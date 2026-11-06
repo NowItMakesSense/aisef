@@ -239,6 +239,25 @@ ok = aisef_project.native_settings(proj, apply=True)[1] == {"ask": [], "deny": [
 print(("OK    " if ok else "FALHA ") + "settings: segunda execucao nao muda nada")
 fails += not ok
 
+print("--- doctor (SessionStart)")
+r = run("doctor.py", {})
+total += 1
+ok = r.returncode == 0 and not r.stdout.strip()
+print(("OK    " if ok else "FALHA ") + "doctor: ambiente completo nao gera nenhuma saida (zero tokens)")
+if not ok:
+    print("      ", r.stdout[:300])
+fails += not ok
+cfg_bak = open(os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"), encoding="utf-8").read()
+qa = json.loads(cfg_bak)
+qa["status"] = "draft"
+aisef_project.write_json(os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"), qa)
+r = run("doctor.py", {})
+total += 1
+ok = "draft" in r.stdout and "qa" in r.stdout and r.returncode == 0
+print(("OK    " if ok else "FALHA ") + "doctor: avisa agente em draft, sem bloquear")
+fails += not ok
+open(os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"), "w", encoding="utf-8").write(cfg_bak)
+
 print("--- hook de auditoria")
 for payload in ({"tool_name": "Bash", "tool_input": {"command": "npm test"}, "session_id": "s1"},
                 {"tool_name": "Edit", "tool_input": {"file_path": os.path.join(proj, "src", "app.py")}},

@@ -1,15 +1,23 @@
 #!/usr/bin/env sh
-# Lancador dos hooks do AISEF: escolhe um Python que funcione (no Windows, "python3" pode ser o
-# atalho da Microsoft Store, que existe no PATH mas nao executa). AISEF_PYTHON tem prioridade.
-# Uso: run.sh <script.py> [pre|post]
-script="$1"; phase="${2:-post}"
-# projeto sem AISEF: nada a fazer (o plugin instalado nao interfere em outros projetos)
+# Lancador dos hooks do AISEF. Roda em toda chamada de ferramenta, entao precisa ser barato:
+# - projeto sem .aisef/config.json: sai na hora (o plugin nao interfere em outros projetos);
+# - AISEF_PYTHON, se definido, e usado direto (o mais rapido);
+# - senao, o primeiro python3/python/py do PATH, pulando o atalho da Microsoft Store (WindowsApps),
+#   que existe no PATH mas nao executa. Nenhum interpretador e executado "so para testar".
+# hooks.json carrega este arquivo com "." (sem abrir outro shell; no Windows isso poupa ~80 ms) e passa
+# o script e a fase por variaveis, que funcionam em qualquer sh POSIX:
+#   AISEF_HOOKS=<dir> AISEF_SCRIPT=gateway.py AISEF_PHASE=pre . <dir>/run.sh
+# Tambem funciona executado direto: sh run.sh <script.py> [pre|post]
+script="${AISEF_SCRIPT:-$1}"; phase="${AISEF_PHASE:-${2:-post}}"
+dir="${AISEF_HOOKS:-$(dirname "$0")}"
 [ -f "${CLAUDE_PROJECT_DIR:-.}/.aisef/config.json" ] || exit 0
-for py in "$AISEF_PYTHON" python3 python py; do
-  [ -n "$py" ] || continue
-  if command -v "$py" >/dev/null 2>&1 && "$py" -c "" >/dev/null 2>&1; then
-    exec "$py" -I "$(dirname "$0")/$script"
-  fi
+if [ -n "$AISEF_PYTHON" ]; then
+  exec "$AISEF_PYTHON" -I "$dir/$script"
+fi
+for py in python3 python py; do
+  path=$(command -v "$py" 2>/dev/null) || continue
+  case "$path" in *WindowsApps*) continue ;; esac
+  exec "$path" -I "$dir/$script"
 done
 if [ "$phase" = "pre" ]; then
   # sem Python nao ha como avaliar a politica: falha fechada

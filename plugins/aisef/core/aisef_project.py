@@ -23,6 +23,7 @@ Uso:
     python3 -I aisef_project.py status --project REPO
 """
 import argparse
+import base64
 import datetime
 import json
 import os
@@ -34,12 +35,33 @@ sys.path.insert(0, HERE)
 import audit_chain  # noqa: E402
 
 try:
-    from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     import audit_signing
     HAS_CRYPTO = True
 except ImportError:  # assinatura opcional
     HAS_CRYPTO = False
+
+
+class _LazySerialization:
+    """`cryptography...serialization` custa ~130 ms de import; os hooks so precisam dele fora do caminho quente."""
+
+    def __getattr__(self, name):
+        from cryptography.hazmat.primitives import serialization as real
+        return getattr(real, name)
+
+
+serialization = _LazySerialization()
+# PKCS8 de uma chave Ed25519 tem sempre este prefixo DER seguido dos 32 bytes da chave
+_ED25519_PKCS8_PREFIX = bytes.fromhex("302e020100300506032b657004220420")
+
+
+def _load_private_key(pem_bytes):
+    """Le a chave privada sem importar `serialization` no caso comum (PKCS8 Ed25519 sem senha)."""
+    body = b"".join(l for l in pem_bytes.splitlines() if l and not l.startswith(b"-----"))
+    der = base64.b64decode(body)
+    if len(der) == 48 and der.startswith(_ED25519_PKCS8_PREFIX):
+        return Ed25519PrivateKey.from_private_bytes(der[16:])
+    return serialization.load_pem_private_key(pem_bytes, password=None)
 
 KEY_ID = "audit-key-1"
 SUBDIRS = ["contracts/features", "contracts/tasks", "contracts/agents", "blueprints", "approvals",
@@ -148,7 +170,7 @@ def load_signer(project_id, key_id=KEY_ID):
         raise RuntimeError("o log deste projeto e assinado, mas este Python nao tem 'cryptography' "
                            "(instale-a ou defina AISEF_PYTHON)")
     with open(private_key_path(project_id, key_id), "rb") as fh:
-        key = serialization.load_pem_private_key(fh.read(), password=None)
+        key = _load_private_key(fh.read())
     return audit_signing.AuditSigner(key_id, key)
 
 
@@ -162,7 +184,12 @@ def _write_event(project, cfg, partial):
     event.update(partial)
     event.setdefault("event_id", "E%d" % (last["sequence"] + 1 if last else 0))
     tail = [last] if last else []  # a cadeia so precisa do ultimo evento (sequencia e hash)
-    signer = load_signer(cfg["project_id"], audit_settings(cfg)["key_id"])
+    key_id = audit_settings(cfg)["key_id"]
+    signer = load_signer(cfg["project_id"], key_id)
+    if signer is None and any(n.endswith(".pem") for n in os.listdir(os.path.join(aisef_dir(project), "keys"))):
+        # log assinado sem a chave privada: gravar sem assinatura quebraria a verificacao em silencio
+        raise RuntimeError("o log deste projeto e assinado, mas a chave privada %s nao foi encontrada "
+                           "(confira AISEF_HOME)" % private_key_path(cfg["project_id"], key_id))
     new = signer.append(tail, event) if signer else audit_chain.append_event(tail, event)
     with open(log_path, "a", encoding="utf-8", newline="\n") as fh:
         fh.write(json.dumps(new, ensure_ascii=False) + "\n")

@@ -30,8 +30,8 @@ import os
 import sys
 
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+# `serialization` custa ~130 ms de import e so serve para PEM: importado sob demanda (o hook roda a cada chamada).
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audit_chain  # noqa: E402
@@ -64,6 +64,7 @@ class AuditSigner:
         return self._private.public_key()
 
     def public_key_pem(self):
+        from cryptography.hazmat.primitives import serialization
         return self._private.public_key().public_bytes(
             serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
 
@@ -243,6 +244,7 @@ def selftest(schema_path):
           errs == [] and any("atrasado" in w for w in warns))
 
     pem = signer.public_key_pem()
+    from cryptography.hazmat.primitives import serialization
     reloaded = AuditVerifier({"audit-key-1": serialization.load_pem_public_key(pem)})
     check("verificador carregado de PEM publico funciona", reloaded.verify(log, head)[0] == [])
 

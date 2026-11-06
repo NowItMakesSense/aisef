@@ -1,13 +1,25 @@
 {
-  "description": "AISEF: Execution Gateway (PreToolUse) e Audit & Evidence (PostToolUse). So atuam em projetos com .aisef/config.json.",
+  "description": "AISEF: Execution Gateway (PreToolUse), Audit & Evidence (PostToolUse) e doctor (SessionStart). So atuam em projetos com .aisef/config.json.",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AISEF_HOOKS=\"${CLAUDE_PLUGIN_ROOT}/hooks\" AISEF_SCRIPT=doctor.py AISEF_PHASE=post . \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash|Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Glob",
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" gateway.py pre",
+            "command": "AISEF_HOOKS=\"${CLAUDE_PLUGIN_ROOT}/hooks\" AISEF_SCRIPT=gateway.py AISEF_PHASE=pre . \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\"",
             "timeout": 20
           }
         ]
@@ -19,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" audit_hook.py post",
+            "command": "AISEF_HOOKS=\"${CLAUDE_PLUGIN_ROOT}/hooks\" AISEF_SCRIPT=audit_hook.py AISEF_PHASE=post . \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\"",
             "timeout": 20
           }
         ]
