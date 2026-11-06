@@ -18,7 +18,9 @@ Brief de feature (so os campos marcados com * sao obrigatorios):
      "scope_in"*: ["..."], "scope_out": ["..."], "risks": [["descricao", "medium", "mitigacao"]],
      "tasks"*: [{"id": "T-010", "title": "...", "role": "backend", "reqs": ["REQ-010"],
                  "criteria": {"AC-10": "descricao verificavel"}, "paths": ["src/x/*"], "depends_on": [],
-                 "test_cmd": "pytest -q", "risk": "low", "resources": ["repo_code"]}]}
+                 "test_cmd": "pytest -q", "risk": "low", "resources": ["repo_code"],
+                 "complexity": "normal"}]}
+    ("complexity": trivial | normal | complex, opcional; entra no Task Contract e alimenta o roteador aisef_route.py)
 """
 import argparse
 import json
@@ -96,6 +98,7 @@ def task_doc(t, feature_id, feature_version, env, now):
         "validation": {"independent_validator_required": t.get("independent_validation", True),
                        "validator_role": t.get("validator_role", "validator")},
         "deliverables": {"execution_report_schema": "execution-report/0.1.0"},
+        **({"complexity": t["complexity"]} if t.get("complexity") else {}),
         "risk": {"level": t.get("risk", "low")}, "limits": {"max_fix_attempts": None},
         "escalation": {"stop_and_report_when": ["scope_exceeded", "unexpected_risk", "requirement_conflict",
                                                 "max_attempts_reached"]},

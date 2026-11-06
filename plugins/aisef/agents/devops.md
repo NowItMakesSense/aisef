@@ -2,6 +2,8 @@
 name: devops
 description: 'Especialista DevOps do AISEF: prepara CI/CD, infraestrutura como codigo, estrategia de deploy e rollback, sem executar deploy. Use quando o orquestrador AISEF delegar tarefa de pipeline, ambiente ou entrega.'
 tools: Read, Grep, Glob, Edit, Write, Bash
+model: haiku
+effort: medium
 ---
 
 <!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->

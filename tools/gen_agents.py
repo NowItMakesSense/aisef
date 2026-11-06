@@ -4,6 +4,8 @@
 As regras comuns do Agent Contract ficam num lugar so (COMMON) e as ferramentas de cada agente vem de
 aisef_project.AGENT_PROFILES, as mesmas que entram no Agent Contract (o teto que o gateway aplica).
 Assim o .md do subagente e o contrato nunca divergem.
+Os campos model/effort do frontmatter vem dos padroes por papel da Model Policy (core/model-policy.v0.1.json);
+o roteador (core/aisef_route.py) refina por tarefa.
 
 Uso:
     python tools/gen_agents.py           # regenera os arquivos
@@ -16,6 +18,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLUGIN = os.path.join(ROOT, "plugins", "aisef")
 sys.path.insert(0, os.path.join(PLUGIN, "core"))
 import aisef_project  # noqa: E402
+import aisef_route  # noqa: E402
 
 OUT = os.path.join(PLUGIN, "agents")
 
@@ -59,16 +62,28 @@ AGENTS = {
 }
 
 
+def static_profile(name):
+    """model/effort estaticos do frontmatter: padrao do papel na Model Policy (o roteador refina por tarefa).
+    O validador tem padrao estatico proprio, porque a escolha real depende do nivel do executor."""
+    pol = aisef_route.load_policy()
+    if name == "validator":
+        sd = pol["validator"]["static_default"]
+        return sd["model"], sd["effort"]
+    e = pol["ladder"][pol["role_defaults"][name]]
+    return e["model"], e["effort"]
+
+
 def render(name):
     desc, role = AGENTS[name]
     tools = aisef_project.AGENT_PROFILES[name][2]
+    model, effort = static_profile(name)
     common = COMMON
     if name in EVALUATORS:
         common = common.replace("## Entrega (duplo formato",
                                 "## Entrega (duplo formato; para voce, o relatorio e de avaliacao, nao de execucao")
-    return ("---\nname: %s\ndescription: '%s'\ntools: %s\n---\n\n"
+    return ("---\nname: %s\ndescription: '%s'\ntools: %s\nmodel: %s\neffort: %s\n---\n\n"
             "<!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->\n\n# %s\n\n%s\n%s"
-            % (name, desc.replace("'", "''"), ", ".join(tools), name, role, common))
+            % (name, desc.replace("'", "''"), ", ".join(tools), model, effort, name, role, common))
 
 
 def main(argv):

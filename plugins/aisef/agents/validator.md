@@ -2,6 +2,8 @@
 name: validator
 description: 'Validador independente do AISEF: verifica se uma entrega cumpre os criterios de aceite do Task Contract, com evidencias, e nunca valida o proprio trabalho. Use quando o orquestrador AISEF precisar mover uma tarefa de executed para validated.'
 tools: Read, Grep, Glob, Bash
+model: sonnet
+effort: medium
 ---
 
 <!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->

@@ -1,5 +1,5 @@
 {
-  "description": "AISEF: Execution Gateway (PreToolUse), Audit & Evidence (PostToolUse) e doctor (SessionStart). So atuam em projetos com .aisef/config.json.",
+  "description": "AISEF: Execution Gateway (PreToolUse), lembrete consultivo do grafo (PreToolUse Grep|Glob), Audit & Evidence (PostToolUse) e doctor (SessionStart). So atuam em projetos com .aisef/config.json.",
   "hooks": {
     "SessionStart": [
       {
@@ -14,6 +14,16 @@
       }
     ],
     "PreToolUse": [
+      {
+        "matcher": "Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AISEF_HOOKS=\"${CLAUDE_PLUGIN_ROOT}/hooks\" AISEF_SCRIPT=graph_nudge.py AISEF_PHASE=post . \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\"",
+            "timeout": 10
+          }
+        ]
+      },
       {
         "matcher": "Bash|Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Glob|WebFetch|mcp__.*",
         "hooks": [

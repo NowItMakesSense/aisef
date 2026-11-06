@@ -141,5 +141,70 @@ expect("consultas a especialista acima do limite",
 expect("escopo acima do teto de 7 dias da politica",
        edit("authorizations/AUTH-1.json", lambda d: d["validity"].update(valid_until="2026-11-20T14:00:00-03:00")), "AUTH-SCOPE-TOO-LONG")
 
+def add_eval_report(level_exec, level_val, val_agent="validator-1"):
+    """Relatorio de execucao com perfil + relatorio de avaliacao do validador, ambos com execution_profile."""
+    def m(proj):
+        edit("reports/RPT-001.json", lambda d: d.update(execution_profile={"model": "sonnet", "effort": "medium", "level": level_exec, "attempt": 1, "routed_by": "aisef_route", "reasons": ["teste"]}))(proj)
+        with open(os.path.join(proj, "reports/RPT-001.json"), encoding="utf-8") as fh:
+            d = json.load(fh)
+        d.update(report_id="RPT-002", agent={"agent_id": val_agent, "agent_contract_version": 1, "role": "validator"},
+                 execution_profile={"model": "opus", "effort": "medium", "level": level_val, "attempt": 1, "routed_by": "aisef_route"})
+        d["technical_report"] = {"ref": "reports/RPT-002.md", "sha256": "b" * 64}
+        with open(os.path.join(proj, "reports/RPT-002.json"), "w", encoding="utf-8") as fh:
+            json.dump(d, fh)
+    return m
+
+expect("validador com nivel menor que o do executor", add_eval_report(5, 3), "ROUTE-VALIDATOR-WEAKER")
+for name, mut in (("validador com nivel igual ao do executor (opus no teto)", add_eval_report(5, 5)),
+                  ("validador com nivel maior que o do executor", add_eval_report(3, 5))):
+    total += 1
+    codes = run(mut).codes()
+    ok = "ROUTE-VALIDATOR-WEAKER" not in codes and "REPORT-AGENT" not in codes and "SCHEMA" not in codes
+    print(("OK    " if ok else "FALHA ") + name + ("" if ok else "  (veio %s)" % sorted(codes)))
+    fails += not ok
+expect("perfil de execucao invalido (modelo desconhecido)", edit("reports/RPT-001.json", lambda d: d.update(execution_profile={"model": "gpt", "effort": "low", "level": 0})), "SCHEMA")
+expect("complexity invalida no contrato da tarefa", edit(T1, lambda d: d.update(complexity="enorme")), "SCHEMA")
+expect("relatorio entregue por agente que nao e executor nem avaliador", edit("reports/RPT-001.json", lambda d: d["agent"].update(agent_id="ghost", role="backend")), "REPORT-AGENT")
+
+# Correcoes de evento (0.4.0): erro de ator corrigido vira aviso; correcao invalida e erro; autovalidacao nao e perdoada.
+def wrong_actor(ev):
+    next(e for e in ev if e["event_id"] == "E5")["actor"].update(type="orchestrator", id="aisef")
+
+def correction(target, after=True, extra=None):
+    def fn(ev):
+        (extra or wrong_actor)(ev)
+        c = dict(copy.deepcopy(ev[-1]), event_id="E900", event_type="correction", corrects_event_id=target,
+                 summary="evento registrado com o ator errado", actor={"type": "orchestrator", "id": "orq"})
+        c.pop("task_id", None); c.pop("subject", None)
+        c["sequence"] = ev[-1]["sequence"] + 1 if after else 0
+        ev.append(c)
+    return fn
+
+def severities(mut, rule):
+    return {f["severity"] for f in run(mut).findings if f["rule"] == rule}
+
+expect("evento de tarefa com ator errado", log_edit(wrong_actor), "LOG-TASK-ACTOR")
+total += 1
+sev = severities(log_edit(correction("E5")), "LOG-TASK-ACTOR")
+print(("OK    " if sev == {"warning"} else "FALHA ") + "ator errado corrigido vira aviso" + ("" if sev == {"warning"} else "  (veio %s)" % sev))
+fails += sev != {"warning"}
+expect("correcao de evento inexistente", log_edit(correction("E404")), "LOG-CORRECTION-UNKNOWN")
+expect("correcao anterior ao evento corrigido", log_edit(correction("E5", after=False)), "LOG-CORRECTION-ORDER")
+
+def self_attest(ev):
+    next(e for e in ev if e["event_type"] == "task_validated")["actor"].update(id="backend-1")
+
+def self_attest_target(ev):
+    return next(e for e in ev if e["event_type"] == "task_validated")["event_id"]
+
+def self_attest_corrected(ev):
+    self_attest(ev)
+    correction(self_attest_target(ev), extra=lambda _: None)(ev)
+
+total += 1
+sev = severities(log_edit(self_attest_corrected), "VAL-SELF-ATTEST")
+print(("OK    " if sev == {"error"} else "FALHA ") + "autovalidacao continua erro mesmo com correcao" + ("" if sev == {"error"} else "  (veio %s)" % sev))
+fails += sev != {"error"}
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

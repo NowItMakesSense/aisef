@@ -49,18 +49,41 @@ Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedid
 ## Delegacao
 - Use os agentes do plugin (`aisef:backend`, `aisef:frontend`, `aisef:database`, `aisef:qa`, `aisef:security`, `aisef:devops`, `aisef:domain`, `aisef:validator`) sob demanda. No Task Contract, `assigned_agent.agent_id` e o nome curto (`backend`), que e o Agent Contract em `.aisef/contracts/agents/`.
 - O gateway aplica o **teto** do Agent Contract a cada subagente: agente em `draft` e bloqueado, recursos e operacoes Git fora do teto sao negados (o `validator` so le o Git). Agentes sem contrato (ex.: `Explore`) seguem so a politica.
-- Entregue a cada um: o Task Contract (caminho), o contexto obrigatorio, o contexto referenciado e o que pode buscar sob demanda.
+- **Contexto (context engineering):** antes de delegar, gere o pacote da tarefa e entregue-o ao agente, em vez de deixa-lo explorar o repositorio:
+  ```
+  python -I CORE/aisef_context.py pack --project . --task T-001
+  ```
+  Ele traz as tres camadas: obrigatorio (contrato, requisitos, criterios, decisoes aprovadas), referenciado (arquivos dos paths, docs do blueprint) e sob demanda (memoria de projeto e consultas sugeridas ao grafo). Com o grafo instalado (Graphify + codebase-memory-mcp, via **aisef-tooling**), faca as consultas de impacto sugeridas antes de delegar e mande ao agente so o resultado.
+- **Modelo e effort (roteamento, custo primeiro):** toda chamada de subagente leva `model` e `effort` explicitos, vindos do roteador, nunca o padrao da sessao:
+  ```
+  python -I CORE/aisef_route.py --project . --task T-001 [--attempt N]
+  python -I CORE/aisef_route.py --project . --task T-001 --validator --executor-level L3
+  ```
+  Use o `model`/`effort` devolvidos na chamada do Agent e registre-os no `execution_profile` do Execution Report. A cada tentativa que falha, chame de novo com `--attempt` + 1 (sobe um nivel). O validador sempre recebe `--validator` com o nivel do executor. Fable so com `--allow-fable`, quando o usuario pedir. Se o roteador avisar que variaveis de ambiente anulam a escolha, conte ao usuario; nao tente contornar.
 - Exija o **duplo formato**: Execution Report JSON (schema `execution-report`) + relatorio tecnico legivel, consistentes entre si.
-- **Paralelismo controlado:** antes de rodar tarefas em paralelo, confira dependencias, conflitos de arquivos e recursos compartilhados. Dois agentes nunca editam o mesmo arquivo.
-- **Falhas:** limites em `CORE/orchestration-defaults.v0.1.json` (3 correcoes automaticas, 1 consulta a especialista, depois escala ao usuario). Risco critico: pare na hora.
+- **Paralelismo em ondas:** depois do plano aprovado, calcule as ondas:
+  ```
+  python -I CORE/aisef_project.py waves --project . --feature FEAT-001
+  ```
+  Dispare todas as tarefas de uma onda em paralelo (uma chamada de Agent por tarefa, na mesma mensagem). Recalcule as ondas depois de cada validacao: uma tarefa liberada antes da onda terminar pode entrar. Dois agentes nunca editam o mesmo arquivo; o comando ja separa tarefas com paths conflitantes.
+- **Memoria de projeto:** descobertas que valem alem da tarefa (comportamento nao documentado, armadilha de ambiente, decisao implicita no codigo) viram entrada com fonte, nunca com segredo:
+  ```
+  python -I CORE/aisef_context.py remember --project . --summary "..." --source-kind file --source-ref <caminho> [--tags a,b] [--task T-001]
+  ```
+- **Falhas:** limites em `CORE/orchestration-defaults.v0.1.json` (3 correcoes automaticas, 1 consulta a especialista, depois escala ao usuario). Cada correcao sobe um nivel no roteador. Risco critico: pare na hora.
 - **Substituicao de agente:** handoff estruturado preservando contrato, historico, evidencias, alteracoes, testes, problemas e permissoes originais.
 
 ## Auditoria
 O hook registra cada operacao automaticamente. Registre voce os marcos (contrato criado, delegacao, estado, decisao):
 
 ```
-python -I CORE/aisef_project.py append --project . --type task_started --feature FEAT-001 --task T-001 --summary "T-001 iniciada"
+python -I CORE/aisef_project.py append --project . --type delegation --feature FEAT-001 --task T-001 --summary "T-001 delegada ao backend (sonnet/medium)"
 ```
+Cada evento tem o ator certo, e o `append` recusa o resto antes de gravar (o log e imutavel):
+- `delegation`, `contract_changed`, `task_completed`: voce (ator padrao `orchestrator`).
+- `task_started` e `task_executed`: o **agente da tarefa** registra, com `--actor agent --actor-id <papel>` (ex.: `backend`). Peca isso no prompt da delegacao.
+- `task_validated`: `--actor validator --actor-id validator`.
+- Errou um evento? Registre `--type correction --corrects <E-id> --summary "<o que estava errado>"`; o original nunca muda e o **aisef-check** passa a considerar a correcao.
 Eventos de decisao do usuario (`approval_granted`, `feature_accepted`...) so via **aisef-approve** com `--actor user`, o que dispara o prompt nativo de permissao.
 
 ## Antes de declarar qualquer coisa pronta

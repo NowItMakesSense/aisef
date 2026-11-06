@@ -68,3 +68,13 @@ Decisões tomadas pelo usuário na conversa "Continuação de projeto com GPT" (
 - **Nova skill `aisef-tooling`**, que roda no fim da discovery e sob demanda. Ela usa fontes prontas em vez de uma busca própria: a skill `find-skills` (skills.sh), o MCP Registry oficial e os marketplaces de plugins.
 - **A `find-skills` é oferecida no `aisef-init`, não exigida.** Sem ela, a busca usa `npx skills find` direto.
 - **Instalar skill, plugin ou MCP pede aprovação no gateway.** Isso muda o que o agente consegue fazer. A instalação é no escopo do projeto, e o passo de instalação da `find-skills` (`-g -y`) não é usado.
+
+## Roteamento, grafo e contexto (2026-11-06, versão 0.4.0)
+- **Modelo e effort por tarefa, híbrido e custo primeiro.** Cada papel tem um padrão (frontmatter gerado por `tools/gen_agents.py` a partir de `core/model-policy.v0.1.json`). O orquestrador ajusta por tarefa com sinais do Task Contract: risco, recursos tocados (segurança, schema, CI/CD, deploy), tamanho, tipo e o novo campo `complexity`, aprovado junto com o plano. Cada tentativa que falha sobe um nível na escada (haiku/low → … → opus/high).
+- **Escada única de níveis** (L0 haiku/low a L6 opus/high) em vez de ajustar modelo e effort separadamente: "subir um nível" fica sem ambiguidade.
+- **Fable nunca é escolhido automaticamente**; só com pedido explícito do usuário.
+- **Validador roda num nível no mínimo igual ao do executor, de preferência em outro modelo**, para não "concordar consigo mesmo". O `aisef-check` acusa validação feita num nível abaixo.
+- **Variáveis de ambiente que anulam a escolha** (`CLAUDE_CODE_EFFORT_LEVEL`, `CLAUDE_CODE_SUBAGENT_MODEL[_FORCE]`) não são contornadas: o roteador avisa.
+- **Grafo de código por MCP externo**, não próprio: Graphify (docs e decisões) + codebase-memory-mcp (código). Instalados pela `aisef-tooling` com aprovação; só ferramentas de leitura entram em `mcp_allow`.
+- **Context engineering:** pacote de contexto por tarefa (`aisef_context.py pack`) nas camadas obrigatório/referenciado/sob demanda, hook consultivo "grafo antes de grep" (nunca bloqueia) e memória de projeto em `.aisef/knowledge/`, sempre com fonte.
+- **Orquestração em ondas:** `aisef_project.py waves` calcula ondas de tarefas prontas (dependências, `parallelizable`, paths sem conflito); o orquestrador dispara cada onda em paralelo dentro do plano aprovado. Na dúvida sobre conflito de arquivos, as tarefas vão para ondas diferentes.

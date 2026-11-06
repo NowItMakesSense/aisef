@@ -54,6 +54,16 @@ DISABLE_TELEMETRY=1 npx --yes skills add vercel-labs/skills@find-skills -a claud
 ```
 O gateway abre o prompt nativo. Sem ela, a aisef-tooling usa `npx skills find` direto; nada deixa de funcionar.
 
+### Grafo de codigo (recomendacao padrao, pergunte antes)
+O AISEF recomenda dois grafos que se complementam: **codebase-memory-mcp** (codigo: chamadas, rotas, raio de impacto) e
+**Graphify** (docs e decisoes: ADRs, specs, `.aisef/`). Ofereca os dois (em projeto novo ou pequeno, diga que o ganho e
+baixo agora; a **aisef-tooling**, secao 6, os oferece de novo quando o codigo crescer). AskUserQuestion (multiSelect): codebase-memory-mcp, Graphify, nenhum agora. Para cada um escolhido
+mostre o que faz, o risco (a checagem de versao em segundo plano do codebase-memory-mcp e o envio de docs ao modelo no
+Graphify) e o comando de instalacao no escopo do projeto, tudo em `<skill-dir>/../aisef-tooling/SKILL.md` secao 6 e
+`references/grafo-de-codigo.md`. **Nao instale sem o OK**; sem resposta, trate como "nenhum agora". Depois de instalar,
+proponha liberar em `.aisef/config.json` -> `mcp_allow` so as ferramentas de leitura listadas la (a edicao pede
+aprovacao). Nao e requisito para seguir: sem grafo, o AISEF funciona como antes.
+
 ## 8. Proximo passo
 - Projeto existente: rode **aisef-discovery** no modo "projeto existente".
 - Projeto novo: rode **aisef-discovery** no modo "projeto novo".

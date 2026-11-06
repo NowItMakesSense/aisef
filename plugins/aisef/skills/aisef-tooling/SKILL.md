@@ -68,3 +68,57 @@ Cada comando abre o prompt nativo de permissao pelo gateway; o usuario confirma 
 Depois de instalar um MCP, as ferramentas dele continuam pedindo aprovacao a cada chamada. Proponha liberar em
 `.aisef/config.json` -> `mcp_allow` **so** as de leitura em que o usuario confia (a edicao pede aprovacao).
 Subagentes especialistas nao instalam nada: o teto do Agent Contract nega.
+O grafo de codigo tem tratamento proprio: secao 6.
+
+## 6. Grafo de codigo (recomendacao padrao do AISEF)
+Um grafo responde "o que chama isto? o que muda se eu mexer aqui?" com poucas dezenas de linhas, em vez de o agente
+ler arquivos inteiros. O AISEF recomenda **dois**, que se complementam (ofereca sempre, instale so com OK):
+
+| Camada | Ferramenta | Fonte oficial | Papel |
+|---|---|---|---|
+| Codigo | **codebase-memory-mcp** | https://github.com/DeusData/codebase-memory-mcp | funcoes, chamadas, rotas, raio de impacto |
+| Docs e decisoes | **Graphify** | https://github.com/Graphify-Labs/graphify | ADRs, specs, `docs/`, `.aisef/` |
+
+Sugira-os mesmo sem item no discovery (e uma recomendacao padrao), mas diga o que cada um faz, o risco e que nao ha
+instalacao sem aprovacao. Em projeto pequeno (poucas dezenas de arquivos) um grafo rende pouco: diga isso e deixe o
+usuario decidir. Detalhes, fontes e o que **nao** foi confirmado: `references/grafo-de-codigo.md` (leia antes de propor
+comandos; confirme a versao atual nas fontes, os projetos mudam rapido).
+
+**Instalacao no escopo do projeto** (cada comando passa pelo gateway; nunca `curl ... | bash`, nunca o `install` que
+configura todos os agentes da maquina):
+- codebase-memory-mcp: baixar e ler o instalador oficial e rodar com `--skip-config` (so o binario); depois
+  `claude mcp add --scope project codebase-memory-mcp -- <caminho-absoluto-do-binario>` (grava `.mcp.json`). O comando
+  `claude mcp add` e composicao do AISEF a partir da configuracao manual do README. Alternativa oficial por plugin:
+  `claude plugin marketplace add DeusData/codebase-memory-mcp` + `claude plugin install codebase-memory@codebase-memory --scope project`
+  (as ferramentas ganham outro prefixo e o `aisef_context.py` nao as enxerga).
+- Graphify: `uv tool install graphifyy` (pacote com dois "y") e `graphify install --project`; depois `/graphify .` sobre
+  `docs/` e `.aisef/`. O servidor MCP e opcional (`graphifyy[mcp]`) e o README nao documenta o comando para inicia-lo
+  (so o codigo-fonte: `python -m graphify.serve`): se o usuario quiser MCP, siga a secao "Servidor MCP" da referencia e
+  diga que essa parte nao esta confirmada pela documentacao.
+
+**Ferramentas so de leitura que entram em `.aisef/config.json` -> `mcp_allow`** (a edicao pede aprovacao; proponha so
+as do servidor que o usuario instalou, com o nome do servidor usado no `.mcp.json`):
+- codebase-memory-mcp: `search_graph`, `trace_path`, `detect_changes`, `query_graph`, `get_graph_schema`,
+  `get_code_snippet`, `get_file_outline`, `get_architecture`, `search_code`, `list_projects`, `index_status`,
+  `check_index_coverage`, `compare_graphs`, no formato `mcp__codebase-memory-mcp__<ferramenta>`.
+- Graphify (via MCP): `query_graph`, `get_node`, `get_neighbors`, `get_community`, `god_nodes`, `graph_stats`,
+  `shortest_path`, no formato `mcp__graphify__<ferramenta>`.
+- **Nunca** em `mcp_allow`: `index_repository`, `delete_project`, `manage_adr`, `ingest_traces` (codebase-memory: gravam
+  ou apagam) e `list_prs`, `get_pr_impact`, `triage_prs` (Graphify: falam com o GitHub). O usuario aprova cada chamada.
+
+**Riscos a mostrar antes do OK** (resumo; detalhes na referencia):
+- codebase-memory-mcp le o codigo inteiro, cria um indice fora do repositorio (`~/.cache/codebase-memory-mcp/`), roda
+  um daemon e um monitor de arquivos em segundo plano e e um binario nativo (o Defender pode acusar falso positivo).
+- **README e SECURITY.md divergem sobre checagem de versao em segundo plano.** O README diz que nao ha; o SECURITY.md
+  (e o `security-allowlist.txt` do repositorio) diz que, apos o `initialize`, uma thread consulta
+  `api.github.com/.../releases/latest` com `curl --max-time 5`, sem dados do projeto. Verificado em 2026-11-06 (v0.12.1):
+  trate como existente e informe o usuario.
+- Graphify: o passo semantico manda docs, PDFs e imagens ao provedor de modelo da chave configurada (use
+  `GRAPHIFY_BACKEND=none` ou `ollama` se houver restricao); grava log das consultas em `~/.cache/graphify-queries.log`;
+  seu hook proprio (`graphify hook-guard`) duplica o lembrete do AISEF e, com `GRAPHIFY_HOOK_STRICT=1`, nega leituras.
+
+**Depois de instalar:** o hook `graph_nudge.py` (consultivo, nunca bloqueia) lembra o agente de consultar o grafo antes
+de Grep/Glob quando o `.mcp.json` tem um dos dois (desligue com `"graph_nudge": {"enabled": false}` em
+`.aisef/config.json`), e `python -I <skill-dir>/../../core/aisef_context.py pack --project . --task <T-ID>` inclui no
+pacote da tarefa as consultas sugeridas ao grafo, com os nomes reais das ferramentas.
+Registre no `.aisef/tooling.md` o que foi instalado e a aprovacao do usuario.

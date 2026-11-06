@@ -16,7 +16,8 @@ python -I CORE/aisef_new.py feature --project . --brief <brief.json>
 Gera `contracts/features/FEAT-*.json`, um `contracts/tasks/T-*.json` por tarefa, a RTM, os criterios e o pedido `plan_approval` (pendente). Se o brief tiver erro, nada e gravado e a mensagem diz o que corrigir.
 - Requisito: `origin` so pode ser `user_stated` (padrao), `investigated` ou `decision`. Nunca invente.
 - Toda tarefa tem criterios **objetivos e verificaveis** e ao menos um requisito; todo requisito tem tarefa.
-- `role` da tarefa = agente do plugin (`backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`); `paths` = arquivos que ele pode alterar; `depends_on` e `parallelizable` controlam o paralelismo.
+- `role` da tarefa = agente do plugin (`backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`); `paths` = arquivos que ele pode alterar; `depends_on` e `parallelizable` controlam o paralelismo (ondas do `aisef_project.py waves`).
+- `complexity` da tarefa (`trivial`, `normal` ou `complex`; padrao `normal`) entra no plano que o usuario aprova e pesa na escolha de modelo e effort (`aisef_route.py`). Use `trivial` so para mudanca mecanica e `complex` para tarefa com raciocinio dificil, varios modulos ou risco de regressao.
 - Tarefa que precisa de `db_data`: inclua `resources` e, no Task Contract gerado, a classificacao do dataset.
 Depois, leve o plano ao usuario com **aisef-approve** (`decide` aprovado ja marca o contrato como `approved_for_execution` e as tarefas como `ready`).
 

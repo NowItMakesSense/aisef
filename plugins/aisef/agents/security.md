@@ -2,6 +2,8 @@
 name: security
 description: 'Especialista de seguranca do AISEF: revisa ameacas, autenticacao, autorizacao, segredos e exposicao de dados de uma feature ou entrega. Use quando o orquestrador AISEF pedir revisao de seguranca ou o blueprint tiver ameacas a mitigar.'
 tools: Read, Grep, Glob, Bash
+model: sonnet
+effort: high
 ---
 
 <!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->

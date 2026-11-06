@@ -1,0 +1,45 @@
+{
+  "$comment": "AISEF Model Policy - RASCUNHO v0.1. Selecao HIBRIDA de modelo e effort por tarefa, prioridade CUSTO PRIMEIRO (decisao do usuario, 2026-11-06). Cada papel tem um nivel padrao na escada (frontmatter estatico do agente); o roteador aisef_route.py ajusta o nivel por tarefa na hora da chamada: +1 por sinal de risco/complexidade (cumulativos), -1 para tarefa trivial, +1 por tentativa falha anterior, sempre dentro do piso (L0) e do teto (L6). Fable nunca e escolhido automaticamente: so com --allow-fable (pedido explicito do usuario), e entao o teto passa a incluir L7. O validador segue regra propria: nivel >= nivel do executor e, entre os niveis a partir dele, o MENOR cujo MODELO difere do modelo do executor (se nao houver, ex.: executor opus, usa o mesmo nivel). Atencao: as variaveis de ambiente CLAUDE_CODE_EFFORT_LEVEL, CLAUDE_CODE_SUBAGENT_MODEL e CLAUDE_CODE_SUBAGENT_MODEL_FORCE tem precedencia no Claude Code e anulam esta escolha; o roteador avisa quando elas estao definidas.",
+  "policy_version": "0.1.0",
+  "status": "draft",
+  "ladder": [
+    { "level": 0, "model": "haiku",  "effort": "low" },
+    { "level": 1, "model": "haiku",  "effort": "medium" },
+    { "level": 2, "model": "sonnet", "effort": "low" },
+    { "level": 3, "model": "sonnet", "effort": "medium" },
+    { "level": 4, "model": "sonnet", "effort": "high" },
+    { "level": 5, "model": "opus",   "effort": "medium" },
+    { "level": 6, "model": "opus",   "effort": "high" }
+  ],
+  "fable_extension": { "level": 7, "model": "fable", "effort": "high", "requires_flag": "--allow-fable" },
+  "ceiling_level": 6,
+  "floor_level": 0,
+  "role_defaults": {
+    "domain": 0,
+    "devops": 1,
+    "frontend": 2,
+    "qa": 2,
+    "backend": 3,
+    "database": 3,
+    "security": 4
+  },
+  "not_routed_roles": ["orchestrator"],
+  "validator": {
+    "static_default": { "model": "sonnet", "effort": "medium", "level": 3 },
+    "rule": "min_level_ge_executor_with_different_model_else_same_level"
+  },
+  "signals": {
+    "$comment": "Cada sinal soma ou subtrai 1 nivel; os sinais sao cumulativos. 'sensitive_resources' usa permissions.resources do Task Contract: sensitive_files e db_data (seguranca), db_schema (schema de banco), config_ci_iac (CI/CD) e deploy_infra (deploy); basta um deles para o sinal valer (conta uma vez).",
+    "high_risk_levels": ["high", "critical"],
+    "sensitive_resources": ["sensitive_files", "db_data", "db_schema", "config_ci_iac", "deploy_infra"],
+    "complex_value": "complex",
+    "trivial_value": "trivial",
+    "paths_more_than": 10,
+    "up_step": 1,
+    "down_step": 1
+  },
+  "escalation": {
+    "per_failed_attempt": 1,
+    "$comment": "attempt 1 = sem escalonamento; attempt N soma N-1 niveis."
+  }
+}
