@@ -38,7 +38,7 @@ Pré-requisitos:
 No Claude Code, rode:
 
 ```
-/plugin marketplace add fcarvalhosanna/aisef
+/plugin marketplace add NowItMakesSense/aisef
 /plugin install aisef@aisef
 ```
 
