@@ -18,6 +18,7 @@ Most agent workflows either give you **process without enforcement** (skills tha
   - Secret files ask for approval; databases and deploys are denied.
   - Each subagent is capped by its Agent Contract (the validator, for example, can only read git).
   - Destructive operations go up one approval level.
+  - MCP tools ask for approval unless allow-listed (`mcp_allow`), `WebFetch` URLs carrying tokens are denied, and in `bypassPermissions` mode anything that would need approval is denied.
 - **Evidence:** every operation and every blocked attempt goes to an append-only, hash-chained log signed with Ed25519. The signed head and periodic anchors are kept outside the repository, so rewriting or truncating the log is detected.
 
 ## Install

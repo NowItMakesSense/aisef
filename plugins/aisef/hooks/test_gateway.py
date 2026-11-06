@@ -28,10 +28,12 @@ def run(script, payload, project=proj):
     return r
 
 
-def decision(tool, _agent=None, **inp):
+def decision(tool, _agent=None, _mode=None, **inp):
     payload = {"tool_name": tool, "tool_input": inp, "cwd": proj}
     if _agent:
         payload["agent_type"] = _agent
+    if _mode:
+        payload["permission_mode"] = _mode
     r = run("gateway.py", payload)
     if not r.stdout.strip():
         return "allow", ""
@@ -39,10 +41,10 @@ def decision(tool, _agent=None, **inp):
     return out["permissionDecision"], out["permissionDecisionReason"]
 
 
-def case(name, tool, expected, _agent=None, **inp):
+def case(name, tool, expected, _agent=None, _mode=None, **inp):
     global fails, total
     total += 1
-    got, reason = decision(tool, _agent, **inp)
+    got, reason = decision(tool, _agent, _mode, **inp)
     ok = got == expected
     print(("OK    " if ok else "FALHA ") + "%s -> %s" % (name, got))
     if not ok:
@@ -95,6 +97,24 @@ case("Invoke-Expression -> ask", "Bash", "ask", command="Invoke-Expression $s")
 case("pipe comum (grep) segue livre", "Bash", "allow", command="git log --oneline | grep fix | head -5")
 case("ativar regras nativas -> ask", "Bash", "ask", command="python aisef_project.py settings --project . --apply")
 case("rotacionar chave -> ask", "Bash", "ask", command="python aisef_project.py rotate-key --project .")
+
+print("--- MCP, WebFetch e modo bypass")
+case("ferramenta MCP desconhecida -> ask", "mcp__db__run_query", "ask", query="select 1")
+cfg_path = os.path.join(proj, ".aisef", "config.json")
+cfg_text = open(cfg_path, encoding="utf-8").read()
+cfg = json.loads(cfg_text)
+cfg["mcp_allow"] = ["mcp__github__get_*", "mcp__docs__*"]
+aisef_project.write_json(cfg_path, cfg)
+case("MCP liberado em mcp_allow -> allow", "mcp__github__get_issue", "allow", number=1)
+case("outra ferramenta do mesmo servidor nao liberada -> ask", "mcp__github__create_pull_request", "ask", title="x")
+case("subagente com MCP fora do teto -> deny", "mcp__db__run_query", "deny", _agent="aisef:backend", query="x")
+open(cfg_path, "w", encoding="utf-8").write(cfg_text)
+case("WebFetch comum -> allow", "WebFetch", "allow", url="https://docs.python.org/3/library/json.html", prompt="x")
+case("WebFetch levando token na query -> deny", "WebFetch", "deny", url="https://x.example/c?token=abcdef0123456789abcd", prompt="x")
+case("WebFetch levando JWT -> deny", "WebFetch", "deny", url="https://x.example/c/eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.x", prompt="x")
+case("modo bypass: o que pediria aprovacao e negado", "Bash", "deny", _mode="bypassPermissions", command="git commit -m x")
+case("modo bypass: operacao livre segue livre", "Bash", "allow", _mode="bypassPermissions", command="git status")
+case("modo normal: commit continua ask", "Bash", "ask", _mode="default", command="git commit -m x")
 
 print("--- codigo, config e destrutivos")
 case("Edit codigo -> allow", "Edit", "allow", file_path=os.path.join(proj, "src", "app.py"))
@@ -235,7 +255,8 @@ ok = ("Bash(git commit:*)" in settings["permissions"]["ask"] and settings["permi
 print(("OK    " if ok else "FALHA ") + "settings: regras ask/deny mescladas sem apagar nem duplicar as do usuario")
 fails += not ok
 total += 1
-ok = aisef_project.native_settings(proj, apply=True)[1] == {"ask": [], "deny": []}
+ok = (aisef_project.native_settings(proj, apply=True)[1] == {"ask": [], "deny": [], "settings": []}
+      and settings["permissions"]["disableBypassPermissionsMode"] == "disable")
 print(("OK    " if ok else "FALHA ") + "settings: segunda execucao nao muda nada")
 fails += not ok
 

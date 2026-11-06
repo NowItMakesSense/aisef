@@ -14,6 +14,7 @@ Classifica cada chamada de ferramenta em (recurso, acao, ambiente), resolve o ni
 So atua em projetos com .aisef/config.json. Falha fechado: erro interno vira 'deny'. Somente stdlib.
 """
 import datetime
+import fnmatch
 import glob
 import json
 import os
@@ -44,6 +45,10 @@ SQL_DESTRUCTIVE_RE = re.compile(
 OBFUSCATED_RE = re.compile(
     r"base64\s+(?:-d|--decode)|FromBase64String|\|\s*(?:ba|z|da)?sh\b|\|\s*(?:python3?|node|perl|ruby)\b|"
     r"(?:^|[;&|]\s*)eval\s|\bInvoke-Expression\b|\biex\b|\bsource\s+<\(", re.I)
+# URL que leva um segredo para fora: parametro de credencial com valor longo, ou token com formato conhecido.
+WEBFETCH_SECRET_RE = re.compile(
+    r"[?&](?:token|access_token|api_?key|apikey|key|secret|password|passwd|auth|session|sig|signature)=[^&\s]{12,}|"
+    r"\bgh[pousr]_[A-Za-z0-9]{30,}|\bAKIA[0-9A-Z]{16}\b|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.", re.I)
 CONFIG_PATH_RE = re.compile(
     r"(?:^|/)(?:\.github/workflows/|\.gitlab-ci\.yml$|Jenkinsfile$|azure-pipelines\.yml$|\.circleci/|"
     r"Dockerfile[^/]*$|docker-compose[^/]*\.ya?ml$|compose\.ya?ml$|[^/]+\.tf$|[^/]+\.tfvars$|helm/|charts/|k8s/|"
@@ -319,6 +324,14 @@ def decide(data, project, policy, patterns, config, now):
             elif tool in READ_TOOLS and sensitive:
                 items.append(("sensitive_files", "read_content", env, False, "arquivo sensivel"))
 
+    if tool.startswith("mcp__"):
+        # Servidor MCP pode escrever arquivos, acessar banco ou fazer deploy sem passar pelo Bash:
+        # so as ferramentas que o usuario liberou em config.json -> mcp_allow (globs) passam direto.
+        if not any(fnmatch.fnmatchcase(tool, pat) for pat in config.get("mcp_allow", [])):
+            items.append(("unclassified", "execute", env, False, "ferramenta MCP %s fora de mcp_allow" % tool))
+    elif tool == "WebFetch" and WEBFETCH_SECRET_RE.search(inp.get("url") or ""):
+        raise Decision("deny", "a URL parece carregar um segredo (token/chave na query): possivel vazamento de dados")
+
     contract = agent_contract(project, data)
     if contract is not None:
         enforce_ceiling(contract, tool, items, env)
@@ -346,6 +359,9 @@ def decide(data, project, policy, patterns, config, now):
     if worst == "allow":
         return None, None
     reason = "AISEF: " + "; ".join(why)
+    if data.get("permission_mode") == "bypassPermissions":
+        # no modo que pula permissoes um 'ask' poderia passar sem ninguem ver: o que exige aprovacao e negado
+        return "deny", reason + ". A sessao esta em modo bypassPermissions: operacoes que exigem aprovacao ficam bloqueadas."
     if worst in ("approve_scope", "approve_operation"):
         return "ask", reason + ". Aprove so se isso estiver dentro do que voce autorizou."
     if worst == "approve_reinforced":

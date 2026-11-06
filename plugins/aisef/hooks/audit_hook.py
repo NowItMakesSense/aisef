@@ -36,6 +36,10 @@ def main():
         probe = {"data": {"command": cmd}}
         detail["command"] = "[omitido: possivel segredo]" if audit_chain.find_secrets(probe) else cmd
         summary = "Bash: " + detail["command"].splitlines()[0][:120] if detail["command"] else "Bash"
+    elif tool.startswith("mcp__"):
+        # so o nome dos campos: os valores podem carregar segredos ou dados pessoais
+        detail["input_keys"] = sorted(inp)[:20]
+        summary = "MCP: " + tool[:150]
     else:
         path = inp.get("file_path") or inp.get("notebook_path") or ""
         try:

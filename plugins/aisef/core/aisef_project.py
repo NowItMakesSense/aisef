@@ -431,7 +431,12 @@ def native_settings(project, apply=False):
         new = [r for r in rules if r not in have]
         have.extend(new)
         added[key] = new
-    if apply and (added["ask"] or added["deny"]):
+    # sem isto, iniciar a sessao em bypassPermissions desliga as regras acima (o gateway ainda nega o sensivel)
+    added["settings"] = []
+    if perms.get("disableBypassPermissionsMode") != "disable":
+        perms["disableBypassPermissionsMode"] = "disable"
+        added["settings"].append("disableBypassPermissionsMode=disable")
+    if apply and (added["ask"] or added["deny"] or added["settings"]):
         write_json(path, current)
     return path, added
 
@@ -652,12 +657,12 @@ def main(argv):
         return 0
     if a.command == "settings":
         path, added = native_settings(project, a.apply)
-        total = len(added["ask"]) + len(added["deny"])
+        total = len(added["ask"]) + len(added["deny"]) + len(added["settings"])
         if not total:
             print("%s ja tem todas as regras do AISEF" % path)
         else:
             print("%s %d regra(s) em %s:" % ("gravadas" if a.apply else "faltam (use --apply para gravar)", total, path))
-            for k in ("ask", "deny"):
+            for k in ("ask", "deny", "settings"):
                 for r in added[k]:
                     print("  %s %s" % (k, r))
         return 0

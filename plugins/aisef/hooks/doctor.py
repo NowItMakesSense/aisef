@@ -45,11 +45,11 @@ def problems(project):
             found.append("agentes ainda em draft (bloqueados pelo gateway): %s. Peca ao usuario para aprova-los "
                          "(aisef-init, passo 4)" % ", ".join(drafts))
         settings = os.path.join(project, ".claude", "settings.json")
-        have = []
+        perms = {}
         if os.path.exists(settings):
             with open(settings, encoding="utf-8") as fh:
-                have = json.load(fh).get("permissions", {}).get("ask", [])
-        if "Bash(git commit:*)" not in have:
+                perms = json.load(fh).get("permissions", {})
+        if "Bash(git commit:*)" not in perms.get("ask", []) or perms.get("disableBypassPermissionsMode") != "disable":
             found.append("as regras nativas de segunda camada nao estao no .claude/settings.json: proponha ao usuario "
                          "`aisef_project.py settings --project . --apply`")
     except Exception as exc:

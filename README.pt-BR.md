@@ -49,6 +49,9 @@ O passo a passo completo, usando o projeto de demonstração, está em [docs/wal
 - **Banco de dados e deploy:** o ambiente de destino é desconhecido, então ficam bloqueados como se fossem produção.
 - **Código ofuscado ou baixado** (`curl | sh`, `base64 -d | bash`, `eval`): pede aprovação.
 - **Operações destrutivas:** sobem um nível de aprovação (regra T1).
+- **Ferramentas MCP:** pedem aprovação, a não ser que estejam liberadas em `mcp_allow`.
+- **WebFetch:** uma URL que carrega token é negada.
+- **Modo `bypassPermissions`:** tudo o que pediria aprovação passa a ser negado.
 - **Subagentes:** cada um fica limitado pelo seu Agent Contract. O validador, por exemplo, só lê o Git. Um agente em rascunho fica bloqueado.
 - **O próprio AISEF:** o log de auditoria e as chaves não podem ser editados à mão.
 - **Registro:** toda tentativa negada ou levada à aprovação também vai para o log.
