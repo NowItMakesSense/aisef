@@ -46,7 +46,7 @@ A `SessionStart` doctor tells you if something is missing, and stays silent othe
 3. Ask for work in plain language:
    - **Feature:** the model writes a ~20-line brief, and `aisef_new.py` expands it into valid contracts, tasks, RTM and a plan-approval request. You approve the plan, execution runs inside the approved scope, and the feature closes only with your acceptance.
    - **Small change** (typo, trivial fix, non-breaking dependency patch): goes through a quick maintenance path, with no blueprint and no extra approvals.
-4. See everything in the panel (`aisef-panel`): features, tasks, traceability, approvals, decisions, risks, timeline, dependencies, and an engineering page with architecture and ER diagrams. It works offline.
+4. See everything in the panel (`aisef-panel`): features, tasks, traceability, approvals, decisions, risks, timeline, dependencies, and an engineering page with architecture and ER diagrams. Mermaid is fetched once (pinned version, SHA-256 checked) into `~/.aisef/vendor/`, so the panel works offline from then on.
 
 A step-by-step walkthrough with the demo project is in [docs/walkthrough.md](docs/walkthrough.md) (Portuguese).
 
@@ -55,7 +55,7 @@ A step-by-step walkthrough with the demo project is in [docs/walkthrough.md](doc
 | Component | Role |
 |---|---|
 | Skills | `aisef` (orchestrator), `aisef-init`, `aisef-discovery`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
-| Agents | `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, each capped by an Agent Contract |
+| Agents | `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, each capped by an Agent Contract; generated from one source (`tools/gen_agents.py`) so prompts and contracts never drift |
 | Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`) |
 | Core | 9 JSON Schemas, permission policy, `check_project.py`, signed audit chain, generators, panel |
 | `AGENTS.md` template | the same rules as guidance for Codex, Cursor, Gemini and other tools |

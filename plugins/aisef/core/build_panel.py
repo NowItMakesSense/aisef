@@ -513,13 +513,51 @@ def build(project, out, schemas_dir, now=None):
     return bundle
 
 
+# O Mermaid (2,5 MB) nao fica no repositorio: e baixado uma vez, com versao e hash fixos, para um cache
+# fora do projeto. Depois disso o painel funciona offline. Sem rede e sem cache, a pagina tenta a CDN.
+MERMAID_VERSION = "11.4.1"
+MERMAID_URL = "https://cdn.jsdelivr.net/npm/mermaid@%s/dist/mermaid.min.js" % MERMAID_VERSION
+MERMAID_SHA256 = "a43bc1afd446f9c4cc66ac5dd45d02e8d65e26fc5344ec0ef787f88d6ddb6f9e"
+
+
+def mermaid_cache_path():
+    home = os.environ.get("AISEF_HOME") or os.path.join(os.path.expanduser("~"), ".aisef")
+    return os.path.join(home, "vendor", "mermaid-%s.min.js" % MERMAID_VERSION)
+
+
+def ensure_mermaid():
+    """Caminho da copia local verificada do Mermaid, baixando-a se faltar. None se nao der (sem rede)."""
+    import hashlib
+    path = mermaid_cache_path()
+    if os.path.exists(path):
+        with open(path, "rb") as fh:
+            if hashlib.sha256(fh.read()).hexdigest() == MERMAID_SHA256:
+                return path
+    try:
+        import urllib.request
+        with urllib.request.urlopen(MERMAID_URL, timeout=30) as resp:
+            data = resp.read()
+    except OSError:
+        return None
+    if hashlib.sha256(data).hexdigest() != MERMAID_SHA256:
+        sys.stderr.write("aviso: Mermaid baixado nao confere com o hash esperado; ignorado\n")
+        return None
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path + ".tmp", "wb") as fh:
+        fh.write(data)
+    os.replace(path + ".tmp", path)
+    return path
+
+
 def install_page(out):
     """Copia a pagina e o Mermaid local (o painel abre via file:// e funciona sem internet)."""
     shutil.copy(os.path.join(HERE, "index.html"), os.path.join(out, "index.html"))
-    vendor = os.path.join(HERE, "vendor", "mermaid.min.js")
-    if os.path.exists(vendor):
+    vendor = ensure_mermaid()
+    if vendor:
         os.makedirs(os.path.join(out, "vendor"), exist_ok=True)
         shutil.copy(vendor, os.path.join(out, "vendor", "mermaid.min.js"))
+    else:
+        sys.stderr.write("aviso: sem copia local do Mermaid (sem rede?); o painel tentara a CDN\n")
 
 
 def main(argv):

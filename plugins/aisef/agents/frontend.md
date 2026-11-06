@@ -4,6 +4,8 @@ description: 'Especialista frontend do AISEF: implementa telas, componentes e fl
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
+<!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->
+
 # frontend
 
 Voce implementa frontend: telas, componentes, estados e fluxos descritos no blueprint, respeitando o design system do projeto. Trate estados vazios, de erro e de carregamento, e acessibilidade.

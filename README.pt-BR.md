@@ -38,7 +38,7 @@ No início de cada sessão, um doctor avisa se falta alguma coisa. Quando está 
 3. Peça o trabalho em linguagem natural:
    - **Feature:** o modelo escreve um brief de umas 20 linhas, e o `aisef_new.py` gera a partir dele os contratos, as tarefas, a RTM e o pedido de aprovação, tudo já validado. Você aprova o plano, a execução acontece dentro do escopo aprovado e a feature só fecha com o seu aceite.
    - **Mudança pequena** (typo, ajuste trivial, patch de dependência que não quebra nada): vai pelo caminho rápido de manutenção, sem blueprint e sem aprovações extras.
-4. Acompanhe tudo no painel (`aisef-panel`). Ele funciona sem internet.
+4. Acompanhe tudo no painel (`aisef-panel`). O Mermaid é baixado uma vez, com versão fixa e conferência por SHA-256, para `~/.aisef/vendor/`; depois disso o painel funciona sem internet.
 
 O passo a passo completo, usando o projeto de demonstração, está em [docs/walkthrough.md](docs/walkthrough.md).
 

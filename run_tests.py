@@ -27,6 +27,7 @@ SUITES = [
     ("gateway + auditoria + Approval Center", [os.path.join(HOOKS, "test_gateway.py")]),
     ("geradores (briefs e caminho rapido)", [os.path.join(CORE, "test_generators.py")]),
     ("ciclo de vida do log", [os.path.join(CORE, "test_audit_lifecycle.py")]),
+    ("agentes gerados da fonte unica", [os.path.join(ROOT, "tools", "gen_agents.py"), "--check"]),
 ]
 
 failed = []

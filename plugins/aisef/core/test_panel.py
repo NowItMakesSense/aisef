@@ -194,6 +194,20 @@ check("manifesto contabiliza as redacoes e sobe o aviso", bb["manifest"]["redact
 check("data.js tambem nao contem o segredo", "hunter2" not in open(os.path.join(d, "panel", "data.js"), encoding="utf-8").read())
 
 # ------------------------------------------------------------------ pagina
+print("--- Mermaid local (cache verificado por hash)")
+import io  # noqa: E402
+import urllib.request  # noqa: E402
+saved_home, saved_open = os.environ.get("AISEF_HOME"), urllib.request.urlopen
+os.environ["AISEF_HOME"] = os.path.join(work, "mmd-home")
+urllib.request.urlopen = lambda *a, **k: io.BytesIO(b"window.mermaid = {render: evil};")
+check("download adulterado do Mermaid e recusado e nada vai para o cache",
+      build_panel.ensure_mermaid() is None and not os.path.exists(build_panel.mermaid_cache_path()))
+urllib.request.urlopen = saved_open
+if saved_home is None:
+    os.environ.pop("AISEF_HOME")
+else:
+    os.environ["AISEF_HOME"] = saved_home
+
 print("--- pagina HTML")
 html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
 check("uma unica atribuicao a .innerHTML na pagina (saida do Mermaid em modo strict)", len(re.findall(r"\.innerHTML\s*=", html)) == 1 and 'securityLevel: "strict"' in html)
