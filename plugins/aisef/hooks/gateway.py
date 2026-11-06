@@ -23,7 +23,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 CORE = os.path.join(os.path.dirname(HERE), "core")
 POLICY_PATH = os.path.join(CORE, "permission-policy.v0.1.json")
-PATTERNS_PATH = os.path.join(HERE, "db_patterns.json")
+PATTERNS_PATH = os.path.join(HERE, "sensitive_patterns.json")
 LEVELS = ["allow", "approve_scope", "approve_operation", "approve_reinforced", "deny"]
 
 GIT_RE = re.compile(r"(?:^|[;&|(]\s*|\s)git(?:\s+-C\s+\S+)?\s+([a-z-]+)([^;&|]*)", re.I)
@@ -119,13 +119,16 @@ def norm(path):
 def classify_bash(cmd, patterns, env):
     """Retorna lista de (recurso, acao, ambiente, destrutivo, rotulo). Vazia = repo_code em dev."""
     found = []
-    for rx, label in patterns["cmd"]:
+    for rx, label, category in patterns["cmd"]:
         if rx.search(cmd):
-            if "secret" in label or "environment dump" in label:
+            if category == "secret":
                 found.append(("sensitive_files", "read_content", env, False, label))
             else:
                 # banco ou conexao: o ambiente alvo e desconhecido -> tratado como producao
                 found.append(("db_data", "write", "unknown", bool(SQL_DESTRUCTIVE_RE.search(cmd)), label))
+    # um comando que cita arquivo sensivel (cat .env, cp id_rsa ...) e leitura do conteudo dele
+    if any(patterns["path"].search(tok) and not patterns["safe"].search(tok) for tok in cmd.split()):
+        found.append(("sensitive_files", "read_content", env, False, "comando que cita arquivo sensivel"))
     for m in GIT_RE.finditer(cmd):
         sub, rest = m.group(1).lower(), m.group(2)
         if sub in ("status", "log", "diff", "show", "blame", "fetch", "remote", "rev-parse", "ls-files", "describe",
@@ -344,9 +347,9 @@ def main():
             policy = merge_policy(policy, load_json(local))
         raw = load_json(PATTERNS_PATH)
         patterns = {
-            "cmd": [(re.compile(p["pattern"], re.I), p["label"]) for p in raw["cmd_patterns"]],
-            "path": re.compile(raw["path_pattern"], re.I),
-            "safe": re.compile(raw["safe_path"], re.I),
+            "cmd": [(re.compile(r["regex"], re.I), r["label"], r["category"]) for r in raw["commands"]],
+            "path": re.compile(raw["paths"]["regex"], re.I),
+            "safe": re.compile(raw["paths"]["allow"], re.I),
         }
         now = datetime.datetime.now(datetime.timezone.utc)
         decision, reason = decide(data, project, policy, patterns, config, now)

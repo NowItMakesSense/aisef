@@ -1,0 +1,47 @@
+{
+  "$comment": "Padroes do Execution Gateway (gateway.py) para reconhecer operacoes sensiveis. Cada regra tem uma categoria: 'database' vira db_data com ambiente desconhecido (tratado como producao pela politica); 'secret' vira sensitive_files/read_content. As regex sao aplicadas, sem diferenciar maiusculas, ao comando do Bash; 'paths' vale para caminhos de Read/Edit/Write/Grep/Glob e para mencoes de arquivo dentro de comandos. Acrescente regras aqui, nao no codigo.",
+  "version": "0.1.0",
+  "commands": [
+    {
+      "id": "db-cli",
+      "category": "database",
+      "label": "cliente de banco de dados",
+      "regex": "(?<![\\w.-])(?:psql|pg_dump(?:all)?|pg_restore|mysql(?:dump|admin)?|mariadb(?:-dump)?|mongo(?:sh|dump|restore|export|import)?|redis-cli|sqlite3|sqlcmd|bcp|cqlsh|clickhouse(?:-client)?|influx|sqlplus|isql|usql|pgcli|mycli|litecli|duckdb)(?:\\.exe)?(?![\\w.-])"
+    },
+    {
+      "id": "db-url",
+      "category": "database",
+      "label": "URL de conexao com banco",
+      "regex": "\\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\\+srv)?|rediss?|mssql|sqlserver|oracle|cockroachdb|clickhouse|cassandra)://"
+    },
+    {
+      "id": "db-migration",
+      "category": "database",
+      "label": "execucao de migration ou acesso via ORM",
+      "regex": "\\b(?:prisma\\s+(?:migrate|db)|alembic\\s+(?:upgrade|downgrade|stamp)|flyway|liquibase|knex\\s+migrate|sequelize(?:-cli)?\\s+db:|typeorm\\s+(?:migration|schema)|dbmate|goose\\s+\\w|atlas\\s+(?:migrate|schema)|(?:rake|rails)\\s+db:|manage\\.py\\s+(?:migrate|dbshell|flush|loaddata|sqlmigrate)|artisan\\s+(?:migrate|db)|ef\\s+database)\\b"
+    },
+    {
+      "id": "container-shell",
+      "category": "database",
+      "label": "shell dentro de container ou pod (alcanca o banco)",
+      "regex": "\\b(?:docker|podman|nerdctl)(?:\\s+compose|-compose)?\\s+(?:exec|attach)\\b|\\bkubectl\\s+(?:exec|attach|port-forward)\\b"
+    },
+    {
+      "id": "secret-manager",
+      "category": "secret",
+      "label": "leitura de cofre de segredos",
+      "regex": "\\baws\\s+secretsmanager\\s+get-secret-value\\b|\\baws\\s+ssm\\s+get-parameters?(?:-by-path)?\\b[^;&|]*--with-decryption|\\bgcloud\\s+secrets\\s+versions\\s+access\\b|\\baz\\s+keyvault\\s+secret\\s+(?:show|download)\\b|\\bvault\\s+(?:read|kv\\s+get)\\b|\\bop\\s+(?:read|item\\s+get)\\b|\\bdoppler\\s+(?:secrets|run)\\b|\\bpass\\s+show\\b|\\bkubectl\\s+get\\s+secrets?\\b|\\bsops\\s+(?:-d|--decrypt)\\b"
+    },
+    {
+      "id": "env-dump",
+      "category": "secret",
+      "label": "despejo das variaveis de ambiente",
+      "regex": "(?:^|[;&|(]\\s*)(?:printenv|env|set|export\\s+-p|declare\\s+-x)\\s*(?:$|[;&|)])|\\b(?:Get-ChildItem|gci|dir|ls)\\s+env:"
+    }
+  ],
+  "paths": {
+    "label": "arquivo sensivel",
+    "regex": "(?:^|[\\\\/\\s\"'=])\\.env(?:\\.[\\w.-]+)?(?=$|[\\s\"';|&)])|(?:^|[\\\\/\\s\"'=])(?:secrets?|\\.ssh|\\.aws|\\.gnupg)[\\\\/]|\\.(?:pem|key|p12|pfx|jks|keystore)(?![\\w.])|\\bid_(?:rsa|dsa|ecdsa|ed25519)\\b|\\bcredentials(?:\\.json)?\\b|\\.(?:pgpass|netrc|npmrc|pypirc)\\b|\\.my\\.cnf\\b|\\bservice-account[\\w-]*\\.json\\b",
+    "allow": "\\.env\\.(?:example|sample|template|dist|defaults)\\b"
+  }
+}

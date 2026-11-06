@@ -24,11 +24,12 @@ Decisões tomadas pelo usuário na conversa "Continuação de projeto com GPT" (
 - **Leitura de `repo_code` e `db_schema` em produção:** aprovação por operação (opção B), em vez de escopo somente leitura.
 - **Git:** status, log e diff são livres. Commit, push, merge e release exigem, cada um, sua própria aprovação. Force push, reescrita de histórico e exclusão de branch exigem aprovação reforçada.
 - **Regras transversais:**
-  - T1: operação destrutiva sobe um nível.
+  - T1: operação destrutiva sobe um nível. Lista ampliada em 2026-11-05: DROP, TRUNCATE, DELETE sem WHERE, ALTER…DROP, rollback de migration, `rm` recursivo, `git clean`, descartar alterações (`checkout --`/`restore`/`stash drop`), apagar branch, force push, remover volumes de container, `kubectl delete` e `terraform destroy`.
   - T2: produção é sempre execução pontual.
   - T3: segredos nunca aparecem em logs.
   - T4: acesso ao schema não implica acesso aos dados.
   - T5: o AISEF funciona sem banco conectado.
+- **Autorização de escopo vale no máximo 7 dias** (2026-11-05).
 - Em conflito, vale a regra **mais restritiva**. Recurso ou ambiente não classificado é tratado como sensível ou como produção.
 
 ## Auditoria
@@ -42,14 +43,16 @@ Decisões tomadas pelo usuário na conversa "Continuação de projeto com GPT" (
 - O agente não valida o próprio trabalho.
 - A memória pertence ao projeto.
 - O Agent Contract define só um **teto** de permissão. A permissão efetiva vem da política e da autorização.
+- **O validador só usa Git de leitura**, e **um agente só fica `active` com aprovação do usuário** (confirmados em 2026-11-05). O gateway aplica o teto de cada subagente.
 
 ## Painel
 - JSON como fonte de dados, em **visão derivada** dos contratos e do log. O painel nunca é fonte de verdade.
 - Mermaid gera os diagramas.
+- **Com a integridade comprometida, o painel continua mostrando os dados**, com o banner vermelho, para permitir a investigação (2026-11-05).
 
 ## Plugin (empacotamento, 2026-11-05)
 - **Plugin do Claude Code distribuído por marketplace** no GitHub, em vez de uma skill copiada para cada projeto. O código fica no plugin e os dados ficam em `.aisef/` no projeto.
-- O AISEF **absorve** a skill `new-project-setup`. Na v0.1, os padrões de bloqueio de banco e segredos e a ideia da entrevista já migraram.
+- O AISEF **não absorve** a skill `new-project-setup` (decisão revista pelo usuário em 2026-11-05). Os dois seguem independentes. Os padrões de banco e segredos do gateway, que vieram de lá na v0.1, foram reescritos do zero em `hooks/sensitive_patterns.json`.
 - **Execution Gateway por hook PreToolUse.** As aprovações usam o prompt nativo de permissão (`ask`), que o modelo não consegue responder. Nível reforçado sem registro aprovado para a operação exata resulta em `deny`.
-- **Banco a partir de uma sessão:** o ambiente alvo é desconhecido, então a política trata como produção. Na prática, fica bloqueado por padrão, o que é coerente com a regra anterior do `new-project-setup`.
+- **Banco a partir de uma sessão:** o ambiente alvo é desconhecido, então a política trata como produção. Na prática, fica bloqueado por padrão.
 - **Chave privada e head** ficam em `~/.aisef/`, fora do repositório.
