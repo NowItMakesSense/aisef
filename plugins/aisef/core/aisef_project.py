@@ -18,6 +18,7 @@ Uso:
     python3 -I aisef_project.py decide --project REPO --request APR-NNN --choice approve|reject|request_changes|select_option
                                        [--option OPT-X] [--note TEXTO] [--ack impact_read,rollback_read,diff_reviewed]
                                        [--authorization rascunho.json]
+    python3 -I aisef_project.py agents --project REPO [--activate] [--roles backend,qa]
     python3 -I aisef_project.py verify --project REPO
     python3 -I aisef_project.py status --project REPO
 """
@@ -167,7 +168,93 @@ def init(project, project_id, name=None, environment="dev"):
         signed = True
     append(project, {"event_id": "E0", "event_type": "genesis", "actor": {"type": "system", "id": "aisef"},
                      "summary": "Log criado"})
+    write_agent_drafts(project)
     return signed
+
+
+# Agentes do plugin (plugins/aisef/agents/*.md). O contrato e o TETO; o gateway o aplica aos subagentes.
+EDIT_TOOLS = ["Read", "Grep", "Glob", "Edit", "Write", "Bash"]
+READ_TOOLS = ["Read", "Grep", "Glob", "Bash"]
+AGENT_PROFILES = {
+    "backend": ("Agente Backend", ["implementation", "refactoring", "testing"], EDIT_TOOLS, ["repo_code", "db_schema"], ["status_log_diff", "commit"],
+                ["APIs, servicos, regras de dominio e integracoes, com testes"]),
+    "frontend": ("Agente Frontend", ["implementation", "refactoring", "testing"], EDIT_TOOLS, ["repo_code"], ["status_log_diff", "commit"],
+                 ["Telas, componentes e fluxos de UX, com testes"]),
+    "database": ("Agente de Banco de Dados", ["migration", "implementation", "review"], ["Read", "Grep", "Glob", "Edit", "Write"], ["repo_code", "db_schema"],
+                 ["status_log_diff"], ["Entidades e migrations com rollback, sem conectar ao banco"]),
+    "qa": ("Agente de QA", ["testing", "review"], READ_TOOLS, ["repo_code"], ["status_log_diff"],
+           ["Testes, cobertura dos criterios de aceite e regressoes"]),
+    "security": ("Agente de Seguranca", ["security_review", "review"], READ_TOOLS, ["repo_code"], ["status_log_diff"],
+                 ["Ameacas, controle de acesso, segredos e exposicao de dados"]),
+    "devops": ("Agente DevOps", ["implementation", "documentation"], EDIT_TOOLS, ["repo_code", "config_ci_iac", "deploy_infra"], ["status_log_diff", "commit"],
+               ["CI/CD, IaC, estrategia de deploy e rollback, sem executar deploy"]),
+    "domain": ("Agente de Dominio", ["investigation", "documentation"], ["Read", "Grep", "Glob", "WebSearch", "WebFetch"], ["repo_code"], ["status_log_diff"],
+               ["Regras de negocio, glossario e excecoes, sempre com fonte"]),
+    "validator": ("Agente Validador", ["validation"], READ_TOOLS, ["repo_code"], ["status_log_diff"],
+                  ["Verificar criterios de aceite com evidencias, sem nunca validar o proprio trabalho"]),
+}
+
+
+def agent_contract(role, created_at):
+    name, task_types, tools, resources, git_ops, resp = AGENT_PROFILES[role]
+    doc = {
+        "schema_version": "0.1.0", "agent_id": role, "contract_version": 1, "role": role, "name": name,
+        "description": "Agente %s do plugin AISEF (perfil em plugins/aisef/agents/%s.md)" % (role, role),
+        "responsibilities": resp, "task_types": task_types,
+        "tools": {"allowed": tools, "via_execution_gateway": True},
+        "permission_ceiling": {"resources": resources, "max_environment": "dev", "git_operations": git_ops},
+        "context_access": {"layers": ["mandatory", "referenced", "on_demand"]},
+        "communication": {"route": "orchestrator", "can_delegate_directly": False,
+                          "can_message_other_agents_directly": False, "reports_discoveries_to_orchestrator": True},
+        "authority": {"can_change_scope": False, "can_modify_approved_decisions": False,
+                      "can_modify_other_agents_contracts": False, "can_modify_own_contract": False,
+                      "can_contest_with_evidence": True, "must_stop_on_scope_change": True},
+        "output": {"execution_report_schema": "execution-report/0.1.0", "formats": ["json", "technical_report"],
+                   "secrets_in_output": False},
+        "validation_role": {"can_self_attest_delivery": False, "can_validate_own_work": False},
+        "memory": {"permanent_knowledge_source": False, "writes_discoveries_to": "project_knowledge_base"},
+        "handoff": {"replaceable": True, "preserved_on_replacement": [
+            "contract", "history", "evidence", "changes", "tests", "identified_problems", "original_permissions"]},
+        "limits": {"max_fix_attempts": None},
+        "status": "draft",
+        "audit": {"created_by": "aisef-init", "created_at": created_at},
+    }
+    if role == "validator":
+        doc["validation_role"]["validates"] = ["backend", "frontend", "database", "devops"]
+    return doc
+
+
+def write_agent_drafts(project):
+    """Cria os Agent Contracts dos agentes do plugin como 'draft' (nao sobrescreve existentes)."""
+    created = []
+    for role in AGENT_PROFILES:
+        path = os.path.join(aisef_dir(project), "contracts", "agents", role + ".json")
+        if not os.path.exists(path):
+            write_json(path, agent_contract(role, now_iso()))
+            created.append(role)
+    return created
+
+
+def activate_agents(project, roles=None):
+    """Decisao do USUARIO: ativa Agent Contracts em draft (o gateway exige o prompt nativo para isto)."""
+    when, done = now_iso(), []
+    for role in roles or list(AGENT_PROFILES):
+        path = os.path.join(aisef_dir(project), "contracts", "agents", role + ".json")
+        with open(path, encoding="utf-8") as fh:
+            doc = json.load(fh)
+        if doc.get("status") != "draft":
+            continue
+        doc["status"] = "active"
+        doc["audit"].update({"approved_by": "user", "approved_at": when})
+        problems = validate(doc, "agent-contract.schema.v0.1.json")
+        if problems:
+            raise SystemExit("%s invalido, nada ativado:\n - %s" % (role, "\n - ".join(problems)))
+        write_json(path, doc)
+        append(project, {"event_type": "contract_changed", "actor": {"type": "user", "id": "user"},
+                         "summary": "Agent Contract %s aprovado e ativo" % role,
+                         "subject": {"kind": "agent_contract", "id": role, "version": doc["contract_version"]}})
+        done.append(role)
+    return done
 
 
 CHOICE_STATUS = {"approve": "approved", "select_option": "approved", "reject": "rejected",
@@ -213,6 +300,12 @@ def decide(project, request_id, choice, option=None, note=None, ack=(), authoriz
         with open(authorization_draft, encoding="utf-8") as fh:
             auth = json.load(fh)
         if auth.get("kind") == "scope":
+            with open(os.path.join(HERE, "permission-policy.v0.1.json"), encoding="utf-8") as fh:
+                max_days = json.load(fh).get("scope_authorization_schema_ref", {}).get("validity_max_days")
+            v = auth.get("validity", {})
+            span = (datetime.datetime.fromisoformat(v["valid_until"]) - datetime.datetime.fromisoformat(v["valid_from"])).total_seconds()
+            if max_days is not None and span > max_days * 86400:
+                raise SystemExit("nada foi gravado; escopo de %.1f dias excede o maximo da politica (%d dias)" % (span / 86400, max_days))
             auth.update({"status": "active", "granted_by": "user", "granted_at": when})
             auth.setdefault("history", []).append({"event": "granted", "at": when, "by": "user"})
             auth_id, kind = auth["authorization_id"], "scope_authorization"
@@ -271,7 +364,7 @@ def verify(project):
 
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["init", "append", "decide", "verify", "status"])
+    ap.add_argument("command", choices=["init", "append", "decide", "agents", "verify", "status"])
     ap.add_argument("--project", default=os.getcwd())
     ap.add_argument("--project-id")
     ap.add_argument("--name")
@@ -289,6 +382,8 @@ def main(argv):
     ap.add_argument("--note")
     ap.add_argument("--ack", default="", help="impact_read,rollback_read,diff_reviewed")
     ap.add_argument("--authorization", help="rascunho JSON da autorizacao gerada (escopo ou reforcada)")
+    ap.add_argument("--activate", action="store_true", help="agents: ativa os Agent Contracts em draft (decisao do usuario)")
+    ap.add_argument("--roles", default="", help="agents: lista separada por virgula (padrao: todos)")
     a = ap.parse_args(argv)
     project = os.path.abspath(a.project)
 
@@ -310,6 +405,15 @@ def main(argv):
             partial["data"] = json.loads(a.data)
         ev = append(project, partial)
         print("evento %s (sequencia %d) registrado" % (ev["event_id"], ev["sequence"]))
+        return 0
+    if a.command == "agents":
+        roles = [x for x in a.roles.split(",") if x] or None
+        if a.activate:
+            done = activate_agents(project, roles)
+            print("ativados: %s" % (", ".join(done) or "nenhum (ja ativos ou inexistentes)"))
+        else:
+            created = write_agent_drafts(project)
+            print("drafts criados: %s" % (", ".join(created) or "nenhum (ja existiam)"))
         return 0
     if a.command == "decide":
         if not (a.request and a.choice):

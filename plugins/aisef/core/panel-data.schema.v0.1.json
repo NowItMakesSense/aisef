@@ -5,7 +5,7 @@
   "description": "RASCUNHO v0.1. Dados do painel HTML. E uma VISAO DERIVADA dos contratos, relatorios, aprovacoes e do log de auditoria: nunca e fonte de verdade, e e regenerada pelo build_panel.py. O manifesto registra de qual ponto do log os dados vieram e se a integridade desse log foi verificada. Sem segredos e sem raciocinio interno dos modelos.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "manifest", "overview", "features", "tasks", "rtm", "approvals", "decisions", "agents", "risks", "timeline", "graphs", "executions", "source_errors"],
+  "required": ["schema_version", "manifest", "overview", "features", "tasks", "rtm", "approvals", "decisions", "agents", "risks", "timeline", "graphs", "executions", "engineering", "source_errors"],
   "properties": {
     "schema_version": { "const": "0.1.0" },
 
@@ -298,6 +298,61 @@
       }
     },
 
+    "engineering": {
+      "type": "array",
+      "description": "Paginas de engenharia (arquitetura, backend, frontend, banco/ER, seguranca, DevOps, testes) derivadas do Engineering Blueprint vigente de cada feature.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["blueprint_id", "feature_id", "version", "title", "summary", "state", "approval", "components", "decisions", "endpoints", "screens", "entities", "migrations", "threats", "secrets_handling", "devops", "tests", "graphs"],
+        "properties": {
+          "blueprint_id": { "type": "string" },
+          "feature_id": { "type": "string" },
+          "version": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "state": { "enum": ["draft", "proposed", "approved", "superseded"] },
+          "approval": { "enum": ["pending", "approved", "rejected", "changes_requested"] },
+          "components": { "type": "array", "items": { "type": "object" } },
+          "decisions": { "type": "array", "items": { "type": "string" } },
+          "endpoints": { "type": "array", "items": { "type": "object" } },
+          "screens": { "type": "array", "items": { "type": "object" } },
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "fields"],
+              "properties": {
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["name", "type", "primary_key", "references", "pii", "secret"],
+                    "description": "So a estrutura: nenhum valor de dado entra no painel.",
+                    "properties": {
+                      "name": { "type": "string" }, "type": { "type": "string" }, "primary_key": { "type": "boolean" },
+                      "references": { "type": ["object", "null"] }, "pii": { "type": "boolean" }, "secret": { "type": "boolean" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "migrations": { "type": "array", "items": { "type": "object" } },
+          "threats": { "type": "array", "items": { "type": "object" } },
+          "secrets_handling": { "type": ["string", "null"] },
+          "devops": { "type": "object" },
+          "tests": { "type": "array", "items": { "type": "object" } },
+          "graphs": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["architecture", "er"],
+            "properties": { "architecture": { "type": "string" }, "er": { "type": ["string", "null"] } }
+          }
+        }
+      }
+    },
     "source_errors": {
       "type": "array",
       "description": "Arquivos de origem invalidos ou ilegiveis. Ficam fora das visoes e aparecem aqui.",

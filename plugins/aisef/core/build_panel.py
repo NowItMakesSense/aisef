@@ -13,7 +13,7 @@ O painel e uma VISAO DERIVADA. Este script:
 
 Estrutura esperada de --project:
     contracts/features/*.json   contracts/tasks/*.json   contracts/agents/*.json
-    approvals/*.json            reports/*.json
+    approvals/*.json            reports/*.json            blueprints/*.json
     audit/log.jsonl             audit/head.json
     keys/<key_id>.pem           (chaves PUBLICAS do Audit Signer)
 
@@ -26,6 +26,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +41,7 @@ SCHEMA_FILES = {
     "agents": "agent-contract.schema.v0.1.json",
     "approvals": "approval-request.schema.v0.1.json",
     "reports": "execution-report.schema.v0.1.json",
+    "blueprints": "engineering-blueprint.schema.v0.1.json",
 }
 SOURCE_GLOBS = {
     "features": "contracts/features/*.json",
@@ -47,6 +49,7 @@ SOURCE_GLOBS = {
     "agents": "contracts/agents/*.json",
     "approvals": "approvals/*.json",
     "reports": "reports/*.json",
+    "blueprints": "blueprints/*.json",
 }
 
 
@@ -380,11 +383,96 @@ def derive(loaded, log, integrity):
     }
 
 
+ER_TYPE = re.compile(r"[^A-Za-z0-9_]")
+
+
+def architecture_mermaid(bp):
+    arch = bp["architecture"]
+    shape = {"datastore": ('[("', '")]'), "external": ('{{"', '"}}'), "ui": ('(["', '"])')}
+    lines = ["flowchart LR"]
+    for c in arch["components"]:
+        left, right = shape.get(c["kind"], ('["', '"]'))
+        lines.append("  %s%s%s: %s%s" % (mermaid_id("c_", c["id"]), left, mermaid_label(c["id"], 20),
+                                         mermaid_label(c["name"]), right))
+    for i in arch.get("interactions", []):
+        lines.append('  %s -->|"%s"| %s' % (mermaid_id("c_", i["from"]), mermaid_label(i.get("protocol", ""), 20),
+                                           mermaid_id("c_", i["to"])))
+    return "\n".join(lines)
+
+
+def er_mermaid(bp):
+    entities = bp.get("database", {}).get("entities", [])
+    if not entities:
+        return None
+    lines = ["erDiagram"]
+    rels = []
+    # nome da tabela como identificador do Mermaid; o id do blueprint so se o nome nao servir
+    ident = {e["id"]: (ER_TYPE.sub("_", e["name"]) if re.match(r"^[A-Za-z]", e["name"]) else mermaid_id("e_", e["id"]))
+             for e in entities}
+    for e in entities:
+        lines.append("  %s {" % ident[e["id"]])
+        for f in e["fields"]:
+            keys = ["PK"] if f.get("primary_key") else []
+            if f.get("references"):
+                keys.append("FK")
+                rels.append((f["references"]["entity_id"], e["id"], f["name"]))
+            note = "segredo" if f.get("secret") else "pii" if f.get("pii") else ""
+            lines.append("    %s %s%s%s" % (ER_TYPE.sub("_", f["type"]) or "t", ER_TYPE.sub("_", f["name"]) or "f",
+                                             (" " + ",".join(keys)) if keys else "", (' "%s"' % note) if note else ""))
+        lines.append("  }")
+    for target, source, field in rels:
+        lines.append('  %s ||--o{ %s : "%s"' % (ident.get(target, mermaid_id("e_", target)), ident[source], mermaid_label(field, 30)))
+    return "\n".join(lines)
+
+
+def derive_engineering(blueprints):
+    """Paginas de engenharia: o blueprint vigente de cada feature (o de maior versao que nao foi substituido)."""
+    current = {}
+    for bp in blueprints:
+        if bp["state"]["status"] == "superseded":
+            continue
+        cur = current.get(bp["feature_id"])
+        if cur is None or bp["contract_version"] > cur["contract_version"]:
+            current[bp["feature_id"]] = bp
+    rows = []
+    for fid in sorted(current):
+        bp = current[fid]
+        db = bp.get("database", {})
+        rows.append({
+            "blueprint_id": bp["blueprint_id"], "feature_id": fid, "version": bp["contract_version"],
+            "title": bp["title"], "summary": bp["summary"], "state": bp["state"]["status"],
+            "approval": bp["approval"]["status"],
+            "components": [{k: c.get(k) for k in ("id", "name", "kind", "responsibility", "owner_role", "requirement_ids")}
+                           for c in bp["architecture"]["components"]],
+            "decisions": [d["id"] for d in bp["architecture"].get("decisions", [])],
+            "endpoints": [{"id": e["id"], "method": e["method"], "path": e["path"], "auth": e["auth"],
+                           "roles": e.get("roles", []), "errors": ["%s %s" % (x["status"], x.get("code", "")) for x in e.get("errors", [])],
+                           "requirement_ids": e["requirement_ids"]} for e in bp.get("backend", {}).get("endpoints", [])],
+            "screens": [{"id": s["id"], "name": s["name"], "route": s["route"], "endpoints": s["calls_endpoint_ids"],
+                         "states": s.get("states", []), "requirement_ids": s["requirement_ids"]}
+                        for s in bp.get("frontend", {}).get("screens", [])],
+            "entities": [{"id": e["id"], "name": e["name"], "data_class": e.get("data_class"),
+                          "fields": [{"name": f["name"], "type": f["type"], "primary_key": bool(f.get("primary_key")),
+                                      "references": f.get("references"), "pii": bool(f.get("pii")), "secret": bool(f.get("secret"))}
+                                     for f in e["fields"]]} for e in db.get("entities", [])],
+            "migrations": [{k: m.get(k) for k in ("id", "description", "entity_ids", "destructive", "reversible", "rollback")}
+                           for m in db.get("migrations", [])],
+            "threats": [{k: t.get(k) for k in ("id", "description", "severity", "mitigation", "component_ids")}
+                        for t in bp.get("security", {}).get("threats", [])],
+            "secrets_handling": bp.get("security", {}).get("secrets_handling"),
+            "devops": {k: bp.get("devops", {}).get(k) for k in ("environments", "deploy_strategy", "pipeline_steps", "rollback", "observability")},
+            "tests": [{"level": l["level"], "covers": l["covers"], "notes": l.get("notes")} for l in bp["test_strategy"]["levels"]],
+            "graphs": {"architecture": architecture_mermaid(bp), "er": er_mermaid(bp)},
+        })
+    return rows
+
+
 # ----------------------------------------------------------------------------- escrita
 def build(project, out, schemas_dir, now=None):
     loaded, source_errors = load_sources(project, schemas_dir)
     log, integrity = check_integrity(project)
     views = derive(loaded, log, integrity)
+    views["engineering"] = derive_engineering(loaded["blueprints"])
 
     project_id = log[0].get("project_id") if log else None
     manifest = {
@@ -425,13 +513,25 @@ def build(project, out, schemas_dir, now=None):
     return bundle
 
 
+def install_page(out):
+    """Copia a pagina e o Mermaid local (o painel abre via file:// e funciona sem internet)."""
+    shutil.copy(os.path.join(HERE, "index.html"), os.path.join(out, "index.html"))
+    vendor = os.path.join(HERE, "vendor", "mermaid.min.js")
+    if os.path.exists(vendor):
+        os.makedirs(os.path.join(out, "vendor"), exist_ok=True)
+        shutil.copy(vendor, os.path.join(out, "vendor", "mermaid.min.js"))
+
+
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--project", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--schemas", default=HERE)
+    ap.add_argument("--with-page", action="store_true", help="copia index.html e o Mermaid local para <out>")
     args = ap.parse_args(argv[1:])
     bundle = build(args.project, args.out, args.schemas)
+    if args.with_page:
+        install_page(args.out)
     m = bundle["manifest"]
     print("painel gerado em %s | integridade: %s | eventos: %d | redacoes: %d | fontes invalidas: %d" % (
         args.out, m["integrity"]["status"], m["source"]["event_count"], m["redactions"], len(bundle["source_errors"])))

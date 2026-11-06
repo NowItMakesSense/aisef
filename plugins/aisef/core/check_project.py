@@ -655,6 +655,11 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                 rep.err("AUTH-EXPIRED", where, "expirou em %s mas segue 'active'" % au["validity"]["valid_until"])
             if au["history"][0]["event"] != "granted":
                 rep.err("AUTH-HISTORY", where, "primeiro evento do historico deve ser 'granted'")
+            max_days = (policy or {}).get("scope_authorization_schema_ref", {}).get("validity_max_days")
+            if max_days is not None:
+                days = (parse_time(au["validity"]["valid_until"]) - parse_time(au["validity"]["valid_from"])).total_seconds() / 86400
+                if days > max_days + 1e-6:
+                    rep.err("AUTH-SCOPE-TOO-LONG", where, "validade de %.1f dias excede o maximo da politica (%d)" % (days, max_days))
             if policy is not None:
                 for r in au["resources"]:
                     lv = write_like_levels(policy, r, au["environment"])

@@ -28,7 +28,14 @@ python -I CORE/aisef_project.py init --project . --project-id <ID> --name "<nome
 ```
 Isso cria `.aisef/{contracts/{features,tasks,agents},blueprints,approvals,authorizations,reports,audit,keys}`, `config.json` e o evento genesis. A chave **privada** e o head assinado ficam em `~/.aisef/` (fora do repositorio). Nunca leia nem copie esses arquivos.
 
-## 4. Documente para outras ferramentas (pergunte antes de editar)
+## 4. Ative os agentes (decisao do usuario)
+O init criou os Agent Contracts dos 8 agentes do plugin em `.aisef/contracts/agents/*.json`, com `status: "draft"`. Agente em draft e bloqueado pelo gateway. Mostre ao usuario, numa tabela, o teto de cada um (recursos, Git, ambiente maximo; o `validator` so tem Git de leitura) e pergunte se aprova (AskUserQuestion: todos, alguns, nenhum agora). Com o OK:
+```
+python -I CORE/aisef_project.py agents --project . --activate [--roles backend,qa]
+```
+O comando abre o prompt nativo de permissao (a decisao e do usuario) e registra a aprovacao no log.
+
+## 5. Documente para outras ferramentas (pergunte antes de editar)
 Proponha acrescentar ao `CLAUDE.md` (e ao `AGENTS.md`, se existir) uma secao curta:
 ```
 ## AISEF
@@ -37,7 +44,7 @@ Commit, push, merge, release, arquivos sensiveis e banco passam pelo Execution G
 ```
 Mostre o texto e so grave com OK. Nunca sobrescreva arquivos existentes em silencio.
 
-## 5. Proximo passo
+## 6. Proximo passo
 - Projeto existente: rode **aisef-discovery** no modo "projeto existente".
 - Projeto novo: rode **aisef-discovery** no modo "projeto novo".
 

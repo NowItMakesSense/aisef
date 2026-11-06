@@ -31,13 +31,20 @@ DEPLOY_RE = re.compile(
     r"\b(?:terraform\s+(?:apply|destroy)|tofu\s+apply|pulumi\s+up|kubectl\s+(?:apply|delete|rollout)|"
     r"helm\s+(?:install|upgrade|uninstall)|serverless\s+deploy|sls\s+deploy|fly\s+deploy|vercel\s+.*--prod|"
     r"netlify\s+deploy\s+.*--prod|gcloud\s+\S+\s+deploy|aws\s+cloudformation\s+deploy|cdk\s+deploy)\b", re.I)
+DEPLOY_DESTRUCTIVE_RE = re.compile(
+    r"\b(?:terraform\s+destroy|tofu\s+destroy|pulumi\s+destroy|kubectl\s+delete|helm\s+uninstall)\b", re.I)
 RM_RECURSIVE_RE = re.compile(r"\brm\s+(?:-[a-z]*r[a-z]*|--recursive)\b|\bRemove-Item\b[^;&|]*-Recurse\b|\brmdir\s+/s\b", re.I)
-SQL_DESTRUCTIVE_RE = re.compile(r"\b(?:DROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX|VIEW)|TRUNCATE\s+TABLE?|DELETE\s+FROM\s+\w+\s*(?:;|$))", re.I)
+CONTAINER_DESTRUCTIVE_RE = re.compile(
+    r"\b(?:docker|podman)\s+(?:volume\s+(?:rm|prune)|system\s+prune|compose\s+down\s+[^;&|]*(?:-v\b|--volumes))", re.I)
+# T1 (decisao do usuario, 2026-11-05): DROP, TRUNCATE, DELETE sem WHERE, ALTER ... DROP e rollback de migration
+SQL_DESTRUCTIVE_RE = re.compile(
+    r"\b(?:DROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX|VIEW|COLUMN)|TRUNCATE\s+TABLE?|DELETE\s+FROM\s+\w+\s*(?:;|$|\"|')|"
+    r"ALTER\s+TABLE\s+\S+\s+DROP\b|migrate\s+(?:down|rollback|reset)\b|db:rollback\b|downgrade\b|migrate\s+reset\b)", re.I)
 CONFIG_PATH_RE = re.compile(
     r"(?:^|/)(?:\.github/workflows/|\.gitlab-ci\.yml$|Jenkinsfile$|azure-pipelines\.yml$|\.circleci/|"
     r"Dockerfile[^/]*$|docker-compose[^/]*\.ya?ml$|compose\.ya?ml$|[^/]+\.tf$|[^/]+\.tfvars$|helm/|charts/|k8s/|"
     r"kubernetes/|\.claude/settings[^/]*\.json$)", re.I)
-AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:approvals|authorizations)/|(?:^|[/\s\"'=>])\.aisef/(?:config|policy\.local)\.json")
+AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:approvals|authorizations|contracts/agents)/|(?:^|[/\s\"'=>])\.aisef/(?:config|policy\.local)\.json")
 AISEF_AUDIT_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:audit|keys)/")
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 READ_TOOLS = {"Read", "Grep", "Glob"}
@@ -145,16 +152,23 @@ def classify_bash(cmd, patterns, env):
             op = "release_publish"
         else:
             op = None  # subcomando nao classificado
-        found.append(("git", op, env, op in ("force_push", "branch_delete"), "git " + sub))
+        # T1: descartar trabalho local tambem e destrutivo (git clean, checkout/restore de arquivos, stash drop)
+        discards = ((sub == "clean" and re.search(r"\s-[a-z]*f", rest)) or
+                    (sub == "checkout" and re.search(r"\s(?:--\s|\.(?:\s|$))", rest + " ")) or
+                    (sub == "restore" and "--staged" not in rest) or
+                    (sub == "stash" and re.search(r"\s(?:drop|clear)\b", rest)))
+        found.append(("git", op, env, op in ("force_push", "branch_delete") or bool(discards), "git " + sub))
     if re.search(r"\bgh\s+(?:release\s+create|pr\s+merge)\b|\bnpm\s+publish\b|\btwine\s+upload\b|\bcargo\s+publish\b", cmd):
         found.append(("git", "release_publish", env, False, "release/publicacao"))
-    if DEPLOY_RE.search(cmd):
-        found.append(("deploy_infra", "execute", "unknown", False, "deploy/infra"))
+    if DEPLOY_RE.search(cmd) or DEPLOY_DESTRUCTIVE_RE.search(cmd):
+        found.append(("deploy_infra", "execute", "unknown", bool(DEPLOY_DESTRUCTIVE_RE.search(cmd)), "deploy/infra"))
     if RM_RECURSIVE_RE.search(cmd):
         found.append(("repo_code", "write", env, True, "remocao recursiva"))
+    if CONTAINER_DESTRUCTIVE_RE.search(cmd):
+        found.append(("repo_code", "write", env, True, "remocao de volumes/containers"))
     if AISEF_AUDIT_RE.search(norm(cmd)) and not re.search(r"audit_chain\.py\s+verify|aisef_project\.py\s+(?:verify|status)", cmd):
         raise Decision("deny", "o log de auditoria e as chaves do AISEF so podem ser alterados pelo hook de auditoria")
-    if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b)", cmd):
+    if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b|agents\b[^;&|]*--activate\b)", cmd):
         found.append(("aisef_decision", "write", env, False, "registro de decisao do usuario"))
     return found
 
@@ -170,7 +184,7 @@ def is_pending_request(tool, path, inp):
     return isinstance(doc, dict) and doc.get("status") == "pending" and "decision" not in doc and "resulting_ref" not in doc
 
 
-def scope_covers(project, resource, env, now):
+def scope_covers(project, resource, env, now, max_days=None):
     for path in glob.glob(os.path.join(project, ".aisef", "authorizations", "*.json")):
         try:
             a = load_json(path)
@@ -186,6 +200,8 @@ def scope_covers(project, resource, env, now):
             end = datetime.datetime.fromisoformat(v["valid_until"])
         except (KeyError, ValueError):
             continue
+        if max_days is not None and (end - start).total_seconds() > max_days * 86400:
+            continue  # escopo acima do teto da politica (7 dias) nao vale
         if start <= now <= end:
             return a.get("authorization_id", os.path.basename(path))
     return None
@@ -207,6 +223,41 @@ def reinforced_for(project, operation, now):
         except (KeyError, ValueError):
             continue
     return None
+
+
+ENV_ORDER = ["dev", "staging", "prod"]
+
+
+def agent_contract(project, data):
+    """Agent Contract do subagente que fez a chamada (aisef:backend -> contracts/agents/backend.json), se houver."""
+    name = data.get("agent_type") or ""
+    if not name:
+        return None
+    path = os.path.join(project, ".aisef", "contracts", "agents", name.split(":")[-1] + ".json")
+    return load_json(path) if os.path.exists(path) else None
+
+
+def enforce_ceiling(contract, tool, items, env):
+    """O Agent Contract e um TETO: nunca concede nada, so restringe (o resto segue a politica)."""
+    aid = contract.get("agent_id", "?")
+    if contract.get("status") != "active":
+        raise Decision("deny", "agente %s nao esta ativo: o usuario ainda nao aprovou o Agent Contract dele" % aid)
+    ceiling = contract.get("permission_ceiling", {})
+    allowed = set(ceiling.get("resources", []))
+    max_env = ceiling.get("max_environment", "dev")
+    if env in ENV_ORDER and max_env in ENV_ORDER and ENV_ORDER.index(env) > ENV_ORDER.index(max_env):
+        raise Decision("deny", "agente %s so pode atuar ate '%s' (ambiente atual: %s)" % (aid, max_env, env))
+    if tool in EDIT_TOOLS and "repo_code" not in allowed:
+        raise Decision("deny", "agente %s nao tem repo_code no teto de permissao: nao pode editar arquivos" % aid)
+    for resource, action, _env, _destr, label in items:
+        if resource == "aisef_decision":
+            raise Decision("deny", "agente %s nao registra decisoes do usuario" % aid)
+        if resource == "git":
+            if action not in ceiling.get("git_operations", ["status_log_diff"]):
+                raise Decision("deny", "agente %s nao pode solicitar %s (teto Git: %s)"
+                               % (aid, label, ", ".join(ceiling.get("git_operations", ["status_log_diff"]))))
+        elif resource not in allowed:
+            raise Decision("deny", "agente %s nao tem %s no teto de permissao (%s)" % (aid, resource, label))
 
 
 def decide(data, project, policy, patterns, config, now):
@@ -238,6 +289,10 @@ def decide(data, project, policy, patterns, config, now):
             elif tool in READ_TOOLS and sensitive:
                 items.append(("sensitive_files", "read_content", env, False, "arquivo sensivel"))
 
+    contract = agent_contract(project, data)
+    if contract is not None:
+        enforce_ceiling(contract, tool, items, env)
+
     worst, why, scoped = "allow", [], []
     for resource, action, item_env, destructive, label in items:
         if resource == "aisef_decision":
@@ -248,7 +303,8 @@ def decide(data, project, policy, patterns, config, now):
             if destructive:
                 lvl = apply_t1(policy, lvl, eff_env)
             if lvl == "approve_scope":
-                auth = scope_covers(project, resource, eff_env, now)
+                auth = scope_covers(project, resource, eff_env, now,
+                                    policy.get("scope_authorization_schema_ref", {}).get("validity_max_days"))
                 if auth:
                     scoped.append(auth)
                     lvl = "allow"

@@ -40,7 +40,8 @@ Leia `references/lifecycle.md` para o detalhe de cada fase. Resumo:
 Depois de aprovado o plano, execute **sem interrupcoes desnecessarias** dentro do escopo e das permissoes.
 
 ## Delegacao
-- Use os agentes do plugin (`aisef:backend`, `aisef:frontend`, `aisef:database`, `aisef:qa`, `aisef:security`, `aisef:devops`, `aisef:domain`, `aisef:validator`) sob demanda.
+- Use os agentes do plugin (`aisef:backend`, `aisef:frontend`, `aisef:database`, `aisef:qa`, `aisef:security`, `aisef:devops`, `aisef:domain`, `aisef:validator`) sob demanda. No Task Contract, `assigned_agent.agent_id` e o nome curto (`backend`), que e o Agent Contract em `.aisef/contracts/agents/`.
+- O gateway aplica o **teto** do Agent Contract a cada subagente: agente em `draft` e bloqueado, recursos e operacoes Git fora do teto sao negados (o `validator` so le o Git). Agentes sem contrato (ex.: `Explore`) seguem so a politica.
 - Entregue a cada um: o Task Contract (caminho), o contexto obrigatorio, o contexto referenciado e o que pode buscar sob demanda.
 - Exija o **duplo formato**: Execution Report JSON (schema `execution-report`) + relatorio tecnico legivel, consistentes entre si.
 - **Paralelismo controlado:** antes de rodar tarefas em paralelo, confira dependencias, conflitos de arquivos e recursos compartilhados. Dois agentes nunca editam o mesmo arquivo.

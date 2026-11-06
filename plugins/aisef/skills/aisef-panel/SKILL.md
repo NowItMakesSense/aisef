@@ -8,9 +8,9 @@ description: 'Gera e abre o painel HTML do AISEF (visao geral, features, tarefas
 CORE = `<skill-dir>/../../core`. O painel e uma **visao derivada**: nunca e fonte de verdade, e regenerado a cada vez.
 
 ```
-python -I CORE/build_panel.py --project .aisef --out .aisef/panel
+python -I CORE/build_panel.py --project .aisef --out .aisef/panel --with-page
 ```
-Depois copie `CORE/index.html` para `.aisef/panel/index.html` e abra o arquivo no navegador (`start` no Windows, `open` no macOS, `xdg-open` no Linux). `.aisef/panel/` esta no `.gitignore` do AISEF.
+Depois abra `.aisef/panel/index.html` no navegador (`start` no Windows, `open` no macOS, `xdg-open` no Linux). `.aisef/panel/` esta no `.gitignore` do AISEF.
 
 - Contratos invalidos ficam fora das visoes e aparecem em `source_errors`: reporte-os e sugira **aisef-check**.
 - Banner vermelho de integridade comprometida: pare e avise o usuario antes de qualquer outra coisa.

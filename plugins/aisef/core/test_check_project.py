@@ -125,5 +125,21 @@ expect("blueprint: requisito sem teste", edit(B, lambda d: d["test_strategy"]["l
 expect("blueprint: aprovacao aponta pedido inexistente", edit(B, lambda d: (d["approval"].update(status="approved", approved_by="user", approved_at="2026-01-01T00:00:00+00:00", request_ref="APR-404"), d["state"].update(status="approved"))), "BP-APPROVAL-REF")
 expect("blueprint: dois vigentes para a feature", dup_blueprint, "BP-MULTIPLE-ACTIVE")
 
+T3 = "contracts/tasks/T-003.json"
+parallel = lambda d: (d["dependencies"].update(parallelizable=True, depends_on=[]))
+expect("paralelas com o mesmo arquivo exclusivo",
+       both(edit(T2, lambda d: (parallel(d), d["scope"].update(exclusive_files=["src/auth/jwt.py"]))),
+            edit(T3, lambda d: (parallel(d), d["scope"].update(exclusive_files=["src/auth/jwt.py"]))),
+            edit(F, lambda d: [t.update(depends_on=[]) for t in d["task_plan"] if t["task_id"] in ("T-002", "T-003")])),
+       "PAR-FILE-CONFLICT")
+expect("paralelas com caminhos permitidos sobrepostos",
+       both(edit(T2, parallel), edit(T3, parallel),
+            edit(F, lambda d: [t.update(depends_on=[]) for t in d["task_plan"] if t["task_id"] in ("T-002", "T-003")])),
+       "PAR-PATH-OVERLAP")
+expect("consultas a especialista acima do limite",
+       edit("reports/RPT-001.json", lambda d: d["attempts"].update(specialist_consultations_used=2)), "REPORT-CONSULTATIONS")
+expect("escopo acima do teto de 7 dias da politica",
+       edit("authorizations/AUTH-1.json", lambda d: d["validity"].update(valid_until="2026-11-20T14:00:00-03:00")), "AUTH-SCOPE-TOO-LONG")
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

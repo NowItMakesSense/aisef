@@ -96,7 +96,7 @@
     {
       "id": "T1",
       "name": "destrutivo_sobe_um_nivel",
-      "applies_to": ["DROP", "TRUNCATE", "DELETE_WITHOUT_WHERE", "rm_recursive", "branch_delete", "force_push"],
+      "applies_to": ["DROP", "TRUNCATE", "DELETE_WITHOUT_WHERE", "ALTER_DROP_COLUMN", "migration_rollback", "rm_recursive", "git_clean", "git_discard_changes", "branch_delete", "force_push", "container_volume_delete", "k8s_delete", "terraform_destroy"],
       "minimum_level": { "dev": "approve_operation", "staging": "approve_reinforced", "prod": "approve_reinforced" }
     },
     {
@@ -134,6 +134,7 @@
   ],
 
   "scope_authorization_schema_ref": {
+    "validity_max_days": 7,
     "required_fields": [
       "project", "feature", "environment", "resources", "operations",
       "limits", "validity", "termination_condition", "history", "revocable",
@@ -158,8 +159,6 @@
     "7. Registrar solicitacao, decisao e justificativa em Audit & Evidence."
   ],
 
-  "pending_decisions": [
-    "Lista final de operacoes destrutivas (T1)",
-    "Limites de tentativas de correcao automatica (fora desta politica)"
-  ]
+  "pending_decisions": [],
+  "$decided": "T1 ampliada e validade maxima de escopo de 7 dias decididas pelo usuario em 2026-11-05. Limites de tentativas: orchestration-defaults (padrao A)."
 }

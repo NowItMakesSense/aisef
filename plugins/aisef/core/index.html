@@ -92,7 +92,7 @@
     validated:"Validada", completed:"Concluída", rejected:"Reprovada", cancelled:"Cancelada",
     discovery:"Descoberta", planning:"Planejamento", awaiting_plan_approval:"Aguardando aprovação do plano",
     approved_for_execution:"Aprovada p/ execução", in_execution:"Em execução", awaiting_acceptance:"Aguardando aceite",
-    closed:"Encerrada", pending:"Pendente", approved:"Aprovado", changes_requested:"Alterações solicitadas",
+    closed:"Encerrada", proposed:"Proposto", pending:"Pendente", approved:"Aprovado", changes_requested:"Alterações solicitadas",
     expired:"Expirado", withdrawn:"Retirado", superseded:"Substituído",
     not_started:"Não iniciado", covered:"Coberto", broken_link:"Vínculo quebrado",
     low:"Baixo", medium:"Médio", high:"Alto", critical:"Crítico",
@@ -296,38 +296,139 @@
     return h("div", { "class": "block" }, ul);
   };
 
+  // Desenha um diagrama Mermaid em `slot`. Unico ponto da pagina que usa innerHTML, e so com o SVG
+  // gerado pelo Mermaid em modo strict. Copia local primeiro (offline); a CDN, com versao fixa, so se faltar.
+  var MERMAID_SOURCES = ["vendor/mermaid.min.js", "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"];
+  var mermaidQueue = [], mermaidState = window.mermaid ? "ready" : "idle", mermaidSeq = 0;
+  function drawMermaid(slot, code) {
+    function fallback(why) {
+      slot.textContent = "";
+      slot.appendChild(h("p", { "class": "muted", text: why }));
+      slot.appendChild(h("pre", { text: code }));
+    }
+    function render() {
+      var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      window.mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "default" });
+      window.mermaid.render("mmd" + Date.now() + "_" + (mermaidSeq++), code).then(function (res) {
+        slot.innerHTML = res.svg; // saida do Mermaid em modo strict
+      }).catch(function () { fallback("Não foi possível desenhar o diagrama. Código Mermaid:"); });
+    }
+    if (mermaidState === "ready") return render();
+    if (mermaidState === "failed") return fallback("Mermaid indisponível. Código do diagrama:");
+    mermaidQueue.push({ render: render, fallback: fallback });
+    if (mermaidState === "loading") return;
+    mermaidState = "loading";
+    (function load(i) {
+      if (i >= MERMAID_SOURCES.length) {
+        mermaidState = "failed";
+        mermaidQueue.splice(0).forEach(function (q) { q.fallback("Mermaid indisponível. Código do diagrama:"); });
+        return;
+      }
+      var s = document.createElement("script");
+      s.src = MERMAID_SOURCES[i];
+      s.onload = function () { mermaidState = "ready"; mermaidQueue.splice(0).forEach(function (q) { q.render(); }); };
+      s.onerror = function () { s.remove(); load(i + 1); };
+      document.head.appendChild(s);
+    })(0);
+  }
+
   views.deps = function () {
     var g = D.graphs.dependencies, box = h("div"), slot = h("div", { id: "graph", "class": "block" });
     box.appendChild(h("p", { "class": "muted", text: "Setas partem da tarefa de que outra depende. Verde: concluída · amarelo: em andamento · vermelho: bloqueada ou ausente." }));
     if (g.missing_nodes.length) box.appendChild(h("p", {}, h("span", { "class": "badge bad", text: "Dependências inexistentes: " + g.missing_nodes.join(", ") })));
     box.appendChild(slot);
-    function fallback(why) {
-      slot.textContent = "";
-      slot.appendChild(h("p", { "class": "muted", text: why }));
-      slot.appendChild(h("pre", { text: g.mermaid }));
-    }
     if (!g.nodes.length) { slot.textContent = "Sem tarefas."; return box; }
-    function render() {
-      var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      window.mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "default" });
-      window.mermaid.render("depgraph" + Date.now(), g.mermaid).then(function (res) {
-        slot.innerHTML = res.svg; // saida do Mermaid em modo strict
-      }).catch(function () { fallback("Não foi possível desenhar o diagrama. Código Mermaid:"); });
-    }
-    if (window.mermaid) render();
-    else {
-      var s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
-      s.onload = render;
-      s.onerror = function () { fallback("Mermaid indisponível (sem internet?). Código do diagrama:"); };
-      document.head.appendChild(s);
-    }
+    drawMermaid(slot, g.mermaid);
+    return box;
+  };
+
+  views.engineering = function () {
+    var box = h("div"), E = D.engineering || [];
+    if (!E.length) return h("p", { "class": "muted", text: "Nenhum Engineering Blueprint ainda. Ele é escrito depois do Feature Contract (skill aisef-feature)." });
+    function yes(v) { return v ? "sim" : "não"; }
+    E.forEach(function (b) {
+      var sec = h("div", { "class": "block" });
+      sec.appendChild(h("h2", {}, b.feature_id + " · " + b.title + " ", badge(b.state), " ", badge(b.approval)));
+      sec.appendChild(h("p", { "class": "muted", text: b.blueprint_id + " v" + b.version + " · " + b.summary }));
+
+      sec.appendChild(h("h3", { text: "Arquitetura" }));
+      var arch = h("div", { "class": "block" }); sec.appendChild(arch); drawMermaid(arch, b.graphs.architecture);
+      sec.appendChild(table([
+        { t: "Componente", f: function (r) { return h("div", {}, h("strong", { text: r.id }), h("div", { text: r.name })); } },
+        { t: "Tipo", f: function (r) { return r.kind; } },
+        { t: "Responsabilidade", f: function (r) { return r.responsibility || "—"; } },
+        { t: "Dono", f: function (r) { return r.owner_role || "—"; } },
+        { t: "Requisitos", f: function (r) { return list(r.requirement_ids); } }
+      ], b.components));
+      if (b.decisions.length) sec.appendChild(h("p", { "class": "muted", text: "Decisões arquiteturais: " + b.decisions.join(", ") }));
+
+      sec.appendChild(h("h3", { text: "Backend" }));
+      sec.appendChild(table([
+        { t: "Endpoint", f: function (r) { return h("code", { text: r.method + " " + r.path }); } },
+        { t: "Autenticação", f: function (r) { return r.auth + (r.roles.length ? " (" + r.roles.join(", ") + ")" : ""); } },
+        { t: "Erros", f: function (r) { return list(r.errors); } },
+        { t: "Requisitos", f: function (r) { return list(r.requirement_ids); } }
+      ], b.endpoints, "Sem endpoints neste blueprint."));
+
+      sec.appendChild(h("h3", { text: "Frontend" }));
+      sec.appendChild(table([
+        { t: "Tela", f: function (r) { return h("div", {}, h("strong", { text: r.name }), h("div", { "class": "muted", text: r.route })); } },
+        { t: "Endpoints", f: function (r) { return list(r.endpoints); } },
+        { t: "Estados", f: function (r) { return list(r.states); } },
+        { t: "Requisitos", f: function (r) { return list(r.requirement_ids); } }
+      ], b.screens, "Sem telas neste blueprint."));
+
+      sec.appendChild(h("h3", { text: "Banco de dados" }));
+      if (b.graphs.er) { var er = h("div", { "class": "block" }); sec.appendChild(er); drawMermaid(er, b.graphs.er); }
+      b.entities.forEach(function (e) {
+        sec.appendChild(h("p", {}, h("strong", { text: e.name }), h("span", { "class": "muted", text: " · " + e.id + (e.data_class ? " · " + e.data_class : "") })));
+        sec.appendChild(table([
+          { t: "Campo", f: function (r) { return r.name; } },
+          { t: "Tipo", f: function (r) { return r.type; } },
+          { t: "Chave", f: function (r) { return (r.primary_key ? "PK " : "") + (r.references ? "FK → " + r.references.entity_id + "." + r.references.field : "") || "—"; } },
+          { t: "Sensível", f: function (r) { return r.secret ? h("span", { "class": "badge bad", text: "segredo" }) : r.pii ? h("span", { "class": "badge warn", text: "dado pessoal" }) : "—"; } }
+        ], e.fields));
+      });
+      sec.appendChild(table([
+        { t: "Migração", f: function (r) { return h("div", {}, h("strong", { text: r.id }), h("div", { text: r.description || "" })); } },
+        { t: "Entidades", f: function (r) { return list(r.entity_ids); } },
+        { t: "Destrutiva", f: function (r) { return r.destructive ? h("span", { "class": "badge bad", text: "sim" }) : "não"; } },
+        { t: "Reversível", f: function (r) { return yes(r.reversible); } },
+        { t: "Rollback", f: function (r) { return r.rollback || "—"; } }
+      ], b.migrations, "Sem migrações."));
+
+      sec.appendChild(h("h3", { text: "Segurança" }));
+      sec.appendChild(table([
+        { t: "Severidade", f: function (r) { return badge(r.severity); } },
+        { t: "Ameaça", f: function (r) { return r.description; } },
+        { t: "Mitigação", f: function (r) { return r.mitigation; } },
+        { t: "Componentes", f: function (r) { return list(r.component_ids); } }
+      ], b.threats, "Nenhuma ameaça registrada."));
+      if (b.secrets_handling) sec.appendChild(h("p", { "class": "muted", text: "Segredos: " + b.secrets_handling }));
+
+      sec.appendChild(h("h3", { text: "DevOps" }));
+      var dv = b.devops || {};
+      sec.appendChild(h("ul", {},
+        h("li", { text: "Ambientes: " + list(dv.environments) }),
+        h("li", { text: "Estratégia de deploy: " + (dv.deploy_strategy || "—") }),
+        h("li", { text: "Pipeline: " + list(dv.pipeline_steps) }),
+        h("li", { text: "Rollback: " + (dv.rollback || "—") }),
+        h("li", { text: "Observabilidade: " + list(dv.observability) })));
+
+      sec.appendChild(h("h3", { text: "Testes" }));
+      sec.appendChild(table([
+        { t: "Nível", f: function (r) { return r.level; } },
+        { t: "Cobre", f: function (r) { return list(r.covers); } },
+        { t: "Notas", f: function (r) { return r.notes || "—"; } }
+      ], b.tests));
+      box.appendChild(sec);
+    });
     return box;
   };
 
   var TABS = [["overview","Visão geral"],["features","Features"],["tasks","Tarefas"],["rtm","Rastreabilidade"],
               ["approvals","Aprovações"],["decisions","Decisões"],["agents","Agentes"],["risks","Riscos"],
-              ["timeline","Linha do tempo"],["deps","Dependências"]];
+              ["timeline","Linha do tempo"],["deps","Dependências"],["engineering","Engenharia"]];
   var nav = document.getElementById("tabs");
 
   function show(name) {

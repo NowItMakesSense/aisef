@@ -86,6 +86,13 @@ check("linha do tempo: do mais recente ao mais antigo, 11 eventos",
       len(b["timeline"]) == 11 and b["timeline"][0]["sequence"] == 10 and b["timeline"][-1]["sequence"] == 0)
 check("execucao T-001: 6 testes passaram, 1 criterio atendido",
       b["executions"][0]["tests"]["passed"] == 6 and b["executions"][0]["criteria"]["met"] == 1)
+eng = b["engineering"]
+check("engenharia: 1 blueprint (BP-001) com 2 componentes, 2 endpoints, 1 entidade e 1 ameaca",
+      len(eng) == 1 and eng[0]["blueprint_id"] == "BP-001" and len(eng[0]["components"]) == 2
+      and len(eng[0]["endpoints"]) == 2 and len(eng[0]["entities"]) == 1 and len(eng[0]["threats"]) == 1)
+check("engenharia: ER em Mermaid marca PK, dado pessoal e segredo, sem nenhum valor de dado",
+      eng[0]["graphs"]["er"].startswith("erDiagram") and "uuid id PK" in eng[0]["graphs"]["er"]
+      and '"segredo"' in eng[0]["graphs"]["er"] and '"pii"' in eng[0]["graphs"]["er"])
 g = b["graphs"]["dependencies"]
 check("grafo: 3 nos, 2 arestas (T-001 -> T-002 -> T-003), nenhum ausente",
       len(g["nodes"]) == 3 and [(e["from"], e["to"]) for e in g["edges"]] == [("T-001", "T-002"), ("T-002", "T-003")] and g["missing_nodes"] == [])
@@ -208,10 +215,11 @@ chrome = (shutil.which("google-chrome") or shutil.which("chromium") or shutil.wh
               os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe")) if os.path.exists(p)), None))
 
 
-def dump(dest, tab):
-    shutil.copy(os.path.join(HERE, "index.html"), os.path.join(dest, "panel", "index.html"))
+def dump(dest, tab, offline=False):
+    build_panel.install_page(os.path.join(dest, "panel"))
     url = pathlib.Path(dest, "panel", "index.html").resolve().as_uri() + "#" + tab
-    r = subprocess.run([chrome, "--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+    net = ["--host-resolver-rules=MAP * ~NOTFOUND"] if offline else []
+    r = subprocess.run([chrome, "--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"] + net + [
                         "--virtual-time-budget=4000", "--enable-logging=stderr", "--v=0", "--dump-dom", url],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     # O dump inclui o codigo-fonte dos <script>. Sem remove-lo, textos que existem so no codigo
@@ -230,6 +238,7 @@ if chrome:
         "agents": ["Agente Backend", "Agente Validador"],
         "risks": ["Algoritmo de assinatura mal escolhido", "Regressao nas rotas protegidas"],
         "timeline": ["T-001 concluida", "Escopo para T-003 aguardando aprovacao"],
+        "engineering": ["Desenho tecnico da autenticacao JWT", "POST /auth/token", "Token forjado", "dado pessoal", "MIG-1"],
         "deps": [],  # tratado a parte: SVG do Mermaid (com internet) ou codigo de fallback (sem internet)
     }
     js_errors = []
@@ -249,6 +258,12 @@ if chrome:
     check("nenhum erro de JavaScript no console durante as 10 abas", not js_errors)
     if js_errors:
         print("     ", js_errors[:3])
+
+    out, _ = dump(base, "engineering", offline=True)
+    body = out[out.find("<body"):]
+    check("Chrome sem rede: aba Engenharia desenha arquitetura e ER (2 SVGs)", body.count("<svg") >= 2)
+    out, _ = dump(base, "deps", offline=True)
+    check("Chrome sem rede: Mermaid local desenha o diagrama (SVG)", "<svg" in out[out.find("<body"):])
 
     tamper = os.path.join(work, "tamper")
     out, _ = dump(tamper, "overview")

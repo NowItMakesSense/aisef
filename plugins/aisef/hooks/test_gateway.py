@@ -28,18 +28,21 @@ def run(script, payload, project=proj):
     return r
 
 
-def decision(tool, **inp):
-    r = run("gateway.py", {"tool_name": tool, "tool_input": inp, "cwd": proj})
+def decision(tool, _agent=None, **inp):
+    payload = {"tool_name": tool, "tool_input": inp, "cwd": proj}
+    if _agent:
+        payload["agent_type"] = _agent
+    r = run("gateway.py", payload)
     if not r.stdout.strip():
         return "allow", ""
     out = json.loads(r.stdout)["hookSpecificOutput"]
     return out["permissionDecision"], out["permissionDecisionReason"]
 
 
-def case(name, tool, expected, **inp):
+def case(name, tool, expected, _agent=None, **inp):
     global fails, total
     total += 1
-    got, reason = decision(tool, **inp)
+    got, reason = decision(tool, _agent, **inp)
     ok = got == expected
     print(("OK    " if ok else "FALHA ") + "%s -> %s" % (name, got))
     if not ok:
@@ -102,6 +105,11 @@ scope = {"schema_version": "0.1.0", "kind": "scope", "authorization_id": "AUTH-9
          "validity": {"valid_from": iso(datetime.timedelta(hours=-1)), "valid_until": iso(datetime.timedelta(hours=1))},
          "status": "active"}
 aisef_project.write_json(os.path.join(proj, ".aisef", "authorizations", "AUTH-9.json"), scope)
+scope["validity"]["valid_until"] = iso(datetime.timedelta(days=8))
+aisef_project.write_json(os.path.join(proj, ".aisef", "authorizations", "AUTH-9.json"), scope)
+case("escopo acima de 7 dias nao vale -> ask", "Edit", "ask", file_path=os.path.join(proj, ".github", "workflows", "ci.yml"))
+scope["validity"]["valid_until"] = iso(datetime.timedelta(hours=1))
+aisef_project.write_json(os.path.join(proj, ".aisef", "authorizations", "AUTH-9.json"), scope)
 case("CI coberto por escopo ativo -> allow", "Edit", "allow", file_path=os.path.join(proj, ".github", "workflows", "ci.yml"))
 scope["validity"]["valid_until"] = iso(datetime.timedelta(minutes=-1))
 aisef_project.write_json(os.path.join(proj, ".aisef", "authorizations", "AUTH-9.json"), scope)
@@ -154,6 +162,31 @@ fails += not ok
 for f in ("APR-001.json",):
     os.remove(os.path.join(proj, ".aisef", "approvals", f))
 os.remove(os.path.join(proj, ".aisef", "authorizations", "AUTH-2.json"))
+
+print("--- T1 ampliada (decisao de 2026-11-05)")
+case("git clean -fdx -> ask (destrutivo em dev)", "Bash", "ask", command="git clean -fdx")
+case("git checkout -- arquivo -> ask", "Bash", "ask", command="git checkout -- src/app.py")
+case("git restore -> ask", "Bash", "ask", command="git restore src/app.py")
+case("git stash drop -> ask", "Bash", "ask", command="git stash drop")
+case("docker volume rm -> ask", "Bash", "ask", command="docker volume rm dados")
+case("docker compose down -v -> ask", "Bash", "ask", command="docker compose down -v")
+case("kubectl delete -> deny (ambiente desconhecido)", "Bash", "deny", command="kubectl delete ns app")
+case("terraform destroy -> deny", "Bash", "deny", command="terraform destroy")
+
+print("--- teto do Agent Contract nos subagentes")
+case("agente em draft -> deny", "Edit", "deny", _agent="aisef:backend", file_path=os.path.join(proj, "src", "app.py"))
+aisef_project.activate_agents(proj)
+case("backend ativo edita codigo -> allow", "Edit", "allow", _agent="aisef:backend", file_path=os.path.join(proj, "src", "app.py"))
+case("backend pode solicitar commit -> ask", "Bash", "ask", _agent="aisef:backend", command="git commit -m x")
+case("backend nao pode push (fora do teto) -> deny", "Bash", "deny", _agent="aisef:backend", command="git push")
+case("backend le .env (fora do teto) -> deny", "Read", "deny", _agent="aisef:backend", file_path=os.path.join(proj, ".env"))
+case("validator: git status -> allow", "Bash", "allow", _agent="aisef:validator", command="git status")
+case("validator: git commit -> deny (Git so leitura)", "Bash", "deny", _agent="aisef:validator", command="git commit -m x")
+case("subagente registrando decisao do usuario -> deny", "Bash", "deny", _agent="aisef:backend",
+     command="python aisef_project.py decide --request APR-1 --choice approve")
+case("subagente sem Agent Contract segue so a politica", "Bash", "ask", _agent="Explore", command="git commit -m x")
+case("ativar agentes -> ask (decisao do usuario)", "Bash", "ask", command="python aisef_project.py agents --project . --activate")
+case("editar Agent Contract -> ask", "Edit", "ask", file_path=os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"))
 
 print("--- politica local e falha fechada")
 aisef_project.write_json(os.path.join(proj, ".aisef", "policy.local.json"), {"matrix": {"git": {"status_log_diff": "approve_operation"}}})
