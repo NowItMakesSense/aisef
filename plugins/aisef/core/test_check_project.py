@@ -92,6 +92,23 @@ expect("versao do agente desatualizada", edit(T1, lambda d: d["assigned_agent"].
 expect("ambiente acima do teto do agente", edit(T2, lambda d: d["permissions"].update(environment="staging")), "AGENT-ENV")
 expect("recurso fora do teto do agente", edit(T2, lambda d: d["permissions"].update(resources=["deploy_infra"])), "AGENT-RESOURCE")
 expect("sem validador independente", edit(V, lambda d: d.update(status="suspended")), "VAL-NO-VALIDATOR")
+# 0.5.0: paths do escopo classificados como o gateway classifica, contra o teto do Agent Contract
+expect("path de config/CI fora do teto do agente (docker-compose.yml)",
+       edit(T2, lambda d: d["scope"]["paths_allowed"].append("docker-compose.yml")), "AGENT-PATH-CEILING")
+expect("path sensivel fora do teto do agente (.env)",
+       edit(T2, lambda d: d["scope"]["paths_allowed"].append(".env")), "AGENT-PATH-CEILING")
+expect("arquivo exclusivo de CI fora do teto do agente",
+       edit(T2, lambda d: d["scope"].update(exclusive_files=[".github/workflows/ci.yml"])), "AGENT-PATH-CEILING")
+for name, extra in (("modelo de .env (.env.example) nao e sensivel para o gateway", ".env.example"),
+                    ("path de codigo comum dentro do teto", "src/auth/extra.py")):
+    total += 1
+    codes = run(edit(T2, lambda d, x=extra: d["scope"]["paths_allowed"].append(x))).codes()
+    ok = "AGENT-PATH-CEILING" not in codes
+    print(("OK    " if ok else "FALHA ") + name + ("" if ok else "  (veio %s)" % sorted(codes)))
+    fails += not ok
+expect("config git invalido (branch_per_feature nao booleano)",
+       lambda p: open(os.path.join(p, "config.json"), "w", encoding="utf-8").write(json.dumps({"git": {"branch_per_feature": "sim"}})),
+       "CONFIG-GIT")
 expect("recurso exige escopo e tarefa nao tem", edit(T1, lambda d: d["permissions"].update(scope_authorization_id=None)), "PERM-SCOPE-REQUIRED")
 expect("autorizacao inexistente", edit(T1, lambda d: d["permissions"].update(scope_authorization_id="AUTH-404")), "AUTH-MISSING")
 expect("autorizacao nao cobre o recurso", edit("authorizations/AUTH-1.json", lambda d: d.update(resources=["config_ci_iac"])), "AUTH-RESOURCE")

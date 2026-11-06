@@ -20,6 +20,8 @@ Uso:
                                        [--authorization rascunho.json]
     python3 -I aisef_project.py agents --project REPO [--activate] [--roles backend,qa]
     python3 -I aisef_project.py waves --project REPO [--feature FEAT-x] [--json]
+    python3 -I aisef_project.py next --project REPO [--feature FEAT-x] [--json]
+    python3 -I aisef_project.py request --project REPO --file rascunho.json
     python3 -I aisef_project.py verify --project REPO
     python3 -I aisef_project.py status --project REPO
 """
@@ -30,6 +32,7 @@ import fnmatch
 import glob
 import json
 import os
+import re
 import sys
 import time
 
@@ -90,6 +93,30 @@ def aisef_dir(project):
 def load_config(project):
     with open(os.path.join(aisef_dir(project), "config.json"), encoding="utf-8") as fh:
         return json.load(fh)
+
+
+GIT_DEFAULTS = {"branch_per_feature": False, "delete_branch_after_merge": False, "branch_prefix": "feat/",
+                "remote": "origin", "base_branch": "main"}
+
+
+def git_settings(cfg):
+    """Opcoes Git do projeto (config.json -> git). Devolve (valores com padroes, problemas).
+    branch_per_feature: criar uma branch ao iniciar cada feature; delete_branch_after_merge: depois do merge
+    confirmado do PR, apagar a branch remota e a local (cada exclusao e operacao Git reforcada)."""
+    raw = cfg.get("git", {})
+    out, problems = dict(GIT_DEFAULTS), []
+    if not isinstance(raw, dict):
+        return out, ["git deve ser um objeto"]
+    for key, value in raw.items():
+        if key not in GIT_DEFAULTS:
+            problems.append("git.%s: chave desconhecida (aceitas: %s)" % (key, ", ".join(sorted(GIT_DEFAULTS))))
+        elif type(value) is not type(GIT_DEFAULTS[key]):
+            problems.append("git.%s: esperado %s" % (key, "booleano" if isinstance(GIT_DEFAULTS[key], bool) else "texto"))
+        elif isinstance(value, str) and not re.match(r"^[A-Za-z0-9._/-]{1,60}$", value):
+            problems.append("git.%s: valor invalido para nome Git (%r)" % (key, value))
+        else:
+            out[key] = value
+    return out, problems
 
 
 def private_key_path(project_id, key_id=KEY_ID):
@@ -337,7 +364,7 @@ EDIT_TOOLS = ["Read", "Grep", "Glob", "Edit", "Write", "Bash"]
 READ_TOOLS = ["Read", "Grep", "Glob", "Bash"]
 AGENT_PROFILES = {
     "orchestrator": ("Orquestrador AISEF", ["implementation", "review", "investigation", "documentation"], EDIT_TOOLS,
-                     ["repo_code", "config_ci_iac"], ["status_log_diff", "commit", "push", "merge"],
+                     ["repo_code", "config_ci_iac"], ["status_log_diff", "commit", "push", "pull_request", "merge"],
                      ["Coordenar o trabalho, executar tarefas pequenas e integrar resultados (sessao principal)"]),
     "backend": ("Agente Backend", ["implementation", "refactoring", "testing"], EDIT_TOOLS, ["repo_code", "db_schema"], ["status_log_diff", "commit"],
                 ["APIs, servicos, regras de dominio e integracoes, com testes"]),
@@ -425,7 +452,7 @@ def activate_agents(project, roles=None):
 NATIVE_ASK_RULES = [
     "Bash(git commit:*)", "Bash(git push:*)", "Bash(git merge:*)", "Bash(git rebase:*)", "Bash(git reset --hard:*)",
     "Bash(git branch -D:*)", "Bash(git branch -d:*)", "Bash(git tag:*)", "Bash(git clean:*)", "Bash(git filter-branch:*)",
-    "Bash(gh release:*)", "Bash(gh pr merge:*)", "Bash(npm publish:*)", "Bash(twine upload:*)", "Bash(cargo publish:*)",
+    "Bash(gh release:*)", "Bash(gh pr create:*)", "Bash(gh pr merge:*)", "Bash(npm publish:*)", "Bash(twine upload:*)", "Bash(cargo publish:*)",
     "Bash(psql:*)", "Bash(mysql:*)", "Bash(mongosh:*)", "Bash(redis-cli:*)", "Bash(sqlite3:*)", "Bash(sqlcmd:*)",
     "Bash(docker exec:*)", "Bash(docker compose exec:*)", "Bash(kubectl exec:*)", "Bash(kubectl delete:*)",
     "Bash(terraform apply:*)", "Bash(terraform destroy:*)", "Bash(helm install:*)", "Bash(helm upgrade:*)",
@@ -486,6 +513,65 @@ def validate(doc, schema_file):
     return ["%s: %s" % ("/".join(map(str, e.absolute_path)) or "(raiz)", e.message) for e in v.iter_errors(doc)]
 
 
+def request(project, draft_path):
+    """Cria um pedido PENDENTE do Approval Center a partir de um rascunho: valida, anexa approval_requested
+    e grava o pedido com audit.requested_event_ref ja apontando para o evento. Criar pedido nao e decidir."""
+    with open(draft_path, encoding="utf-8") as fh:
+        req = json.load(fh)
+    if not isinstance(req, dict):
+        raise SystemExit("nada foi gravado; o rascunho precisa ser um objeto JSON")
+    if req.get("status") != "pending" or "decision" in req or "resulting_ref" in req:
+        raise SystemExit("nada foi gravado; request so cria pedido pendente (status 'pending', sem decision/resulting_ref): "
+                         "a decisao e do usuario, via decide")
+    cfg = load_config(project)
+    if req.get("project_id") != cfg["project_id"]:
+        raise SystemExit("nada foi gravado; project_id %r difere do projeto (%s)" % (req.get("project_id"), cfg["project_id"]))
+    req.setdefault("audit", {})["requested_event_ref"] = "events/pending"
+    req["audit"].pop("decided_event_ref", None)
+    problems = validate(req, "approval-request.schema.v0.1.json")
+    if problems:
+        raise SystemExit("nada foi gravado; pedido invalido:\n - " + "\n - ".join(problems))
+    rid = req["request_id"]
+    path = os.path.join(aisef_dir(project), "approvals", rid + ".json")
+    if os.path.exists(path):
+        raise SystemExit("nada foi gravado; %s ja existe (pedido nao e sobrescrito: crie outro id)" % rid)
+    partial = {"event_type": "approval_requested", "actor": {"type": "orchestrator", "id": "orchestrator"},
+               "summary": "%s aguardando decisao: %s" % (rid, req["title"]),
+               "data": {"request_id": rid, "request_type": req["request_type"]}}
+    if req.get("feature_id"):
+        partial["feature_id"] = req["feature_id"]
+    if req.get("task_id"):
+        partial["task_id"] = req["task_id"]
+    ev = append(project, partial)
+    req["audit"]["requested_event_ref"] = "events/%d" % ev["sequence"]
+    write_json(path, req)
+    return req, ev
+
+
+REINFORCED_GIT_OPS = ("force_push", "history_rewrite", "branch_delete")
+
+
+def needs_reinforced(req):
+    """Pedido cuja aprovacao so vale com uma autorizacao reforcada (o gateway exige a operacao exata)."""
+    return req.get("request_type") == "reinforced_approval" or (
+        req.get("request_type") == "git_operation" and (req.get("git") or {}).get("operation") in REINFORCED_GIT_OPS)
+
+
+def reinforced_mismatch(req, auth):
+    """Motivo pelo qual o rascunho nao serve como autorizacao reforcada deste pedido, ou None."""
+    if auth is None:
+        return "falta --authorization com o rascunho da autorizacao reforcada"
+    if auth.get("kind") != "reinforced":
+        return "a autorizacao precisa ser kind 'reinforced' (veio %r)" % auth.get("kind")
+    want = ((req.get("operation") or {}).get("operation") or "").strip()
+    if (auth.get("operation") or "").strip() != want:
+        return "a operation da autorizacao (%r) difere da operation exata do pedido (%r)" % (auth.get("operation"), want)
+    for key in ("feature_id", "task_id"):
+        if req.get(key) and auth.get(key) != req.get(key):
+            return "%s da autorizacao (%r) difere do pedido (%r)" % (key, auth.get(key), req.get(key))
+    return None
+
+
 def decide(project, request_id, choice, option=None, note=None, ack=(), authorization_draft=None):
     """Registra a decisao do USUARIO sobre um pedido pendente do Approval Center.
 
@@ -512,6 +598,12 @@ def decide(project, request_id, choice, option=None, note=None, ack=(), authoriz
     if authorization_draft and req["status"] == "approved":
         with open(authorization_draft, encoding="utf-8") as fh:
             auth = json.load(fh)
+    if req["status"] == "approved" and needs_reinforced(req):
+        # aprovar sem a autorizacao reforcada geraria um pedido aprovado inutil: o gateway continuaria negando
+        problem = reinforced_mismatch(req, auth)
+        if problem:
+            raise SystemExit("nada foi gravado; %s exige aprovacao reforcada: %s" % (request_id, problem))
+    if auth is not None:
         if auth.get("kind") == "scope":
             with open(os.path.join(HERE, "permission-policy.v0.1.json"), encoding="utf-8") as fh:
                 max_days = json.load(fh).get("scope_authorization_schema_ref", {}).get("validity_max_days")
@@ -862,8 +954,9 @@ def format_waves(res):
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["init", "append", "decide", "agents", "settings", "rotate-key", "anchor",
-                                        "verify", "status", "waves"])
-    ap.add_argument("--json", action="store_true", help="waves: saida em JSON")
+                                        "verify", "status", "waves", "next", "request"])
+    ap.add_argument("--json", action="store_true", help="waves/next: saida em JSON")
+    ap.add_argument("--file", help="request: rascunho JSON do pedido (status pending)")
     ap.add_argument("--apply", action="store_true", help="settings: grava as regras em .claude/settings.json")
     ap.add_argument("--project", default=os.getcwd())
     ap.add_argument("--project-id")
@@ -930,6 +1023,17 @@ def main(argv):
             print(json.dumps({"error": str(e), "ids": e.ids}, ensure_ascii=False) if a.json else "ERRO: %s" % e)
             return 1
         print(json.dumps(res, ensure_ascii=False, indent=2) if a.json else format_waves(res))
+        return 0
+    if a.command == "request":
+        if not a.file:
+            ap.error("--file e obrigatorio (rascunho do pedido, fora de .aisef/)")
+        req, ev = request(project, a.file)
+        print("%s pendente gravado (approval_requested: %s, sequencia %d)" % (req["request_id"], ev["event_id"], ev["sequence"]))
+        return 0
+    if a.command == "next":
+        import aisef_next
+        res = aisef_next.compute_next(project, a.feature)
+        print(json.dumps(res, ensure_ascii=False, indent=2) if a.json else aisef_next.format_next(res))
         return 0
     if a.command == "rotate-key":
         print("nova chave: %s" % rotate_key(project))

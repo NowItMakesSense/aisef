@@ -68,7 +68,7 @@
         "max_environment": { "enum": ["dev", "staging", "prod"] },
         "git_operations": {
           "type": "array", "uniqueItems": true,
-          "items": { "enum": ["status_log_diff", "commit", "push", "merge", "release_publish", "force_push", "history_rewrite", "branch_delete"] },
+          "items": { "enum": ["status_log_diff", "commit", "push", "pull_request", "merge", "release_publish", "force_push", "history_rewrite", "branch_delete"] },
           "description": "Operacoes Git que o agente pode SOLICITAR. A execucao segue a politica e exige aprovacao humana."
         }
       }

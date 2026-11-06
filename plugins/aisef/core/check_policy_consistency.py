@@ -90,11 +90,16 @@ def check(policy, auth, approval):
 
     # Git: cada operacao tem pedido proprio (git_operation) e os reforcados exigem as confirmacoes
     git = policy["matrix"].get("git", {})
+    request_ops = set(approval["properties"]["git"]["properties"]["operation"]["enum"])
     for op, level in git.items():
         if op.startswith("$"):
             continue
         if level not in ("allow", "approve_operation", "approve_reinforced"):
             conflicts.append("git.%s = %s: nao ha tipo de pedido correspondente" % (op, level))
+        elif level != "allow" and op not in request_ops:
+            conflicts.append("git.%s = %s: o Approval Center nao aceita git.operation '%s' (o pedido teria de usar outro tipo)" % (op, level, op))
+    for op in sorted(request_ops - set(k for k in git if not k.startswith("$"))):
+        conflicts.append("git.operation '%s' do Approval Center nao existe na matriz da politica" % op)
 
     # T2: producao nunca por escopo
     t2 = next((r for r in policy["transversal_rules"] if r["id"] == "T2"), None)
