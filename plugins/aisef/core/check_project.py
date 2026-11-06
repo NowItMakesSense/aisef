@@ -47,6 +47,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import audit_chain  # noqa: E402
 import check_policy_consistency as pol  # noqa: E402
 
 KINDS = {
@@ -116,11 +117,7 @@ def load_project(project, schemas_dir, rep):
                     rep.err("SCHEMA", rel, "%s: %s" % ("/".join(map(str, p.path)) or "(raiz)", p.message[:140]))
                     continue
             docs[kind].append((rel, data))
-    log = []
-    lp = os.path.join(project, "audit", "log.jsonl")
-    if os.path.exists(lp):
-        with open(lp, encoding="utf-8") as fh:
-            log = [json.loads(line) for line in fh if line.strip()]
+    log = audit_chain.read_log_dir(os.path.join(project, "audit"))  # inclui segmentos arquivados
     return docs, log
 
 

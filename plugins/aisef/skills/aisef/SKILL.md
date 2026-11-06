@@ -39,6 +39,13 @@ Leia `references/lifecycle.md` para o detalhe de cada fase. Resumo:
 
 Depois de aprovado o plano, execute **sem interrupcoes desnecessarias** dentro do escopo e das permissoes.
 
+## Caminho rapido (mudancas pequenas)
+Use em vez do ciclo completo **somente se todas** forem verdade: nao muda comportamento observavel; nao toca API, schema de banco, seguranca, CI/CD, configuracao de producao nem dependencia com quebra; cabe em poucos arquivos (guia: ate ~50 linhas). Exemplos: typo, texto, renomear variavel local, patch de dependencia, ajuste de lint. Na duvida, nao e rapido.
+```
+python -I CORE/aisef_new.py quick --project . --title "<o que>" --why "<por que>" [--path <glob>] [--test-cmd "<comando>"]
+```
+Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedido de plano dessa feature: leve ao usuario uma unica vez (**aisef-approve**). Depois, as tarefas ja nascem `ready`: faca a mudanca, rode os testes, registre o resultado e conclua, sem blueprint nem validador independente. Commit, push e afins continuam pedindo aprovacao.
+
 ## Delegacao
 - Use os agentes do plugin (`aisef:backend`, `aisef:frontend`, `aisef:database`, `aisef:qa`, `aisef:security`, `aisef:devops`, `aisef:domain`, `aisef:validator`) sob demanda. No Task Contract, `assigned_agent.agent_id` e o nome curto (`backend`), que e o Agent Contract em `.aisef/contracts/agents/`.
 - O gateway aplica o **teto** do Agent Contract a cada subagente: agente em `draft` e bloqueado, recursos e operacoes Git fora do teto sao negados (o `validator` so le o Git). Agentes sem contrato (ex.: `Explore`) seguem so a politica.

@@ -17,6 +17,7 @@ Observacoes:
 """
 import hashlib
 import json
+import os
 import re
 import sys
 
@@ -100,6 +101,31 @@ def verify_chain(log):
 def read_log(path):
     with open(path, encoding="utf-8") as fh:
         return [json.loads(line) for line in fh if line.strip()]
+
+
+def log_segments(audit_dir):
+    """Arquivos do log em ordem: segmentos arquivados (archive/log-<primeira>-<ultima>.jsonl) e o atual."""
+    archive = os.path.join(audit_dir, "archive")
+    segs = []
+    if os.path.isdir(archive):
+        named = []
+        for name in os.listdir(archive):
+            m = re.match(r"^log-(\d+)-(\d+)\.jsonl$", name)
+            if m:
+                named.append((int(m.group(1)), os.path.join(archive, name)))
+        segs = [p for _first, p in sorted(named)]
+    current = os.path.join(audit_dir, "log.jsonl")
+    if os.path.exists(current):
+        segs.append(current)
+    return segs
+
+
+def read_log_dir(audit_dir):
+    """O log inteiro (todos os segmentos concatenados): a cadeia continua de um segmento para o outro."""
+    log = []
+    for seg in log_segments(audit_dir):
+        log.extend(read_log(seg))
+    return log
 
 
 def selftest(schema_path=None):

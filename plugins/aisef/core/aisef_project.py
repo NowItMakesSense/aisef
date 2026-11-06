@@ -50,6 +50,10 @@ def now_iso():
     return datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat(timespec="seconds")
 
 
+def iso_in(**delta):
+    return (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(**delta)).astimezone().isoformat(timespec="seconds")
+
+
 def home_dir():
     return os.environ.get("AISEF_HOME") or os.path.join(os.path.expanduser("~"), ".aisef")
 
@@ -63,8 +67,42 @@ def load_config(project):
         return json.load(fh)
 
 
-def private_key_path(project_id):
-    return os.path.join(home_dir(), "keys", project_id, KEY_ID + ".pem")
+def private_key_path(project_id, key_id=KEY_ID):
+    return os.path.join(home_dir(), "keys", project_id, key_id + ".pem")
+
+
+def anchors_path(project_id):
+    return os.path.join(home_dir(), "anchors", project_id + ".jsonl")
+
+
+def audit_settings(cfg):
+    """Limites do log; ajustaveis em config.json -> audit. Valores pequenos so fazem sentido em teste."""
+    a = cfg.get("audit", {})
+    return {"key_id": a.get("key_id", KEY_ID), "checkpoint_every": a.get("checkpoint_every", 500),
+            "rotate_bytes": a.get("rotate_bytes", 5 * 1024 * 1024)}
+
+
+def last_line(path):
+    """Ultima linha nao vazia sem ler o arquivo inteiro (o log so cresce)."""
+    with open(path, "rb") as fh:
+        fh.seek(0, os.SEEK_END)
+        pos, buf = fh.tell(), b""
+        while pos > 0:
+            step = min(4096, pos)
+            pos -= step
+            fh.seek(pos)
+            buf = fh.read(step) + buf
+            lines = [l for l in buf.split(b"\n") if l.strip()]
+            if len(lines) > 1 or (lines and pos == 0):
+                return json.loads(lines[-1].decode("utf-8"))
+    return None
+
+
+def last_event(audit_dir):
+    for seg in reversed(audit_chain.log_segments(audit_dir)):
+        if os.path.getsize(seg):
+            return last_line(seg)
+    return None
 
 
 def external_head_path(project_id):
@@ -102,39 +140,113 @@ class Lock:
         os.remove(self.path)
 
 
-def load_signer(project_id):
-    if not os.path.exists(private_key_path(project_id)):
+def load_signer(project_id, key_id=KEY_ID):
+    if not os.path.exists(private_key_path(project_id, key_id)):
         return None
     if not HAS_CRYPTO:
         # um evento sem assinatura num log assinado quebraria a verificacao: melhor recusar alto
         raise RuntimeError("o log deste projeto e assinado, mas este Python nao tem 'cryptography' "
                            "(instale-a ou defina AISEF_PYTHON)")
-    with open(private_key_path(project_id), "rb") as fh:
+    with open(private_key_path(project_id, key_id), "rb") as fh:
         key = serialization.load_pem_private_key(fh.read(), password=None)
-    return audit_signing.AuditSigner(KEY_ID, key)
+    return audit_signing.AuditSigner(key_id, key)
 
 
-def append(project, partial):
-    """Anexa um evento (sequence, prev_hash e hash sao preenchidos aqui) e assina se houver chave."""
-    cfg = load_config(project)
-    log_path = os.path.join(aisef_dir(project), "audit", "log.jsonl")
+def _write_event(project, cfg, partial):
+    """Anexa UM evento ao segmento atual. Chamar com o lock do log ja obtido."""
+    audit_dir = os.path.join(aisef_dir(project), "audit")
+    log_path = os.path.join(audit_dir, "log.jsonl")
+    last = last_event(audit_dir)
     event = {"schema_version": "0.1.0", "log_id": cfg["log_id"], "project_id": cfg["project_id"],
              "timestamp": now_iso()}
     event.update(partial)
-    with Lock(log_path + ".lock"):
-        log = audit_chain.read_log(log_path) if os.path.exists(log_path) else []
-        event.setdefault("event_id", "E%d" % len(log))
-        signer = load_signer(cfg["project_id"])
-        if signer:
-            new = signer.append(log, event)
-        else:
-            new = audit_chain.append_event(log, event)
-        with open(log_path, "a", encoding="utf-8", newline="\n") as fh:
-            fh.write(json.dumps(new, ensure_ascii=False) + "\n")
-        if signer:
-            write_json(external_head_path(cfg["project_id"]), signer.head)
-            write_json(os.path.join(aisef_dir(project), "audit", "head.json"), signer.head)
+    event.setdefault("event_id", "E%d" % (last["sequence"] + 1 if last else 0))
+    tail = [last] if last else []  # a cadeia so precisa do ultimo evento (sequencia e hash)
+    signer = load_signer(cfg["project_id"], audit_settings(cfg)["key_id"])
+    new = signer.append(tail, event) if signer else audit_chain.append_event(tail, event)
+    with open(log_path, "a", encoding="utf-8", newline="\n") as fh:
+        fh.write(json.dumps(new, ensure_ascii=False) + "\n")
+    if signer:
+        write_json(external_head_path(cfg["project_id"]), signer.head)
+        write_json(os.path.join(audit_dir, "head.json"), signer.head)
     return new
+
+
+def _rotate_if_large(project, cfg):
+    """Arquiva o segmento atual quando passa do limite. A cadeia continua no proximo segmento."""
+    audit_dir = os.path.join(aisef_dir(project), "audit")
+    log_path = os.path.join(audit_dir, "log.jsonl")
+    if not os.path.exists(log_path) or os.path.getsize(log_path) < audit_settings(cfg)["rotate_bytes"]:
+        return
+    with open(log_path, encoding="utf-8") as fh:
+        first = json.loads(fh.readline())
+    last = last_line(log_path)
+    archive = os.path.join(audit_dir, "archive")
+    os.makedirs(archive, exist_ok=True)
+    os.replace(log_path, os.path.join(archive, "log-%09d-%09d.jsonl" % (first["sequence"], last["sequence"])))
+
+
+def append(project, partial):
+    """Anexa um evento (sequence, prev_hash e hash sao preenchidos aqui) e assina se houver chave.
+    A cada `checkpoint_every` eventos grava um checkpoint assinado e uma ancora externa; segmentos
+    grandes sao arquivados."""
+    cfg = load_config(project)
+    log_path = os.path.join(aisef_dir(project), "audit", "log.jsonl")
+    with Lock(log_path + ".lock"):
+        new = _write_event(project, cfg, partial)
+        every = audit_settings(cfg)["checkpoint_every"]
+        if every and new["sequence"] and (new["sequence"] + 1) % every == 0 and new["event_type"] != "checkpoint":
+            cp = _write_event(project, cfg, {"event_type": "checkpoint", "actor": {"type": "system", "id": "aisef"},
+                                             "summary": "Checkpoint ate a sequencia %d" % new["sequence"],
+                                             "data": {"through_sequence": new["sequence"], "through_hash": new["hash"]}})
+            _anchor(cfg, cp)
+        _rotate_if_large(project, cfg)
+    return new
+
+
+def _anchor(cfg, event):
+    rec = {"at": now_iso(), "sequence": event["sequence"], "hash": event["hash"]}
+    path = anchors_path(cfg["project_id"])
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "a", encoding="utf-8", newline="\n") as fh:
+        fh.write(json.dumps(rec) + "\n")
+    return rec
+
+
+def anchor(project):
+    """Ancora manual: grava o ultimo evento em ~/.aisef/anchors/ (fora do repositorio e do log)."""
+    cfg = load_config(project)
+    last = last_event(os.path.join(aisef_dir(project), "audit"))
+    return _anchor(cfg, last)
+
+
+def rotate_key(project):
+    """Troca a chave do Audit Signer. O evento de rotacao e assinado pela chave ANTIGA, que depois e apagada:
+    dali em diante, um evento assinado por ela e erro na verificacao."""
+    if not HAS_CRYPTO:
+        raise SystemExit("rotacao exige a biblioteca cryptography")
+    cfg = load_config(project)
+    old = audit_settings(cfg)["key_id"]
+    n = int(old.rsplit("-", 1)[-1]) + 1 if old.rsplit("-", 1)[-1].isdigit() else 2
+    new_id = "audit-key-%d" % n
+    key = Ed25519PrivateKey.generate()
+    priv = private_key_path(cfg["project_id"], new_id)
+    os.makedirs(os.path.dirname(priv), exist_ok=True)
+    with open(priv, "wb") as fh:
+        fh.write(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
+    with open(os.path.join(aisef_dir(project), "keys", new_id + ".pem"), "wb") as fh:
+        fh.write(key.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo))
+    ev = append(project, {"event_type": "checkpoint", "actor": {"type": "system", "id": "aisef"},
+                          "summary": "Rotacao da chave de auditoria: %s -> %s" % (old, new_id),
+                          "data": {"key_rotation": {"from": old, "to": new_id}}})
+    cfg.setdefault("audit", {})["key_id"] = new_id
+    write_json(os.path.join(aisef_dir(project), "config.json"), cfg)
+    _anchor(cfg, ev)
+    try:
+        os.remove(private_key_path(cfg["project_id"], old))
+    except OSError:
+        pass
+    return new_id
 
 
 def init(project, project_id, name=None, environment="dev"):
@@ -176,6 +288,9 @@ def init(project, project_id, name=None, environment="dev"):
 EDIT_TOOLS = ["Read", "Grep", "Glob", "Edit", "Write", "Bash"]
 READ_TOOLS = ["Read", "Grep", "Glob", "Bash"]
 AGENT_PROFILES = {
+    "orchestrator": ("Orquestrador AISEF", ["implementation", "review", "investigation", "documentation"], EDIT_TOOLS,
+                     ["repo_code", "config_ci_iac"], ["status_log_diff", "commit", "push", "merge"],
+                     ["Coordenar o trabalho, executar tarefas pequenas e integrar resultados (sessao principal)"]),
     "backend": ("Agente Backend", ["implementation", "refactoring", "testing"], EDIT_TOOLS, ["repo_code", "db_schema"], ["status_log_diff", "commit"],
                 ["APIs, servicos, regras de dominio e integracoes, com testes"]),
     "frontend": ("Agente Frontend", ["implementation", "refactoring", "testing"], EDIT_TOOLS, ["repo_code"], ["status_log_diff", "commit"],
@@ -255,6 +370,43 @@ def activate_agents(project, roles=None):
                          "subject": {"kind": "agent_contract", "id": role, "version": doc["contract_version"]}})
         done.append(role)
     return done
+
+
+# Segunda camada: regras 'ask' nativas do Claude Code. Valem mesmo se o hook falhar ou for desligado.
+# Sao 'ask' (nao 'deny') para nao impedir o que a politica permite com aprovacao.
+NATIVE_ASK_RULES = [
+    "Bash(git commit:*)", "Bash(git push:*)", "Bash(git merge:*)", "Bash(git rebase:*)", "Bash(git reset --hard:*)",
+    "Bash(git branch -D:*)", "Bash(git branch -d:*)", "Bash(git tag:*)", "Bash(git clean:*)", "Bash(git filter-branch:*)",
+    "Bash(gh release:*)", "Bash(gh pr merge:*)", "Bash(npm publish:*)", "Bash(twine upload:*)", "Bash(cargo publish:*)",
+    "Bash(psql:*)", "Bash(mysql:*)", "Bash(mongosh:*)", "Bash(redis-cli:*)", "Bash(sqlite3:*)", "Bash(sqlcmd:*)",
+    "Bash(docker exec:*)", "Bash(docker compose exec:*)", "Bash(kubectl exec:*)", "Bash(kubectl delete:*)",
+    "Bash(terraform apply:*)", "Bash(terraform destroy:*)", "Bash(helm install:*)", "Bash(helm upgrade:*)",
+    "Bash(printenv:*)", "Bash(cat .env*)",
+    "Read(./.env)", "Read(./.env.*)", "Read(./**/.env)", "Read(./**/*.pem)", "Read(./**/*.key)", "Read(./secrets/**)",
+    "Edit(./.env)", "Edit(./.env.*)", "Write(./.env)", "Write(./.env.*)",
+    "Edit(./.aisef/approvals/**)", "Write(./.aisef/approvals/**)", "Edit(./.aisef/authorizations/**)",
+    "Write(./.aisef/authorizations/**)", "Edit(./.aisef/contracts/agents/**)", "Edit(./.aisef/config.json)",
+]
+NATIVE_DENY_RULES = ["Edit(./.aisef/audit/**)", "Write(./.aisef/audit/**)", "Edit(./.aisef/keys/**)", "Write(./.aisef/keys/**)"]
+
+
+def native_settings(project, apply=False):
+    """Mescla (uniao) as regras nativas em <repo>/.claude/settings.json. Nunca remove nada que ja exista."""
+    path = os.path.join(project, ".claude", "settings.json")
+    current = {}
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
+            current = json.load(fh)
+    perms = current.setdefault("permissions", {})
+    added = {}
+    for key, rules in (("ask", NATIVE_ASK_RULES), ("deny", NATIVE_DENY_RULES)):
+        have = perms.setdefault(key, [])
+        new = [r for r in rules if r not in have]
+        have.extend(new)
+        added[key] = new
+    if apply and (added["ask"] or added["deny"]):
+        write_json(path, current)
+    return path, added
 
 
 CHOICE_STATUS = {"approve": "approved", "select_option": "approved", "reject": "rejected",
@@ -340,31 +492,96 @@ def decide(project, request_id, choice, option=None, note=None, ack=(), authoriz
         write_json(auth_path, auth)
     req["audit"]["decided_event_ref"] = "events/%d" % ev["sequence"]
     write_json(req_path, req)
+    if req.get("request_type") == "plan_approval" and req["status"] == "approved" and req.get("feature_id"):
+        reflect_plan_approval(project, req["feature_id"], when)
     return req
+
+
+def reflect_plan_approval(project, feature_id, when):
+    """Plano aprovado pelo usuario: o Feature Contract passa a 'approved_for_execution' e as tarefas em draft a 'ready'."""
+    root = aisef_dir(project)
+    fpath = os.path.join(root, "contracts", "features", feature_id + ".json")
+    if not os.path.exists(fpath):
+        return
+    with open(fpath, encoding="utf-8") as fh:
+        feature = json.load(fh)
+    feature["approval"]["plan"] = {"status": "approved", "granularity": "feature", "approved_by": "user", "approved_at": when}
+    if feature["state"]["status"] in ("discovery", "planning", "awaiting_plan_approval"):
+        feature["state"]["status"] = "approved_for_execution"
+    write_json(fpath, feature)
+    for t in feature.get("task_plan", []):
+        tpath = os.path.join(root, "contracts", "tasks", t["task_id"] + ".json")
+        if os.path.exists(tpath):
+            with open(tpath, encoding="utf-8") as fh:
+                task = json.load(fh)
+            if task["state"]["status"] == "draft":
+                task["state"]["status"] = "ready"
+                write_json(tpath, task)
 
 
 def verify(project):
     """Retorna (erros, avisos). Usa o head EXTERNO como referencia, nao a copia do projeto."""
     cfg = load_config(project)
-    log_path = os.path.join(aisef_dir(project), "audit", "log.jsonl")
-    if not os.path.exists(log_path):
-        return ["sem log em .aisef/audit/log.jsonl"], []
-    log = audit_chain.read_log(log_path)
-    pub_path = os.path.join(aisef_dir(project), "keys", KEY_ID + ".pem")
-    if not (HAS_CRYPTO and os.path.exists(pub_path)):
-        return audit_chain.verify_chain(log), ["sem assinatura Ed25519: so a cadeia de hash foi verificada"]
-    with open(pub_path, "rb") as fh:
-        pub = serialization.load_pem_public_key(fh.read())
-    head = None
-    if os.path.exists(external_head_path(cfg["project_id"])):
-        with open(external_head_path(cfg["project_id"]), encoding="utf-8") as fh:
-            head = json.load(fh)
-    return audit_signing.AuditVerifier({KEY_ID: pub}).verify(log, head)
+    audit_dir = os.path.join(aisef_dir(project), "audit")
+    log = audit_chain.read_log_dir(audit_dir)
+    if not log:
+        return ["sem log em .aisef/audit/"], []
+    pubs = {}
+    if HAS_CRYPTO:
+        for name in sorted(os.listdir(os.path.join(aisef_dir(project), "keys"))):
+            if name.endswith(".pem"):
+                with open(os.path.join(aisef_dir(project), "keys", name), "rb") as fh:
+                    pubs[name[:-4]] = serialization.load_pem_public_key(fh.read())
+    if not pubs:
+        errors, warnings = audit_chain.verify_chain(log), ["sem assinatura Ed25519: so a cadeia de hash foi verificada"]
+    else:
+        head = None
+        if os.path.exists(external_head_path(cfg["project_id"])):
+            with open(external_head_path(cfg["project_id"]), encoding="utf-8") as fh:
+                head = json.load(fh)
+        errors, warnings = audit_signing.AuditVerifier(pubs).verify(log, head)
+        errors += rotation_errors(log)
+    errors += anchor_errors(cfg, log)
+    return errors, warnings
+
+
+def rotation_errors(log):
+    """Depois de uma rotacao, a chave antiga nao assina mais nada."""
+    errors, retired = [], {}
+    for ev in log:
+        sig_key = (ev.get("signature") or {}).get("key_id")
+        if sig_key in retired:
+            errors.append("evento %d assinado pela chave %s, aposentada na sequencia %d" % (ev["sequence"], sig_key, retired[sig_key]))
+        rot = (ev.get("data") or {}).get("key_rotation")
+        if ev.get("event_type") == "checkpoint" and rot:
+            retired[rot["from"]] = ev["sequence"]
+    return errors
+
+
+def anchor_errors(cfg, log):
+    """Ancoras externas: cada uma precisa bater com o evento da mesma sequencia (detecta reescrita e truncamento)."""
+    path = anchors_path(cfg["project_id"])
+    if not os.path.exists(path):
+        return []
+    by_seq = {ev["sequence"]: ev["hash"] for ev in log}
+    errors = []
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            a = json.loads(line)
+            if a["sequence"] not in by_seq:
+                errors.append("ancora da sequencia %d nao existe mais no log (truncado?)" % a["sequence"])
+            elif by_seq[a["sequence"]] != a["hash"]:
+                errors.append("ancora da sequencia %d nao confere com o log (reescrito?)" % a["sequence"])
+    return errors
 
 
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["init", "append", "decide", "agents", "verify", "status"])
+    ap.add_argument("command", choices=["init", "append", "decide", "agents", "settings", "rotate-key", "anchor",
+                                        "verify", "status"])
+    ap.add_argument("--apply", action="store_true", help="settings: grava as regras em .claude/settings.json")
     ap.add_argument("--project", default=os.getcwd())
     ap.add_argument("--project-id")
     ap.add_argument("--name")
@@ -405,6 +622,24 @@ def main(argv):
             partial["data"] = json.loads(a.data)
         ev = append(project, partial)
         print("evento %s (sequencia %d) registrado" % (ev["event_id"], ev["sequence"]))
+        return 0
+    if a.command == "settings":
+        path, added = native_settings(project, a.apply)
+        total = len(added["ask"]) + len(added["deny"])
+        if not total:
+            print("%s ja tem todas as regras do AISEF" % path)
+        else:
+            print("%s %d regra(s) em %s:" % ("gravadas" if a.apply else "faltam (use --apply para gravar)", total, path))
+            for k in ("ask", "deny"):
+                for r in added[k]:
+                    print("  %s %s" % (k, r))
+        return 0
+    if a.command == "rotate-key":
+        print("nova chave: %s" % rotate_key(project))
+        return 0
+    if a.command == "anchor":
+        a_ = anchor(project)
+        print("ancora gravada: sequencia %d em %s" % (a_["sequence"], anchors_path(load_config(project)["project_id"])))
         return 0
     if a.command == "agents":
         roles = [x for x in a.roles.split(",") if x] or None

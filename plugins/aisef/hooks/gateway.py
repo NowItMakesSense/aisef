@@ -40,11 +40,15 @@ CONTAINER_DESTRUCTIVE_RE = re.compile(
 SQL_DESTRUCTIVE_RE = re.compile(
     r"\b(?:DROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX|VIEW|COLUMN)|TRUNCATE\s+TABLE?|DELETE\s+FROM\s+\w+\s*(?:;|$|\"|')|"
     r"ALTER\s+TABLE\s+\S+\s+DROP\b|migrate\s+(?:down|rollback|reset)\b|db:rollback\b|downgrade\b|migrate\s+reset\b)", re.I)
+# Codigo que o gateway nao consegue ler antes de rodar (ofuscado ou baixado): ninguem aprova o que nao viu.
+OBFUSCATED_RE = re.compile(
+    r"base64\s+(?:-d|--decode)|FromBase64String|\|\s*(?:ba|z|da)?sh\b|\|\s*(?:python3?|node|perl|ruby)\b|"
+    r"(?:^|[;&|]\s*)eval\s|\bInvoke-Expression\b|\biex\b|\bsource\s+<\(", re.I)
 CONFIG_PATH_RE = re.compile(
     r"(?:^|/)(?:\.github/workflows/|\.gitlab-ci\.yml$|Jenkinsfile$|azure-pipelines\.yml$|\.circleci/|"
     r"Dockerfile[^/]*$|docker-compose[^/]*\.ya?ml$|compose\.ya?ml$|[^/]+\.tf$|[^/]+\.tfvars$|helm/|charts/|k8s/|"
     r"kubernetes/|\.claude/settings[^/]*\.json$)", re.I)
-AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:approvals|authorizations|contracts/agents)/|(?:^|[/\s\"'=>])\.aisef/(?:config|policy\.local)\.json")
+AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:approvals|authorizations|contracts/agents)/|(?:^|[/\s\"'=>])\.aisef/(?:config|policy\.local)\.json\b")
 AISEF_AUDIT_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:audit|keys)/")
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 READ_TOOLS = {"Read", "Grep", "Glob"}
@@ -61,6 +65,27 @@ def emit(decision, reason):
         "hookEventName": "PreToolUse", "permissionDecision": decision,
         "permissionDecisionReason": reason}}, ensure_ascii=False))
     sys.exit(0)
+
+
+def record_attempt(project, data, decision, reason):
+    """Tentativa negada ou levada a aprovacao vai para o log (o que roda de fato o PostToolUse registra).
+    Nunca muda a decisao: se o registro falhar, so avisa."""
+    try:
+        sys.path.insert(0, CORE)
+        import aisef_project
+        import audit_chain
+        inp = data.get("tool_input") or {}
+        what = (inp.get("command") or inp.get("file_path") or inp.get("path") or "")[:300]
+        if audit_chain.find_secrets({"x": what}):
+            what = "[omitido: possivel segredo]"
+        detail = {"tool": data.get("tool_name", ""), "gateway": decision, "reason": reason[:400], "target": what}
+        if data.get("agent_type"):
+            detail["subagent"] = data["agent_type"]
+        aisef_project.append(project, {"event_type": "tool_used", "actor": {"type": "system", "id": "execution-gateway"},
+                                       "summary": "Gateway: %s %s" % (decision, detail["tool"]), "data": detail,
+                                       "panel_visible": decision == "deny"})
+    except Exception as exc:  # o registro e acessorio; a decisao ja foi tomada
+        sys.stderr.write("AISEF: tentativa nao registrada no log (%s)\n" % exc)
 
 
 def stricter(a, b):
@@ -169,9 +194,11 @@ def classify_bash(cmd, patterns, env):
         found.append(("repo_code", "write", env, True, "remocao recursiva"))
     if CONTAINER_DESTRUCTIVE_RE.search(cmd):
         found.append(("repo_code", "write", env, True, "remocao de volumes/containers"))
+    if OBFUSCATED_RE.search(cmd):
+        found.append(("unclassified", "execute", env, False, "codigo ofuscado, baixado ou passado por pipe para um interpretador"))
     if AISEF_AUDIT_RE.search(norm(cmd)) and not re.search(r"audit_chain\.py\s+verify|aisef_project\.py\s+(?:verify|status)", cmd):
         raise Decision("deny", "o log de auditoria e as chaves do AISEF so podem ser alterados pelo hook de auditoria")
-    if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b|agents\b[^;&|]*--activate\b)", cmd):
+    if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b|agents\b[^;&|]*--activate\b|settings\b[^;&|]*--apply\b|rotate-key\b)", cmd):
         found.append(("aisef_decision", "write", env, False, "registro de decisao do usuario"))
     return found
 
@@ -354,10 +381,11 @@ def main():
         now = datetime.datetime.now(datetime.timezone.utc)
         decision, reason = decide(data, project, policy, patterns, config, now)
     except Decision as d:
-        emit(d.level, "AISEF: " + d.reason)
+        decision, reason = d.level, "AISEF: " + d.reason
     except Exception as exc:
         emit("deny", "AISEF: erro no Execution Gateway (%s); falha fechada" % exc)
     if decision:
+        record_attempt(project, data, decision, reason)
         emit(decision, reason)
     sys.exit(0)
 

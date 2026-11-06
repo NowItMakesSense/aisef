@@ -25,6 +25,8 @@ SUITES = [
                             os.path.join(CORE, "authorization.schema.v0.1.json"), os.path.join(CORE, "approval-request.schema.v0.1.json")]),
     ("painel", [os.path.join(CORE, "test_panel.py"), os.path.join(work, "panel")]),
     ("gateway + auditoria + Approval Center", [os.path.join(HOOKS, "test_gateway.py")]),
+    ("geradores (briefs e caminho rapido)", [os.path.join(CORE, "test_generators.py")]),
+    ("ciclo de vida do log", [os.path.join(CORE, "test_audit_lifecycle.py")]),
 ]
 
 failed = []

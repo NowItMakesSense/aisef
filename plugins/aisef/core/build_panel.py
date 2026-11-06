@@ -101,7 +101,7 @@ def check_integrity(project):
         return log, {"status": status, "signatures_verified": False, "head_verified": False,
                      "errors": errors, "warnings": warnings}
     try:
-        log = audit_chain.read_log(log_path)
+        log = audit_chain.read_log_dir(os.path.dirname(log_path))  # inclui segmentos arquivados
     except (OSError, ValueError) as exc:
         errors.append("log ilegivel: %s" % exc)
         return [], {"status": "broken", "signatures_verified": False, "head_verified": False,
