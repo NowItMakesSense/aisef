@@ -1,0 +1,165 @@
+{
+  "$comment": "AISEF Permission Policy - RASCUNHO v0.1. Nada aqui esta aprovado ate o usuario confirmar. Pontos marcados com ASSUNCAO precisam de decisao.",
+  "policy_version": "0.1.0",
+  "status": "draft",
+
+  "levels": {
+    "order": ["allow", "approve_scope", "approve_operation", "approve_reinforced", "deny"],
+    "definitions": {
+      "allow": "Executa sem aprovacao, dentro do escopo da tarefa. Sempre auditado.",
+      "approve_scope": "Humano autoriza um escopo (projeto, feature, ambiente, recursos, operacoes, limites, validade). O agente opera dentro dele.",
+      "approve_operation": "Humano aprova cada operacao individualmente.",
+      "approve_reinforced": "Aprovacao de uso unico, validade curta, com diff, impacto, plano de rollback e justificativa visiveis. Nunca reaproveita autorizacao de escopo.",
+      "deny": "Bloqueado tecnicamente pelo Execution Gateway."
+    }
+  },
+
+  "defaults": {
+    "unclassified_resource": "treat_as_sensitive",
+    "unclassified_dataset": "treat_as_production",
+    "unknown_environment": "treat_as_production",
+    "conflict_resolution": "most_restrictive_wins"
+  },
+
+  "resource_classes": {
+    "repo_code": "Codigo, testes e docs versionados no repositorio",
+    "config_ci_iac": "Arquivos de configuracao, CI/CD e infraestrutura como codigo",
+    "sensitive_files": ".env, credenciais, tokens, chaves privadas",
+    "db_schema": "Tabelas, colunas, indices, constraints, procedures, migrations",
+    "db_data": "Registros, dados pessoais, de clientes e financeiros",
+    "deploy_infra": "Deploy e aplicacao de infraestrutura",
+    "git": "Operacoes Git"
+  },
+
+  "matrix": {
+    "repo_code": {
+      "read":  { "dev": "allow", "staging": "allow", "prod": "approve_operation" },
+      "write": { "dev": "allow", "staging": "not_applicable_via_git", "prod": "not_applicable_via_git" }
+    },
+    "config_ci_iac": {
+      "read":  { "dev": "allow", "staging": "allow", "prod": "allow" },
+      "write": { "dev": "approve_scope", "staging": "approve_scope", "prod": "approve_reinforced" }
+    },
+    "sensitive_files": {
+      "read_content":  { "dev": "approve_operation", "staging": "approve_operation", "prod": "approve_reinforced" },
+      "write":         { "dev": "approve_operation", "staging": "approve_operation", "prod": "approve_reinforced" }
+    },
+    "db_schema": {
+      "read":  { "dev": "allow", "staging": "allow", "prod": "approve_operation" },
+      "write": { "dev": "approve_scope", "staging": "approve_operation", "prod": "approve_reinforced" }
+    },
+    "db_data": {
+      "$note": "Dev e staging dependem da classificacao do dataset (ver dataset_overrides). Valores abaixo sao o piso por ambiente.",
+      "read_rows": { "dev": "approve_scope", "staging": "approve_operation", "prod": "approve_reinforced" },
+      "write":     { "dev": "approve_scope", "staging": "approve_operation", "prod": "approve_reinforced" }
+    },
+    "deploy_infra": {
+      "execute": { "dev": "approve_scope", "staging": "approve_operation", "prod": "approve_reinforced" }
+    },
+    "git": {
+      "status_log_diff": "allow",
+      "commit":          "approve_operation",
+      "push":            "approve_operation",
+      "merge":           "approve_operation",
+      "release_publish": "approve_operation",
+      "force_push":      "approve_reinforced",
+      "history_rewrite": "approve_reinforced",
+      "branch_delete":   "approve_reinforced",
+      "$rule": "Aprovar commit nao aprova push, merge ou release. Cada operacao exige sua propria aprovacao."
+    }
+  },
+
+  "dataset_overrides": {
+    "$comment": "Aplica-se a db_data em staging. A aprovacao de escopo deve declarar a classificacao, que vai para a auditoria.",
+    "classes": {
+      "synthetic": {
+        "definition": "Gerado do zero pelo AISEF ou por script versionado",
+        "read_rows": "approve_scope",
+        "write": "approve_scope"
+      },
+      "anonymized_verified": {
+        "definition": "Anonimizado com processo verificado e registrado",
+        "read_rows": "approve_operation",
+        "write": "approve_scope"
+      },
+      "anonymized_unverified_or_real": {
+        "definition": "Anonimizacao sem verificacao, ou dado real",
+        "read_rows": "approve_reinforced",
+        "write": "approve_reinforced",
+        "treat_as": "prod"
+      }
+    },
+    "unknown_class": "anonymized_unverified_or_real"
+  },
+
+  "transversal_rules": [
+    {
+      "id": "T1",
+      "name": "destrutivo_sobe_um_nivel",
+      "applies_to": ["DROP", "TRUNCATE", "DELETE_WITHOUT_WHERE", "rm_recursive", "branch_delete", "force_push"],
+      "minimum_level": { "dev": "approve_operation", "staging": "approve_reinforced", "prod": "approve_reinforced" }
+    },
+    {
+      "id": "T2",
+      "name": "producao_execucao_pontual",
+      "description": "Em producao o AISEF prepara migration, rollback e runbook. A execucao so ocorre com aprovacao reforcada.",
+      "approval_mode": "single_use",
+      "scope_authorization_allowed": false,
+      "validity_minutes_max": 30
+    },
+    {
+      "id": "T3",
+      "name": "segredos_nunca_em_logs",
+      "description": "Segredos nao podem aparecer em logs, evidencias, relatorios ou painel. Redigir antes de gravar."
+    },
+    {
+      "id": "T4",
+      "name": "schema_nao_implica_dados",
+      "description": "Acesso ao schema nao concede acesso aos registros."
+    },
+    {
+      "id": "T5",
+      "name": "sem_banco_conectado",
+      "description": "AISEF opera por migrations, entidades, ORM e docs quando nao ha conexao, e informa as limitacoes."
+    }
+  ],
+
+  "reinforced_approval_requirements": [
+    "diff ou plano exato da operacao",
+    "impacto estimado",
+    "plano de rollback",
+    "justificativa registrada",
+    "agente e tarefa solicitantes",
+    "uso unico e validade curta"
+  ],
+
+  "scope_authorization_schema_ref": {
+    "required_fields": [
+      "project", "feature", "environment", "resources", "operations",
+      "limits", "validity", "termination_condition", "history", "revocable",
+      "dataset_classification (quando incluir db_data)"
+    ],
+    "agent_must_stop_when": [
+      "sai do escopo",
+      "muda de ambiente",
+      "surge risco inesperado",
+      "exige decisao arquitetural",
+      "exige aprovacao obrigatoria"
+    ]
+  },
+
+  "resolution_algorithm": [
+    "1. Identificar resource_class e action; se nao classificado, aplicar defaults.unclassified_resource.",
+    "2. Identificar ambiente; se desconhecido, tratar como prod.",
+    "3. Obter nivel base em matrix.",
+    "4. Se db_data em staging, aplicar dataset_overrides pela classificacao declarada.",
+    "5. Aplicar regras transversais (T1) elevando o nivel quando couber.",
+    "6. Em conflito, prevalece o nivel mais restritivo.",
+    "7. Registrar solicitacao, decisao e justificativa em Audit & Evidence."
+  ],
+
+  "pending_decisions": [
+    "Lista final de operacoes destrutivas (T1)",
+    "Limites de tentativas de correcao automatica (fora desta politica)"
+  ]
+}

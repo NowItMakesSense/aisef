@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.local/schemas/feature-contract/0.1.0",
+  "title": "AISEF Feature Contract",
+  "description": "RASCUNHO v0.1. Visao global de uma feature: requisitos, regras, decisoes, plano de tarefas, rastreabilidade (RTM), aprovacao e aceite. Mudancas geram nova versao; nunca se sobrescreve nem se apaga conteudo anterior. Verificacoes entre documentos (ex.: todo requisito aponta para tarefas existentes) exigem codigo no validador, pois JSON Schema nao as expressa.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "feature_id", "contract_version", "cycle", "title", "objective", "problem",
+    "business_priority", "requirements", "business_rules", "scope", "architectural_decisions",
+    "dependencies", "risks", "acceptance_criteria", "task_plan", "tests", "rtm",
+    "approval", "state", "audit"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "feature_id": { "$ref": "#/$defs/id" },
+    "contract_version": { "type": "integer", "minimum": 1 },
+    "supersedes": { "type": ["string", "null"], "description": "Versao anterior deste contrato." },
+
+    "cycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number"],
+      "description": "Reabertura cria um novo ciclo. A entrega e a aprovacao anteriores ficam preservadas.",
+      "properties": {
+        "number": { "type": "integer", "minimum": 1 },
+        "previous_cycle_ref": { "type": ["string", "null"] },
+        "reopen_reason_type": { "enum": ["defect", "requirement_change", "evolution", null] },
+        "reopen_reason": { "type": ["string", "null"] },
+        "requested_by": { "type": ["string", "null"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "number": { "minimum": 2 } }, "required": ["number"] },
+          "then": { "required": ["previous_cycle_ref", "reopen_reason_type", "reopen_reason", "requested_by"] }
+        }
+      ]
+    },
+
+    "title": { "type": "string", "minLength": 3, "maxLength": 140 },
+    "objective": { "type": "string", "minLength": 10 },
+    "problem": { "type": "string", "minLength": 10 },
+
+    "business_priority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "set_by"],
+      "description": "Prioridade de negocio definida pelo usuario. O orquestrador reorganiza a fila tecnica, mas nao altera isto sem autorizacao.",
+      "properties": {
+        "level": { "enum": ["low", "medium", "high", "critical"] },
+        "set_by": { "const": "user" },
+        "set_at": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/requirement" }
+    },
+
+    "business_rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/business_rule" }
+    },
+
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["included", "excluded"],
+      "properties": {
+        "included": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "excluded": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "architectural_decisions": { "type": "array", "items": { "$ref": "#/$defs/versioned_ref" } },
+
+    "impact_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Obrigatoria para features em projetos existentes.",
+      "properties": {
+        "apis": { "type": "array", "items": { "type": "string" } },
+        "screens": { "type": "array", "items": { "type": "string" } },
+        "components": { "type": "array", "items": { "type": "string" } },
+        "tables": { "type": "array", "items": { "type": "string" } },
+        "modules": { "type": "array", "items": { "type": "string" } },
+        "integrations": { "type": "array", "items": { "type": "string" } },
+        "compatibility": { "type": "array", "items": { "type": "string" } },
+        "possible_regressions": { "type": "array", "items": { "type": "string" } },
+        "architecture_change_needed": { "type": "boolean" }
+      }
+    },
+
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "features": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "external": { "type": "array", "items": { "type": "string" } },
+        "technical": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description", "severity"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "description": { "type": "string" },
+          "severity": { "enum": ["low", "medium", "high", "critical"] },
+          "mitigation": { "type": "string" }
+        }
+      }
+    },
+
+    "constraints": { "type": "array", "items": { "type": "string" } },
+
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Criterios de aceite da feature, objetivos e verificaveis.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description", "requirement_ids", "verification"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "description": { "type": "string", "minLength": 5 },
+          "requirement_ids": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" } },
+          "verification": { "enum": ["automated_test", "command_output", "static_analysis", "file_assertion", "manual_review", "validator_check"] }
+        }
+      }
+    },
+
+    "task_plan": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id", "contract_version", "role"],
+        "properties": {
+          "task_id": { "$ref": "#/$defs/id" },
+          "contract_version": { "type": "integer", "minimum": 1 },
+          "role": { "type": "string" },
+          "depends_on": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+          "parallelizable": { "type": "boolean", "default": false }
+        }
+      }
+    },
+
+    "tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["integration_required", "regression_required"],
+      "properties": {
+        "integration_required": { "type": "boolean" },
+        "regression_required": { "type": "boolean" },
+        "plan": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "rtm": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Rastreabilidade obrigatoria para todos os requisitos, inclusive os pequenos: requisito -> regras -> tarefas -> criterios -> testes -> evidencias.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["requirement_id", "requirement_version", "task_ids", "criterion_ids"],
+        "properties": {
+          "requirement_id": { "$ref": "#/$defs/id" },
+          "requirement_version": { "type": "integer", "minimum": 1 },
+          "business_rule_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+          "task_ids": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" } },
+          "criterion_ids": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" } },
+          "test_refs": { "type": "array", "items": { "type": "string" } },
+          "evidence_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+        }
+      }
+    },
+
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan"],
+      "properties": {
+        "plan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": {
+            "status": { "enum": ["pending", "approved", "rejected"] },
+            "granularity": { "enum": ["flow", "feature", "requirement"] },
+            "approved_by": { "type": ["string", "null"] },
+            "approved_at": { "type": ["string", "null"], "format": "date-time" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "status": { "const": "approved" } }, "required": ["status"] },
+              "then": { "required": ["granularity", "approved_by", "approved_at"], "properties": { "approved_by": { "type": "string" }, "approved_at": { "type": "string" } } }
+            }
+          ]
+        },
+        "acceptance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "description": "Feature Acceptance: so o usuario encerra a feature, apos o relatorio final comparando planejado e executado.",
+          "properties": {
+            "status": { "enum": ["pending", "accepted", "changes_requested"] },
+            "final_report_ref": { "type": "string" },
+            "approved_by": { "type": ["string", "null"] },
+            "approved_at": { "type": ["string", "null"], "format": "date-time" },
+            "git_operations_authorized": { "const": false, "description": "Aceitar a feature nao autoriza commit, push, merge, release ou publicacao." }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "status": { "const": "accepted" } }, "required": ["status"] },
+              "then": { "required": ["final_report_ref", "approved_by", "approved_at"], "properties": { "approved_by": { "type": "string" }, "approved_at": { "type": "string" } } }
+            }
+          ]
+        }
+      }
+    },
+
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "enum": ["discovery", "planning", "awaiting_plan_approval", "approved_for_execution", "in_execution", "awaiting_acceptance", "closed", "cancelled"]
+        }
+      }
+    },
+
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_by", "created_at"],
+      "properties": {
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "change_reason": { "type": ["string", "null"] },
+        "event_log_ref": { "type": "string" }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "$comment": "Nao se executa sem plano aprovado.",
+      "if": { "properties": { "state": { "properties": { "status": { "enum": ["approved_for_execution", "in_execution", "awaiting_acceptance", "closed"] } }, "required": ["status"] } }, "required": ["state"] },
+      "then": { "properties": { "approval": { "properties": { "plan": { "properties": { "status": { "const": "approved" } } } } } } }
+    },
+    {
+      "$comment": "Feature so fecha com aceite do usuario.",
+      "if": { "properties": { "state": { "properties": { "status": { "const": "closed" } }, "required": ["status"] } }, "required": ["state"] },
+      "then": {
+        "required": ["approval"],
+        "properties": { "approval": { "required": ["acceptance"], "properties": { "acceptance": { "properties": { "status": { "const": "accepted" } } } } } }
+      }
+    }
+  ],
+
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$" },
+    "versioned_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "history_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "statement", "author", "justification", "changed_at"],
+      "properties": {
+        "version": { "type": "integer", "minimum": 1 },
+        "statement": { "type": "string" },
+        "author": { "type": "string" },
+        "justification": { "type": "string" },
+        "changed_at": { "type": "string", "format": "date-time" },
+        "impacts": { "type": "array", "items": { "type": "string" } },
+        "approved_by": { "type": ["string", "null"] },
+        "affected_task_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+      }
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "kind", "statement", "origin", "status", "history"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1 },
+        "kind": { "enum": ["functional", "non_functional"] },
+        "statement": { "type": "string", "minLength": 5 },
+        "origin": {
+          "enum": ["user_stated", "investigated", "decision"],
+          "description": "Nunca 'assumed': o AISEF nao inventa requisitos nem regras de negocio."
+        },
+        "status": { "enum": ["active", "superseded"] },
+        "history": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/history_entry" },
+          "description": "Versoes anteriores preservadas. Requisito nunca e sobrescrito nem apagado."
+        }
+      }
+    },
+    "business_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "statement", "origin", "status"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1 },
+        "statement": { "type": "string", "minLength": 5 },
+        "origin": { "enum": ["user_stated", "investigated", "decision"] },
+        "status": { "enum": ["active", "superseded"] },
+        "exceptions": { "type": "array", "items": { "type": "string" } },
+        "history": { "type": "array", "items": { "$ref": "#/$defs/history_entry" } }
+      }
+    }
+  }
+}

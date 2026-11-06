@@ -1,0 +1,444 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.local/schemas/approval-request/0.1.0",
+  "title": "AISEF Approval Request",
+  "description": "RASCUNHO v0.1. Item da fila do Approval Center: tudo o que o usuario precisa ver para decidir (escopo, arquivos, diffs, testes, impactos, riscos) e o registro da decisao. So o usuario decide. Item decidido e imutavel: mudancas viram novo item. O que for aprovado gera uma autorizacao (authorization.schema) e eventos de auditoria; este schema nao a substitui. Checagens entre documentos (o item bate com a autorizacao gerada, referencias existem) cabem ao validador em codigo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "request_id", "request_type", "status", "title", "summary",
+    "requested_by", "project_id", "feature_id", "created_at", "expires_at",
+    "presented", "risk", "blocks", "policy_version", "audit"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "request_id": { "$ref": "#/$defs/id" },
+    "request_type": {
+      "enum": [
+        "plan_approval", "scope_authorization", "operation_approval", "reinforced_approval",
+        "git_operation", "architecture_decision", "scope_change_decision", "feature_acceptance"
+      ]
+    },
+    "status": { "enum": ["pending", "approved", "rejected", "changes_requested", "expired", "withdrawn", "superseded"] },
+
+    "title": { "type": "string", "minLength": 5, "maxLength": 140 },
+    "summary": { "type": "string", "minLength": 20, "maxLength": 1200, "description": "Em linguagem direta: o que sera feito, por que, e o que acontece se aprovar ou recusar." },
+
+    "requested_by": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "enum": ["orchestrator", "agent", "system"] },
+        "id": { "type": "string" }
+      }
+    },
+
+    "project_id": { "$ref": "#/$defs/id" },
+    "feature_id": { "$ref": "#/$defs/id" },
+    "cycle": { "type": "integer", "minimum": 1 },
+    "task_id": { "$ref": "#/$defs/id" },
+
+    "created_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "validity_minutes": { "type": "integer", "minimum": 1, "maximum": 30, "description": "Aprovacao reforcada: no maximo 30 minutos (T2)." },
+
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "resource_class", "operation", "destructive", "sensitive_content_shown"],
+      "properties": {
+        "environment": { "enum": ["dev", "staging", "prod"] },
+        "resource_class": { "enum": ["repo_code", "config_ci_iac", "sensitive_files", "db_schema", "db_data", "deploy_infra", "git"] },
+        "operation": { "type": "string", "minLength": 3, "description": "Uma unica operacao exata." },
+        "access": { "enum": ["read", "write", "execute"], "description": "Obrigatorio para operation_approval em producao, onde so leitura por operacao e permitida." },
+        "destructive": { "type": "boolean" },
+        "dataset_classification": { "enum": ["synthetic", "anonymized_verified", "anonymized_unverified_or_real", null] },
+        "sensitive_content_shown": { "const": false, "description": "O Approval Center nunca exibe conteudo de segredos: mostra o recurso, nao o valor." }
+      }
+    },
+
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "branch", "covers_only_this_operation"],
+      "properties": {
+        "operation": { "enum": ["commit", "push", "merge", "release_publish", "force_push", "history_rewrite", "branch_delete"] },
+        "branch": { "type": "string" },
+        "target_branch": { "type": "string" },
+        "commit_refs": { "type": "array", "items": { "type": "string" } },
+        "covers_only_this_operation": { "const": true, "description": "Aprovar commit nao aprova push, merge nem release." }
+      }
+    },
+
+    "scope_proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "resources", "operations", "valid_until"],
+      "properties": {
+        "environment": { "enum": ["dev", "staging"] },
+        "resources": { "type": "array", "minItems": 1, "items": { "enum": ["repo_code", "config_ci_iac", "db_schema", "db_data", "deploy_infra"] } },
+        "operations": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "dataset_classification": { "enum": ["synthetic", "anonymized_verified", "anonymized_unverified_or_real", null] },
+        "row_read_included": { "type": "boolean" },
+        "valid_until": { "type": "string", "format": "date-time" },
+        "termination_condition": { "type": "array", "items": { "type": "string" } },
+        "limits": { "type": "object" }
+      }
+    },
+
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["granularity", "task_plan_ref", "requirements_count", "tasks_count"],
+      "properties": {
+        "granularity": { "enum": ["flow", "feature", "requirement"] },
+        "task_plan_ref": { "type": "string" },
+        "requirements_count": { "type": "integer", "minimum": 1 },
+        "tasks_count": { "type": "integer", "minimum": 1 },
+        "assumptions_to_confirm": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "options": {
+      "type": "array",
+      "minItems": 2,
+      "description": "Cenarios para decisoes arquiteturais e de mudanca de escopo. A decisao final e sempre do usuario.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["option_id", "label", "description", "impacts", "risks"],
+        "properties": {
+          "option_id": { "$ref": "#/$defs/id" },
+          "label": { "type": "string" },
+          "description": { "type": "string" },
+          "impacts": { "type": "array", "items": { "type": "string" } },
+          "risks": { "type": "array", "items": { "type": "string" } },
+          "cost": { "type": "string" },
+          "migration": { "type": "string" }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["option_id", "rationale"],
+      "properties": {
+        "option_id": { "$ref": "#/$defs/id" },
+        "rationale": { "type": "string", "minLength": 20 }
+      }
+    },
+
+    "acceptance_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["final_report_ref", "requirements_met", "requirements_not_met", "tests_passed", "tests_failed", "pending_items", "git_operations_authorized"],
+      "description": "Feature Acceptance: relatorio final comparando planejado e executado.",
+      "properties": {
+        "final_report_ref": { "type": "string" },
+        "planned_vs_executed_ref": { "type": "string" },
+        "requirements_met": { "type": "integer", "minimum": 0 },
+        "requirements_not_met": { "type": "integer", "minimum": 0 },
+        "tests_passed": { "type": "integer", "minimum": 0 },
+        "tests_failed": { "type": "integer", "minimum": 0 },
+        "pending_items": { "type": "array", "items": { "type": "string" } },
+        "git_operations_authorized": { "const": false, "description": "Aceitar a feature nao autoriza commit, push, merge, release nem publicacao." }
+      }
+    },
+
+    "presented": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["impact", "evidence_ids"],
+      "description": "O que o usuario ve ao decidir.",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "change"],
+            "properties": {
+              "path": { "type": "string" },
+              "change": { "enum": ["created", "modified", "deleted", "read"] },
+              "lines_added": { "type": "integer", "minimum": 0 },
+              "lines_removed": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "diff_ref": { "type": "string", "minLength": 1 },
+        "tests": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["summary"],
+          "properties": {
+            "summary": { "type": "string" },
+            "executed": { "type": "integer", "minimum": 0 },
+            "passed": { "type": "integer", "minimum": 0 },
+            "failed": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "impact": { "type": "string", "minLength": 10 },
+        "rollback_plan": { "type": "string", "minLength": 10 },
+        "justification": { "type": "string", "minLength": 10 },
+        "requirement_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "evidence_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+      }
+    },
+
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "items"],
+      "properties": {
+        "level": { "enum": ["low", "medium", "high", "critical"] },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["description", "severity"],
+            "properties": {
+              "description": { "type": "string" },
+              "severity": { "enum": ["low", "medium", "high", "critical"] },
+              "mitigation": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "blocks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocked_task_ids", "independent_work_continues"],
+      "description": "O que fica parado ate a decisao. As demais partes independentes continuam.",
+      "properties": {
+        "blocked_task_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "independent_work_continues": { "type": "boolean" }
+      }
+    },
+
+    "required_acknowledgements": {
+      "type": "array", "uniqueItems": true,
+      "items": { "enum": ["impact_read", "rollback_read", "diff_reviewed"] },
+      "description": "Confirmacoes que o usuario precisa marcar para aprovar operacoes reforcadas, para evitar aprovacao no automatico."
+    },
+
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["choice", "decided_by", "decided_at"],
+      "properties": {
+        "choice": { "enum": ["approve", "reject", "request_changes", "select_option"] },
+        "selected_option_id": { "$ref": "#/$defs/id" },
+        "decided_by": { "const": "user" },
+        "decided_at": { "type": "string", "format": "date-time" },
+        "note": { "type": "string" },
+        "acknowledged": { "type": "array", "uniqueItems": true, "items": { "enum": ["impact_read", "rollback_read", "diff_reviewed"] } }
+      }
+    },
+
+    "resulting_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "description": "Artefato gerado pela aprovacao (autorizacao de escopo, aprovacao reforcada, versao de contrato).",
+      "properties": {
+        "kind": { "enum": ["scope_authorization", "reinforced_approval", "feature_contract", "architectural_decision", "operation_grant"] },
+        "id": { "type": "string" },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "superseded_by": { "$ref": "#/$defs/id" },
+
+    "policy_version": { "type": "string" },
+
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requested_event_ref"],
+      "properties": {
+        "requested_event_ref": { "type": "string" },
+        "decided_event_ref": { "type": "string" }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "$comment": "Conteudo obrigatorio por tipo de pedido.",
+      "if": { "properties": { "request_type": { "const": "plan_approval" } }, "required": ["request_type"] },
+      "then": { "required": ["plan"] }
+    },
+    {
+      "if": { "properties": { "request_type": { "const": "scope_authorization" } }, "required": ["request_type"] },
+      "then": { "required": ["scope_proposal"] }
+    },
+    {
+      "if": { "properties": { "request_type": { "const": "operation_approval" } }, "required": ["request_type"] },
+      "then": {
+        "required": ["operation", "task_id"],
+        "properties": { "operation": { "properties": { "resource_class": { "not": { "const": "git" } } } } }
+      }
+    },
+    {
+      "if": { "properties": { "request_type": { "const": "reinforced_approval" } }, "required": ["request_type"] },
+      "then": {
+        "required": ["operation", "task_id", "validity_minutes", "required_acknowledgements"],
+        "properties": {
+          "presented": { "required": ["diff_ref", "rollback_plan", "justification"] },
+          "required_acknowledgements": { "minItems": 3 },
+          "risk": { "properties": { "level": { "enum": ["medium", "high", "critical"] } } }
+        }
+      }
+    },
+    {
+      "$comment": "Git: cada operacao tem seu proprio pedido. Operacoes reforcadas (force push, reescrita, exclusao de branch) exigem rollback, diff e confirmacoes.",
+      "if": { "properties": { "request_type": { "const": "git_operation" } }, "required": ["request_type"] },
+      "then": {
+        "required": ["git", "operation", "task_id"],
+        "properties": { "operation": { "properties": { "resource_class": { "const": "git" } } } }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "request_type": { "const": "git_operation" },
+          "git": { "properties": { "operation": { "enum": ["force_push", "history_rewrite", "branch_delete"] } }, "required": ["operation"] }
+        },
+        "required": ["request_type", "git"]
+      },
+      "then": {
+        "required": ["validity_minutes", "required_acknowledgements"],
+        "properties": {
+          "presented": { "required": ["diff_ref", "rollback_plan", "justification"] },
+          "required_acknowledgements": { "minItems": 3 },
+          "operation": { "properties": { "destructive": { "const": true } } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "request_type": { "enum": ["architecture_decision", "scope_change_decision"] } }, "required": ["request_type"] },
+      "then": { "required": ["options", "recommendation"] }
+    },
+    {
+      "if": { "properties": { "request_type": { "const": "feature_acceptance" } }, "required": ["request_type"] },
+      "then": { "required": ["acceptance_summary"] }
+    },
+    {
+      "$comment": "Em producao, operation_approval so serve para LEITURA de repo_code, db_schema ou config_ci_iac e nunca destrutiva. Qualquer escrita ou execucao em producao e aprovacao reforcada.",
+      "if": {
+        "properties": {
+          "request_type": { "const": "operation_approval" },
+          "operation": { "properties": { "environment": { "const": "prod" } }, "required": ["environment"] }
+        },
+        "required": ["request_type", "operation"]
+      },
+      "then": {
+        "properties": {
+          "operation": {
+            "required": ["access"],
+            "properties": {
+              "access": { "const": "read" },
+              "resource_class": { "enum": ["repo_code", "db_schema", "config_ci_iac"] },
+              "destructive": { "const": false }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "T1: destrutivo em dev aceita aprovacao por operacao; em staging exige reforcada.",
+      "if": {
+        "properties": {
+          "request_type": { "const": "operation_approval" },
+          "operation": {
+            "properties": { "destructive": { "const": true }, "environment": { "const": "staging" } },
+            "required": ["destructive", "environment"]
+          }
+        },
+        "required": ["request_type", "operation"]
+      },
+      "then": { "not": {} }
+    },
+    {
+      "$comment": "Estado pendente nao tem decisao; estados decididos tem.",
+      "if": { "properties": { "status": { "enum": ["pending", "expired", "withdrawn", "superseded"] } }, "required": ["status"] },
+      "then": { "not": { "anyOf": [ { "required": ["decision"] }, { "required": ["resulting_ref"] } ] } }
+    },
+    {
+      "if": { "properties": { "status": { "enum": ["approved", "rejected", "changes_requested"] } }, "required": ["status"] },
+      "then": {
+        "required": ["decision"],
+        "properties": { "audit": { "required": ["requested_event_ref", "decided_event_ref"] } }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "approved" } }, "required": ["status"] },
+      "then": { "properties": { "decision": { "properties": { "choice": { "enum": ["approve", "select_option"] } } } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "rejected" } }, "required": ["status"] },
+      "then": { "not": { "required": ["resulting_ref"] }, "properties": { "decision": { "properties": { "choice": { "const": "reject" } } } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "changes_requested" } }, "required": ["status"] },
+      "then": { "not": { "required": ["resulting_ref"] }, "properties": { "decision": { "properties": { "choice": { "const": "request_changes" } } } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "superseded" } }, "required": ["status"] },
+      "then": { "required": ["superseded_by"] }
+    },
+    {
+      "$comment": "Decisoes com opcoes escolhem uma opcao; as demais aprovam ou recusam.",
+      "if": {
+        "properties": { "request_type": { "enum": ["architecture_decision", "scope_change_decision"] }, "status": { "const": "approved" } },
+        "required": ["request_type", "status"]
+      },
+      "then": { "properties": { "decision": { "properties": { "choice": { "const": "select_option" } }, "required": ["selected_option_id"] } } }
+    },
+    {
+      "if": {
+        "properties": { "request_type": { "enum": ["plan_approval", "scope_authorization", "operation_approval", "reinforced_approval", "git_operation", "feature_acceptance"] }, "status": { "const": "approved" } },
+        "required": ["request_type", "status"]
+      },
+      "then": { "properties": { "decision": { "properties": { "choice": { "const": "approve" } } } } }
+    },
+    {
+      "$comment": "Aprovar escopo ou aprovacao reforcada gera o artefato correspondente.",
+      "if": {
+        "properties": { "request_type": { "enum": ["scope_authorization", "reinforced_approval"] }, "status": { "const": "approved" } },
+        "required": ["request_type", "status"]
+      },
+      "then": { "required": ["resulting_ref"] }
+    },
+    {
+      "$comment": "Confirmacoes obrigatorias: aprovar sem marcar todas e rejeitado.",
+      "if": {
+        "properties": { "request_type": { "enum": ["reinforced_approval", "git_operation"] }, "status": { "const": "approved" }, "required_acknowledgements": { "minItems": 1 } },
+        "required": ["request_type", "status", "required_acknowledgements"]
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "required": ["acknowledged"],
+            "properties": {
+              "acknowledged": {
+                "allOf": [
+                  { "contains": { "const": "impact_read" } },
+                  { "contains": { "const": "rollback_read" } },
+                  { "contains": { "const": "diff_reviewed" } }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,95}$" }
+  }
+}

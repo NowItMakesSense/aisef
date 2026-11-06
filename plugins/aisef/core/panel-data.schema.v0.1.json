@@ -1,0 +1,377 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.local/schemas/panel-data/0.1.0",
+  "title": "AISEF Panel Data",
+  "description": "RASCUNHO v0.1. Dados do painel HTML. E uma VISAO DERIVADA dos contratos, relatorios, aprovacoes e do log de auditoria: nunca e fonte de verdade, e e regenerada pelo build_panel.py. O manifesto registra de qual ponto do log os dados vieram e se a integridade desse log foi verificada. Sem segredos e sem raciocinio interno dos modelos.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest", "overview", "features", "tasks", "rtm", "approvals", "decisions", "agents", "risks", "timeline", "graphs", "executions", "source_errors"],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["derived", "generated_at", "project_id", "builder_version", "source", "integrity", "redactions", "contains_secrets", "contains_model_reasoning"],
+      "properties": {
+        "derived": { "const": true },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "project_id": { "type": ["string", "null"] },
+        "builder_version": { "type": "string" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["log_id", "event_count", "head_sequence", "head_hash"],
+          "properties": {
+            "log_id": { "type": ["string", "null"] },
+            "event_count": { "type": "integer", "minimum": 0 },
+            "head_sequence": { "type": ["integer", "null"] },
+            "head_hash": { "type": ["string", "null"] }
+          }
+        },
+        "integrity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "signatures_verified", "head_verified", "errors", "warnings"],
+          "properties": {
+            "status": { "enum": ["ok", "warning", "broken"], "description": "broken: cadeia, assinatura ou head nao conferem. Os dados exibidos nao devem ser tomados como confiaveis." },
+            "signatures_verified": { "type": "boolean" },
+            "head_verified": { "type": "boolean" },
+            "errors": { "type": "array", "items": { "type": "string" } },
+            "warnings": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "redactions": { "type": "integer", "minimum": 0, "description": "Quantos trechos com aparencia de segredo foram mascarados na geracao." },
+        "contains_secrets": { "const": false },
+        "contains_model_reasoning": { "const": false }
+      }
+    },
+
+    "overview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["features_by_status", "tasks_by_status", "pending_approvals", "pending_high_risk", "blocked_tasks", "last_event_at"],
+      "properties": {
+        "features_by_status": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "tasks_by_status": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "pending_approvals": { "type": "integer", "minimum": 0 },
+        "pending_high_risk": { "type": "integer", "minimum": 0 },
+        "blocked_tasks": { "type": "integer", "minimum": 0 },
+        "last_event_at": { "type": ["string", "null"] }
+      }
+    },
+
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["feature_id", "title", "cycle", "business_priority", "status", "plan_approval", "acceptance", "tasks_total", "tasks_completed", "tasks_blocked", "progress_pct", "requirements_total", "requirements_covered", "risks_open"],
+        "properties": {
+          "feature_id": { "type": "string" },
+          "title": { "type": "string" },
+          "cycle": { "type": "integer", "minimum": 1 },
+          "business_priority": { "enum": ["low", "medium", "high", "critical"] },
+          "status": { "type": "string" },
+          "plan_approval": { "type": "string" },
+          "acceptance": { "type": "string" },
+          "tasks_total": { "type": "integer", "minimum": 0 },
+          "tasks_completed": { "type": "integer", "minimum": 0 },
+          "tasks_blocked": { "type": "integer", "minimum": 0 },
+          "progress_pct": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "requirements_total": { "type": "integer", "minimum": 0 },
+          "requirements_covered": { "type": "integer", "minimum": 0 },
+          "risks_open": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id", "feature_id", "title", "role", "agent_id", "status", "contract_version", "depends_on", "blocked_by", "parallelizable", "risk_level", "environment", "criteria_total", "rejection_count"],
+        "properties": {
+          "task_id": { "type": "string" },
+          "feature_id": { "type": "string" },
+          "title": { "type": "string" },
+          "role": { "type": ["string", "null"] },
+          "agent_id": { "type": "string" },
+          "status": { "type": "string" },
+          "contract_version": { "type": "integer", "minimum": 1 },
+          "depends_on": { "type": "array", "items": { "type": "string" } },
+          "blocked_by": { "type": "array", "items": { "type": "string" }, "description": "Dependencias ainda nao concluidas." },
+          "parallelizable": { "type": "boolean" },
+          "risk_level": { "enum": ["low", "medium", "high", "critical"] },
+          "environment": { "enum": ["dev", "staging", "prod"] },
+          "criteria_total": { "type": "integer", "minimum": 0 },
+          "rejection_count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+
+    "rtm": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["feature_id", "requirement_id", "version", "kind", "statement", "status", "task_ids", "criterion_ids", "missing_task_ids"],
+        "properties": {
+          "feature_id": { "type": "string" },
+          "requirement_id": { "type": "string" },
+          "version": { "type": "integer", "minimum": 1 },
+          "kind": { "type": "string" },
+          "statement": { "type": "string" },
+          "status": { "enum": ["not_started", "in_progress", "covered", "broken_link"], "description": "broken_link: a RTM aponta para tarefa que nao existe ou foi excluida por contrato invalido." },
+          "task_ids": { "type": "array", "items": { "type": "string" } },
+          "criterion_ids": { "type": "array", "items": { "type": "string" } },
+          "missing_task_ids": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pending", "recent"],
+      "properties": {
+        "pending": { "type": "array", "items": { "$ref": "#/$defs/approval_item" }, "description": "Ordenado por: mais tarefas bloqueadas, maior risco, expira antes." },
+        "recent": { "type": "array", "items": { "$ref": "#/$defs/approval_item" } }
+      }
+    },
+
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id", "feature_id", "title", "request_type", "status", "selected_option", "discarded_alternatives", "recommendation", "followed_recommendation", "decided_at"],
+        "properties": {
+          "request_id": { "type": "string" },
+          "feature_id": { "type": "string" },
+          "title": { "type": "string" },
+          "request_type": { "enum": ["architecture_decision", "scope_change_decision"] },
+          "status": { "type": "string" },
+          "selected_option": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/option" }] },
+          "discarded_alternatives": { "type": "array", "items": { "$ref": "#/$defs/option" } },
+          "recommendation": {
+            "anyOf": [
+              { "type": "null" },
+              { "type": "object", "additionalProperties": false, "required": ["option_id", "rationale"], "properties": { "option_id": { "type": "string" }, "rationale": { "type": "string" } } }
+            ]
+          },
+          "followed_recommendation": { "type": ["boolean", "null"] },
+          "decided_at": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["agent_id", "name", "role", "status", "contract_version", "tasks_in_progress", "tasks_assigned_total"],
+        "properties": {
+          "agent_id": { "type": "string" },
+          "name": { "type": "string" },
+          "role": { "type": "string" },
+          "status": { "type": "string" },
+          "contract_version": { "type": "integer", "minimum": 1 },
+          "tasks_in_progress": { "type": "array", "items": { "type": "string" } },
+          "tasks_assigned_total": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "source_id", "feature_id", "description", "severity", "mitigation"],
+        "properties": {
+          "source": { "enum": ["feature", "approval"] },
+          "source_id": { "type": "string" },
+          "feature_id": { "type": "string" },
+          "description": { "type": "string" },
+          "severity": { "enum": ["low", "medium", "high", "critical"] },
+          "mitigation": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "timeline": {
+      "type": "array",
+      "description": "Eventos com panel_visible diferente de false, do mais recente ao mais antigo, ate 200.",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sequence", "event_id", "timestamp", "event_type", "actor_type", "actor_id", "summary", "feature_id", "task_id"],
+        "properties": {
+          "sequence": { "type": "integer", "minimum": 0 },
+          "event_id": { "type": "string" },
+          "timestamp": { "type": "string" },
+          "event_type": { "type": "string" },
+          "actor_type": { "type": "string" },
+          "actor_id": { "type": "string" },
+          "summary": { "type": "string" },
+          "feature_id": { "type": ["string", "null"] },
+          "task_id": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "graphs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dependencies"],
+      "properties": {
+        "dependencies": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["nodes", "edges", "missing_nodes", "mermaid"],
+          "properties": {
+            "nodes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "feature_id", "title", "status"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "feature_id": { "type": "string" },
+                  "title": { "type": "string" },
+                  "status": { "type": "string" }
+                }
+              }
+            },
+            "edges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["from", "to"],
+                "properties": { "from": { "type": "string" }, "to": { "type": "string" } }
+              }
+            },
+            "missing_nodes": { "type": "array", "items": { "type": "string" }, "description": "Dependencias citadas que nao existem como tarefa." },
+            "mermaid": { "type": "string", "description": "Codigo Mermaid ja saneado: rotulos so com caracteres seguros." }
+          }
+        }
+      }
+    },
+
+    "executions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["report_id", "task_id", "status", "finished_at", "tests", "criteria", "evidence_count", "intervention_needed"],
+        "properties": {
+          "report_id": { "type": "string" },
+          "task_id": { "type": "string" },
+          "status": { "type": "string" },
+          "finished_at": { "type": "string" },
+          "tests": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["executed", "passed", "failed", "skipped"],
+            "properties": {
+              "executed": { "type": "integer" }, "passed": { "type": "integer" },
+              "failed": { "type": "integer" }, "skipped": { "type": "integer" }
+            }
+          },
+          "criteria": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["met", "not_met", "not_verifiable"],
+            "properties": {
+              "met": { "type": "integer" }, "not_met": { "type": "integer" }, "not_verifiable": { "type": "integer" }
+            }
+          },
+          "evidence_count": { "type": "integer", "minimum": 0 },
+          "intervention_needed": { "type": "boolean" }
+        }
+      }
+    },
+
+    "source_errors": {
+      "type": "array",
+      "description": "Arquivos de origem invalidos ou ilegiveis. Ficam fora das visoes e aparecem aqui.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "errors"],
+        "properties": {
+          "file": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["option_id", "label", "description", "risks"],
+      "properties": {
+        "option_id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "risks": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "approval_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_id", "request_type", "status", "title", "summary", "feature_id", "task_id", "risk_level", "created_at", "expires_at", "blocked_task_ids", "independent_work_continues", "operation", "required_acknowledgements", "decided"],
+      "properties": {
+        "request_id": { "type": "string" },
+        "request_type": { "type": "string" },
+        "status": { "type": "string" },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "feature_id": { "type": "string" },
+        "task_id": { "type": ["string", "null"] },
+        "risk_level": { "enum": ["low", "medium", "high", "critical"] },
+        "created_at": { "type": "string" },
+        "expires_at": { "type": "string" },
+        "blocked_task_ids": { "type": "array", "items": { "type": "string" } },
+        "independent_work_continues": { "type": "boolean" },
+        "operation": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["environment", "resource_class", "operation", "destructive"],
+              "properties": {
+                "environment": { "type": "string" }, "resource_class": { "type": "string" },
+                "operation": { "type": "string" }, "destructive": { "type": "boolean" }
+              }
+            }
+          ]
+        },
+        "required_acknowledgements": { "type": "array", "items": { "type": "string" } },
+        "decided": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["choice", "decided_by", "decided_at"],
+              "properties": {
+                "choice": { "type": "string" }, "decided_by": { "type": "string" },
+                "decided_at": { "type": "string" }, "selected_option_id": { "type": "string" }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

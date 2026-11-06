@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.local/schemas/audit-event/0.1.0",
+  "title": "AISEF Audit Event",
+  "description": "RASCUNHO v0.1. Um evento do historico imutavel. Eventos sao encadeados por hash (cada um inclui o hash do anterior), so se acrescenta ao fim e correcoes sao novos eventos que apontam para o corrigido. O schema nao calcula nem confere hashes: isso e feito pelo verificador (ver audit_chain.py). Segredos nunca entram, e raciocinio interno privado dos modelos nao e registrado.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "log_id", "sequence", "event_id", "timestamp", "event_type",
+    "actor", "project_id", "summary", "secrets_redacted", "contains_model_reasoning",
+    "hash_algorithm", "prev_hash", "hash"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "log_id": { "$ref": "#/$defs/id", "description": "Um log por projeto." },
+    "sequence": { "type": "integer", "minimum": 0, "description": "0 e o evento genesis; depois, +1 sem lacunas." },
+    "event_id": { "$ref": "#/$defs/id" },
+    "timestamp": { "type": "string", "format": "date-time" },
+
+    "event_type": {
+      "enum": [
+        "genesis", "checkpoint",
+        "contract_created", "contract_changed", "state_changed",
+        "delegation", "task_started", "task_paused", "task_resumed", "task_executed", "task_validated", "task_completed", "task_rejected",
+        "tool_used", "operation_requested", "operation_decided", "operation_executed", "file_modified",
+        "test_run", "evidence_recorded", "validation_result",
+        "failure", "recovery_attempt", "scope_discovery",
+        "authorization_granted", "authorization_revoked", "authorization_expired",
+        "approval_requested", "approval_granted", "approval_rejected",
+        "decision_recorded", "feature_accepted", "feature_reopened",
+        "correction"
+      ]
+    },
+
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "enum": ["user", "orchestrator", "agent", "validator", "system"] },
+        "id": { "type": "string" }
+      }
+    },
+
+    "project_id": { "$ref": "#/$defs/id" },
+    "feature_id": { "$ref": "#/$defs/id" },
+    "cycle": { "type": "integer", "minimum": 1 },
+    "task_id": { "$ref": "#/$defs/id" },
+
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Artefato a que o evento se refere, sempre com versao.",
+      "properties": {
+        "kind": { "enum": ["agent_contract", "feature_contract", "task_contract", "execution_report", "scope_authorization", "reinforced_approval", "requirement", "business_rule", "architectural_decision", "file", "operation"] },
+        "id": { "type": "string" },
+        "version": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["kind", "id"]
+    },
+
+    "summary": { "type": "string", "minLength": 3, "maxLength": 500 },
+    "data": {
+      "type": "object",
+      "description": "Detalhes estruturados do evento. Sem segredos e sem raciocinio interno.",
+      "additionalProperties": true
+    },
+
+    "caused_by": { "type": "string", "description": "event_id do evento que originou este." },
+    "corrects_event_id": { "type": "string", "description": "Em eventos 'correction': o evento corrigido. O original nunca e alterado nem apagado." },
+    "evidence_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+    "panel_visible": { "type": "boolean", "default": true, "description": "Controla a exibicao no painel por eventos relevantes, sem excesso de mensagens." },
+
+    "secrets_redacted": { "const": true },
+    "contains_model_reasoning": { "const": false },
+
+    "hash_algorithm": { "const": "sha256-canonical-json-v1" },
+    "prev_hash": { "$ref": "#/$defs/sha256", "description": "Hash do evento anterior. Genesis usa 64 zeros." },
+    "hash": { "$ref": "#/$defs/sha256", "description": "SHA-256 do JSON canonico deste evento sem o campo 'hash'." },
+
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Assinatura Ed25519 do hash do evento, feita pelo Audit Signer (componente separado, dono da chave privada). Decisao do usuario: assinar cada evento. Perfil de producao: obrigatoria (ver audit_signing.py); o schema base a mantem opcional para permitir testes sem chave. Nao entra no calculo do hash.",
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": { "const": "ed25519" },
+        "key_id": { "$ref": "#/$defs/id" },
+        "value": { "type": "string", "pattern": "^[A-Za-z0-9+/]{86}==$", "description": "Assinatura de 64 bytes em base64." }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "if": { "properties": { "event_type": { "const": "genesis" } }, "required": ["event_type"] },
+      "then": { "properties": { "sequence": { "const": 0 }, "prev_hash": { "const": "0000000000000000000000000000000000000000000000000000000000000000" } } },
+      "else": { "properties": { "sequence": { "minimum": 1 } } }
+    },
+    {
+      "$comment": "Correcao aponta para o evento corrigido, nunca o substitui.",
+      "if": { "properties": { "event_type": { "const": "correction" } }, "required": ["event_type"] },
+      "then": { "required": ["corrects_event_id"] },
+      "else": { "not": { "required": ["corrects_event_id"] } }
+    },
+    {
+      "$comment": "Decisoes do usuario e aceites so podem ser registrados pelo usuario.",
+      "if": { "properties": { "event_type": { "enum": ["approval_granted", "approval_rejected", "authorization_granted", "feature_accepted"] } }, "required": ["event_type"] },
+      "then": { "properties": { "actor": { "properties": { "type": { "const": "user" } } } } }
+    },
+    {
+      "$comment": "Eventos de tarefa e operacao precisam identificar projeto e tarefa/feature.",
+      "if": { "properties": { "event_type": { "enum": ["task_started", "task_executed", "task_validated", "task_completed", "task_rejected", "operation_requested", "operation_decided", "operation_executed", "file_modified", "test_run"] } }, "required": ["event_type"] },
+      "then": { "required": ["feature_id", "task_id"] }
+    },
+    {
+      "$comment": "Validacao so por validador, orquestrador ou QA: nunca pelo proprio executor.",
+      "if": { "properties": { "event_type": { "enum": ["task_validated", "validation_result"] } }, "required": ["event_type"] },
+      "then": { "properties": { "actor": { "properties": { "type": { "enum": ["validator", "orchestrator"] } } } } }
+    }
+  ],
+
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,95}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

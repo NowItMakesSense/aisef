@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.local/schemas/agent-contract/0.1.0",
+  "title": "AISEF Agent Contract",
+  "description": "RASCUNHO v0.1. Perfil permanente de um agente: papel, competencias, tetos de permissao, acesso a contexto e regras de comunicacao. As regras arquiteturais aprovadas aparecem como constantes: nenhum agente pode desligar essas garantias. O contrato define um teto; a permissao efetiva de cada operacao continua sendo decidida pelo Permission Engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "agent_id", "contract_version", "role", "name", "description",
+    "responsibilities", "task_types", "tools", "permission_ceiling", "context_access",
+    "communication", "authority", "output", "validation_role", "memory",
+    "handoff", "limits", "status", "audit"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "agent_id": { "$ref": "#/$defs/id" },
+    "contract_version": { "type": "integer", "minimum": 1 },
+    "supersedes": { "type": ["string", "null"] },
+
+    "role": {
+      "enum": ["orchestrator", "backend", "frontend", "database", "qa", "security", "devops", "domain", "validator", "arena_challenger", "arena_reviewer"]
+    },
+    "name": { "type": "string", "minLength": 3, "maxLength": 80 },
+    "description": { "type": "string", "minLength": 10 },
+
+    "responsibilities": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "out_of_scope": { "type": "array", "items": { "type": "string" } },
+
+    "competencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["area"],
+        "properties": {
+          "area": { "type": "string" },
+          "technologies": { "type": "array", "items": { "type": "string" } },
+          "note": { "type": "string", "description": "Preferencias do usuario nao viram requisitos obrigatorios." }
+        }
+      }
+    },
+
+    "task_types": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": { "enum": ["implementation", "refactoring", "testing", "review", "investigation", "documentation", "migration", "security_review", "validation", "arena_debate"] }
+    },
+
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed", "via_execution_gateway"],
+      "properties": {
+        "allowed": { "type": "array", "items": { "type": "string" }, "description": "Allowlist: o que nao esta listado nao existe para o agente." },
+        "via_execution_gateway": { "const": true, "description": "Toda operacao sensivel passa pelo Execution Gateway e pelo Permission Engine." }
+      }
+    },
+
+    "permission_ceiling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resources", "max_environment"],
+      "description": "Teto do que o agente pode vir a receber. Nunca concede acesso por si so: a autorizacao de escopo e a politica continuam obrigatorias.",
+      "properties": {
+        "resources": {
+          "type": "array", "uniqueItems": true,
+          "items": { "enum": ["repo_code", "config_ci_iac", "sensitive_files", "db_schema", "db_data", "deploy_infra", "git"] }
+        },
+        "max_environment": { "enum": ["dev", "staging", "prod"] },
+        "git_operations": {
+          "type": "array", "uniqueItems": true,
+          "items": { "enum": ["status_log_diff", "commit", "push", "merge", "release_publish", "force_push", "history_rewrite", "branch_delete"] },
+          "description": "Operacoes Git que o agente pode SOLICITAR. A execucao segue a politica e exige aprovacao humana."
+        }
+      }
+    },
+
+    "context_access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layers"],
+      "properties": {
+        "layers": {
+          "type": "array", "uniqueItems": true, "minItems": 1,
+          "items": { "enum": ["mandatory", "referenced", "on_demand"] }
+        },
+        "knowledge_base_scopes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "communication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "can_delegate_directly", "can_message_other_agents_directly", "reports_discoveries_to_orchestrator"],
+      "properties": {
+        "route": { "const": "orchestrator" },
+        "can_delegate_directly": { "const": false },
+        "can_message_other_agents_directly": { "const": false },
+        "reports_discoveries_to_orchestrator": { "const": true }
+      }
+    },
+
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "can_change_scope", "can_modify_approved_decisions", "can_modify_other_agents_contracts",
+        "can_modify_own_contract", "can_contest_with_evidence", "must_stop_on_scope_change"
+      ],
+      "properties": {
+        "can_change_scope": { "const": false },
+        "can_modify_approved_decisions": { "const": false },
+        "can_modify_other_agents_contracts": { "const": false },
+        "can_modify_own_contract": { "const": false },
+        "can_contest_with_evidence": { "const": true, "description": "Pode questionar requisitos, decisoes e instrucoes inconsistentes, com evidencias, sem alterar o que foi aprovado." },
+        "must_stop_on_scope_change": { "const": true }
+      }
+    },
+
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_report_schema", "formats"],
+      "properties": {
+        "execution_report_schema": { "type": "string", "pattern": "^execution-report/[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "formats": {
+          "type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true,
+          "items": { "enum": ["json", "technical_report"] },
+          "description": "Duplo formato obrigatorio e consistente."
+        },
+        "secrets_in_output": { "const": false }
+      }
+    },
+
+    "validation_role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["can_self_attest_delivery", "can_validate_own_work"],
+      "properties": {
+        "can_self_attest_delivery": { "const": false },
+        "can_validate_own_work": { "const": false },
+        "validates": { "type": "array", "items": { "enum": ["backend", "frontend", "database", "devops", "security", "qa", "domain"] }, "description": "Papeis que este agente pode validar. Apenas para roles de validacao." }
+      }
+    },
+
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["permanent_knowledge_source", "writes_discoveries_to"],
+      "properties": {
+        "permanent_knowledge_source": { "const": false, "description": "A memoria pertence ao projeto, nao ao agente." },
+        "writes_discoveries_to": { "const": "project_knowledge_base" }
+      }
+    },
+
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["replaceable", "preserved_on_replacement"],
+      "properties": {
+        "replaceable": { "type": "boolean" },
+        "preserved_on_replacement": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["contract", "history", "evidence", "changes", "tests", "identified_problems", "original_permissions"] },
+          "contains": { "const": "original_permissions" },
+          "minItems": 7,
+          "description": "O novo agente recebe handoff estruturado com tudo isto e herda as permissoes originais, nunca mais."
+        }
+      }
+    },
+
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_fix_attempts": { "type": ["integer", "null"], "minimum": 1 },
+        "max_specialist_consultations": { "type": ["integer", "null"], "minimum": 0 },
+        "timeout_minutes": { "type": ["integer", "null"], "minimum": 1 },
+        "max_parallel_tasks": { "type": ["integer", "null"], "minimum": 1 }
+      },
+      "required": ["max_fix_attempts"],
+      "description": "null = padrao do projeto (orchestration-defaults)."
+    },
+
+    "status": { "enum": ["draft", "active", "deprecated"] },
+
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_by", "created_at"],
+      "properties": {
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "approved_by": { "type": ["string", "null"] },
+        "approved_at": { "type": ["string", "null"], "format": "date-time" },
+        "change_reason": { "type": ["string", "null"] }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "$comment": "O orquestrador e o unico que delega; os demais agentes nunca, e o orquestrador tambem nao pode atestar a propria entrega sozinho em tarefas de risco, mas isso e regra do Task Contract.",
+      "if": { "properties": { "role": { "const": "validator" } }, "required": ["role"] },
+      "then": {
+        "required": ["validation_role"],
+        "properties": {
+          "validation_role": { "required": ["validates"], "properties": { "validates": { "minItems": 1 } } },
+          "permission_ceiling": { "properties": { "git_operations": { "maxItems": 1, "items": { "const": "status_log_diff" } } } }
+        }
+      }
+    },
+    {
+      "$comment": "Agente ativo exige aprovacao do usuario.",
+      "if": { "properties": { "status": { "const": "active" } }, "required": ["status"] },
+      "then": {
+        "properties": { "audit": { "required": ["approved_by", "approved_at"], "properties": { "approved_by": { "type": "string" }, "approved_at": { "type": "string" } } } }
+      }
+    }
+  ],
+
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$" }
+  }
+}

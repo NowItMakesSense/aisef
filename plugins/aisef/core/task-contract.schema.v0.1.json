@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.local/schemas/task-contract/0.1.0",
+  "title": "AISEF Task Contract",
+  "description": "RASCUNHO v0.1. Define com precisao uma tarefa delegada a um agente. Nenhuma tarefa existe sem criterios de aceite objetivos e verificaveis. Agentes nao podem alterar este contrato; mudancas geram nova versao.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "task_id", "contract_version", "feature_id", "feature_contract_version",
+    "title", "objective", "assigned_agent", "requirements", "scope", "context",
+    "permissions", "acceptance_criteria", "validation", "deliverables",
+    "risk", "limits", "escalation", "state", "audit"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "task_id": { "$ref": "#/$defs/id" },
+    "contract_version": { "type": "integer", "minimum": 1, "description": "Incrementa a cada alteracao. Tarefa em andamento nunca migra silenciosamente." },
+    "supersedes": { "type": ["string", "null"], "description": "Versao anterior deste contrato, se houver." },
+
+    "feature_id": { "$ref": "#/$defs/id" },
+    "feature_contract_version": { "type": "integer", "minimum": 1 },
+    "parent_task_id": { "type": ["string", "null"], "description": "Preenchido quando esta e uma subtarefa." },
+    "kind": { "enum": ["task", "subtask"], "default": "task" },
+    "reopen_cycle": { "type": "integer", "minimum": 1, "default": 1, "description": "Ciclo da feature (reabertura cria novo ciclo)." },
+
+    "title": { "type": "string", "minLength": 3, "maxLength": 140 },
+    "objective": { "type": "string", "minLength": 10 },
+
+    "assigned_agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id", "agent_contract_version"],
+      "properties": {
+        "agent_id": { "type": "string" },
+        "agent_contract_version": { "type": "integer", "minimum": 1 },
+        "role": { "enum": ["orchestrator", "backend", "frontend", "database", "qa", "security", "devops", "domain", "validator"] }
+      }
+    },
+
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement_ids"],
+      "properties": {
+        "requirement_ids": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/versioned_ref" },
+          "description": "RTM obrigatoria: toda tarefa rastreia pelo menos um requisito (versao incluida)."
+        },
+        "business_rule_ids": { "type": "array", "items": { "$ref": "#/$defs/versioned_ref" } },
+        "architectural_decision_ids": { "type": "array", "items": { "$ref": "#/$defs/versioned_ref" } }
+      }
+    },
+
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["included", "excluded"],
+      "properties": {
+        "included": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "excluded": { "type": "array", "items": { "type": "string" } },
+        "paths_allowed": { "type": "array", "items": { "type": "string" }, "description": "Globs de arquivos que o agente pode alterar." },
+        "paths_forbidden": { "type": "array", "items": { "type": "string" } },
+        "exclusive_files": { "type": "array", "items": { "type": "string" }, "description": "Arquivos com edicao exclusiva (paralelismo controlado: dois agentes nunca editam o mesmo arquivo sem coordenacao explicita)." }
+      }
+    },
+
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "depends_on": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "blocks": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "shared_resources": { "type": "array", "items": { "type": "string" } },
+        "sync_points": { "type": "array", "items": { "type": "string" } },
+        "parallelizable": { "type": "boolean", "default": false }
+      }
+    },
+
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mandatory"],
+      "description": "Tres camadas de contexto progressivo. Todo documento tem origem, versao e vinculo com o projeto.",
+      "properties": {
+        "mandatory": { "type": "array", "items": { "$ref": "#/$defs/context_ref" } },
+        "referenced": { "type": "array", "items": { "$ref": "#/$defs/context_ref" } },
+        "on_demand": { "type": "array", "items": { "$ref": "#/$defs/context_ref" } }
+      }
+    },
+
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "scope_authorization_id"],
+      "properties": {
+        "environment": { "enum": ["dev", "staging", "prod"] },
+        "scope_authorization_id": { "type": ["string", "null"], "description": "Autorizacao de escopo valida. Null somente se a tarefa so usa operacoes 'allow'." },
+        "resources": { "type": "array", "items": { "type": "string" } },
+        "operations": { "type": "array", "items": { "type": "string" } },
+        "dataset_classification": { "enum": ["synthetic", "anonymized_verified", "anonymized_unverified_or_real", null], "description": "Obrigatorio quando houver acesso a db_data." },
+        "policy_version": { "type": "string", "description": "Versao da Permission Policy usada na emissao." }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "resources": { "contains": { "const": "db_data" } } }, "required": ["resources"] },
+          "then": { "required": ["dataset_classification"], "properties": { "dataset_classification": { "type": "string" } } }
+        }
+      ]
+    },
+
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/acceptance_criterion" },
+      "description": "Obrigatorio e nao vazio: nenhuma tarefa sem definicao de como comprovar a conclusao."
+    },
+
+    "tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required_new": { "type": "array", "items": { "type": "string" } },
+        "required_regression": { "type": "array", "items": { "type": "string" } },
+        "commands": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["independent_validator_required"],
+      "properties": {
+        "independent_validator_required": { "type": "boolean", "description": "O executor nunca e o unico a atestar a propria entrega quando true." },
+        "validator_role": { "enum": ["validator", "qa", "security", "orchestrator"] },
+        "qa_required": { "type": "boolean", "default": false }
+      }
+    },
+
+    "deliverables": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_report_schema"],
+      "properties": {
+        "execution_report_schema": { "type": "string", "description": "Referencia versionada ao schema do Execution Report." },
+        "formats": {
+          "type": "array", "uniqueItems": true,
+          "items": { "enum": ["json", "technical_report"] },
+          "default": ["json", "technical_report"],
+          "description": "Duplo formato obrigatorio: JSON validado e relatorio tecnico legivel, consistentes entre si."
+        },
+        "expected_artifacts": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level"],
+      "properties": {
+        "level": { "enum": ["low", "medium", "high", "critical"] },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "constraints": { "type": "array", "items": { "type": "string" } },
+
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_fix_attempts"],
+      "description": "Limites contra ciclos infinitos. Valores padrao ainda nao definidos pelo usuario.",
+      "properties": {
+        "max_fix_attempts": { "type": ["integer", "null"], "minimum": 1, "description": "null = usar padrao do projeto (a definir)." },
+        "max_specialist_consultations": { "type": ["integer", "null"], "minimum": 0 },
+        "timeout_minutes": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+
+    "escalation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stop_and_report_when"],
+      "properties": {
+        "stop_and_report_when": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "enum": [
+              "scope_exceeded", "environment_changed", "unexpected_risk",
+              "architectural_decision_needed", "mandatory_approval_needed",
+              "requirement_conflict", "criteria_unverifiable", "max_attempts_reached",
+              "critical_risk_operation"
+            ]
+          }
+        },
+        "immediate_stop_on_critical_risk": { "const": true },
+        "route": { "const": "orchestrator", "description": "Toda comunicacao passa pelo orquestrador." }
+      }
+    },
+
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "enum": ["draft", "ready", "in_progress", "blocked", "executed", "validated", "completed", "rejected", "cancelled"],
+          "description": "executed = agente terminou; validated = criterios verificados; completed = orquestrador aceitou e integrou. Reprovacao volta ao executor com evidencias."
+        },
+        "rejection_count": { "type": "integer", "minimum": 0, "default": 0 }
+      }
+    },
+
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_by", "created_at"],
+      "properties": {
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "approved_by": { "type": ["string", "null"] },
+        "approved_at": { "type": ["string", "null"], "format": "date-time" },
+        "change_reason": { "type": ["string", "null"] },
+        "event_log_ref": { "type": "string", "description": "Referencia ao historico imutavel de eventos desta tarefa." }
+      }
+    }
+  },
+
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$" },
+    "versioned_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "context_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "origin", "version"],
+      "properties": {
+        "ref": { "type": "string" },
+        "origin": { "type": "string", "description": "Ex.: blueprint, feature_contract, adr, file, doc, web." },
+        "version": { "type": "string" },
+        "project_link": { "type": "string" }
+      }
+    },
+    "acceptance_criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "verification", "required"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "description": { "type": "string", "minLength": 5 },
+        "required": { "type": "boolean" },
+        "verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["method", "evidence_expected"],
+          "properties": {
+            "method": { "enum": ["automated_test", "command_output", "static_analysis", "file_assertion", "manual_review", "validator_check"] },
+            "command": { "type": "string" },
+            "evidence_expected": { "type": "string", "description": "O que precisa existir para comprovar (ex.: saida do teste, diff, relatorio)." }
+          }
+        },
+        "requirement_ids": { "type": "array", "items": { "$ref": "#/$defs/id" }, "description": "Elo da RTM: criterio -> requisito." }
+      }
+    }
+  }
+}

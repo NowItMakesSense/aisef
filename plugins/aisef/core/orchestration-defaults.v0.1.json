@@ -1,0 +1,22 @@
+{
+  "$comment": "AISEF Orchestration Defaults - RASCUNHO v0.1. Valores padrao do projeto usados quando o Task Contract traz null em limits.",
+  "version": "0.1.0",
+  "status": "draft",
+  "failure_handling": {
+    "max_fix_attempts": 3,
+    "max_specialist_consultations": 1,
+    "on_limit_reached": "escalate_to_orchestrator",
+    "immediate_stop_on_critical_risk": true,
+    "notes": [
+      "Ordem: investigar, corrigir automaticamente (ate 3x), consultar um especialista (1x), escalar.",
+      "Operacao nao idempotente exige reconciliacao antes de qualquer nova tentativa.",
+      "Cada tentativa gera evento na auditoria com causa, acao e resultado."
+    ]
+  },
+  "resolution": {
+    "task_contract_null_means": "use_defaults",
+    "task_contract_value_overrides_default": true,
+    "task_may_only_lower_limits_without_approval": false,
+    "$note": "Elevar limites acima do padrao exige aprovacao do usuario. Reduzir e permitido."
+  }
+}

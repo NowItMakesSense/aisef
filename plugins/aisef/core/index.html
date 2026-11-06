@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AISEF Painel</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1b1f24; --muted:#5b6672; --line:#d9dee4; --accent:#2457c5;
+          --ok:#1f7a3d; --warn:#9a6700; --bad:#b42318; --okbg:#e6f4ea; --warnbg:#fff4d6; --badbg:#fde8e6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171b; --card:#1d2227; --ink:#e8ebee; --muted:#9aa5b1; --line:#323a42; --accent:#7aa2f7;
+            --ok:#5fd38a; --warn:#e3b341; --bad:#ff7b72; --okbg:#12301e; --warnbg:#3a2f10; --badbg:#3d1714; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding:14px 20px; background:var(--card); border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:18px; }
+  header .sub { color:var(--muted); font-size:13px; }
+  #integrity { margin:12px 20px 0; padding:10px 14px; border-radius:8px; border:1px solid var(--line); }
+  #integrity.ok { background:var(--okbg); color:var(--ok); border-color:var(--ok); }
+  #integrity.warning { background:var(--warnbg); color:var(--warn); border-color:var(--warn); }
+  #integrity.broken { background:var(--badbg); color:var(--bad); border-color:var(--bad); font-weight:600; }
+  nav { display:flex; flex-wrap:wrap; gap:6px; padding:12px 20px 0; }
+  nav button { background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer; font:inherit; }
+  nav button[aria-current="true"] { background:var(--accent); color:#fff; border-color:var(--accent); }
+  main { padding:14px 20px 28px; }
+  h2 { font-size:16px; margin:18px 0 8px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px,1fr)); gap:10px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+  .card .n { font-size:26px; font-weight:650; }
+  .card .l { color:var(--muted); font-size:13px; }
+  .block { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .tablewrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:10px; }
+  table { border-collapse:collapse; width:100%; min-width:520px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:13px; white-space:nowrap; }
+  tr:last-child td { border-bottom:0; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); background:var(--bg); white-space:nowrap; }
+  .badge.ok { color:var(--ok); border-color:var(--ok); background:var(--okbg); }
+  .badge.warn { color:var(--warn); border-color:var(--warn); background:var(--warnbg); }
+  .badge.bad { color:var(--bad); border-color:var(--bad); background:var(--badbg); }
+  .bar { height:8px; background:var(--line); border-radius:99px; overflow:hidden; min-width:90px; }
+  .bar > div { height:100%; background:var(--accent); }
+  .muted { color:var(--muted); }
+  ul.timeline { list-style:none; margin:0; padding:0; }
+  ul.timeline li { padding:8px 0; border-bottom:1px solid var(--line); }
+  ul.timeline li:last-child { border-bottom:0; }
+  pre { white-space:pre-wrap; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; overflow-x:auto; }
+  select { font:inherit; padding:5px 8px; border-radius:6px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+  footer { color:var(--muted); font-size:12.5px; padding:0 20px 24px; }
+  #graph svg { max-width:100%; height:auto; }
+  details { margin-top:6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AISEF · Painel do projeto</h1>
+  <div class="sub" id="sub"></div>
+</header>
+<div id="integrity" role="status"></div>
+<nav id="tabs" aria-label="Areas do painel"></nav>
+<main id="view"></main>
+<footer id="foot"></footer>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  "use strict";
+  // Todo texto vindo dos dados entra na pagina por textContent. O unico innerHTML
+  // da pagina recebe o SVG que o Mermaid gera com securityLevel "strict".
+  var D = window.AISEF_DATA;
+  var view = document.getElementById("view");
+
+  function h(tag, props) {
+    var node = document.createElement(tag);
+    props = props || {};
+    Object.keys(props).forEach(function (k) {
+      if (k === "class") node.className = props[k];
+      else if (k === "text") node.textContent = props[k];
+      else node.setAttribute(k, props[k]);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      var kid = arguments[i];
+      if (kid === null || kid === undefined || kid === false) continue;
+      node.appendChild(typeof kid === "string" || typeof kid === "number" ? document.createTextNode(String(kid)) : kid);
+    }
+    return node;
+  }
+
+  var LABEL = {
+    draft:"Rascunho", ready:"Pronta", in_progress:"Em andamento", blocked:"Bloqueada", executed:"Executada",
+    validated:"Validada", completed:"Concluída", rejected:"Reprovada", cancelled:"Cancelada",
+    discovery:"Descoberta", planning:"Planejamento", awaiting_plan_approval:"Aguardando aprovação do plano",
+    approved_for_execution:"Aprovada p/ execução", in_execution:"Em execução", awaiting_acceptance:"Aguardando aceite",
+    closed:"Encerrada", pending:"Pendente", approved:"Aprovado", changes_requested:"Alterações solicitadas",
+    expired:"Expirado", withdrawn:"Retirado", superseded:"Substituído",
+    not_started:"Não iniciado", covered:"Coberto", broken_link:"Vínculo quebrado",
+    low:"Baixo", medium:"Médio", high:"Alto", critical:"Crítico",
+    plan_approval:"Plano", scope_authorization:"Escopo", operation_approval:"Operação",
+    reinforced_approval:"Aprovação reforçada", git_operation:"Git", architecture_decision:"Decisão arquitetural",
+    scope_change_decision:"Mudança de escopo", feature_acceptance:"Aceite da feature"
+  };
+  function lab(v) { return LABEL[v] || String(v); }
+  function tone(v) {
+    if (["completed","covered","approved","closed","validated","active","low"].indexOf(v) >= 0) return "ok";
+    if (["in_progress","in_execution","pending","medium","executed","awaiting_acceptance","awaiting_plan_approval"].indexOf(v) >= 0) return "warn";
+    if (["blocked","rejected","broken_link","high","critical","expired","cancelled"].indexOf(v) >= 0) return "bad";
+    return "";
+  }
+  function badge(v) { return h("span", { "class": "badge " + tone(v), text: lab(v) }); }
+  function when(s) { if (!s) return "—"; var d = new Date(s); return isNaN(d) ? String(s) : d.toLocaleString("pt-BR"); }
+  function list(a) { return a && a.length ? a.join(", ") : "—"; }
+
+  function table(cols, rows, empty) {
+    if (!rows.length) return h("p", { "class": "muted", text: empty || "Nada para mostrar." });
+    var head = h("tr"); cols.forEach(function (c) { head.appendChild(h("th", { text: c.t })); });
+    var body = h("tbody");
+    rows.forEach(function (r) {
+      var tr = h("tr");
+      cols.forEach(function (c) { var v = c.f(r); tr.appendChild(h("td", {}, v)); });
+      body.appendChild(tr);
+    });
+    return h("div", { "class": "tablewrap" }, h("table", {}, h("thead", {}, head), body));
+  }
+  function card(n, l) { return h("div", { "class": "card" }, h("div", { "class": "n", text: n }), h("div", { "class": "l", text: l })); }
+
+  var views = {};
+
+  views.overview = function () {
+    var o = D.overview, m = D.manifest, box = h("div");
+    var cards = h("div", { "class": "cards" });
+    cards.appendChild(card(D.features.length, "Features"));
+    cards.appendChild(card(D.tasks.length, "Tarefas"));
+    cards.appendChild(card(o.pending_approvals, "Aprovações pendentes"));
+    cards.appendChild(card(o.pending_high_risk, "Pendentes de risco alto/crítico"));
+    cards.appendChild(card(o.blocked_tasks, "Tarefas bloqueadas ou à espera"));
+    cards.appendChild(card(D.risks.length, "Riscos registrados"));
+    box.appendChild(cards);
+    box.appendChild(h("h2", { text: "Tarefas por estado" }));
+    var ts = h("div", { "class": "block" });
+    Object.keys(o.tasks_by_status).forEach(function (k) { ts.appendChild(h("span", {}, badge(k), " ", String(o.tasks_by_status[k]), "   ")); });
+    if (!Object.keys(o.tasks_by_status).length) ts.appendChild(h("span", { "class": "muted", text: "Sem tarefas." }));
+    box.appendChild(ts);
+    box.appendChild(h("h2", { text: "Origem dos dados" }));
+    box.appendChild(h("div", { "class": "block" },
+      h("div", { text: "Eventos no log: " + m.source.event_count + " · último evento: " + when(o.last_event_at) }),
+      h("div", { "class": "muted", text: "Assinaturas verificadas: " + (m.integrity.signatures_verified ? "sim" : "não") +
+        " · head verificado: " + (m.integrity.head_verified ? "sim" : "não") + " · trechos mascarados: " + m.redactions })));
+    if (D.source_errors.length) {
+      box.appendChild(h("h2", { text: "Arquivos de origem com problema (fora do painel)" }));
+      box.appendChild(table([{ t: "Arquivo", f: function (r) { return r.file; } },
+        { t: "Problemas", f: function (r) { return r.errors.join(" | "); } }], D.source_errors));
+    }
+    return box;
+  };
+
+  views.features = function () {
+    return table([
+      { t: "Feature", f: function (r) { return h("div", {}, h("strong", { text: r.feature_id }), h("div", { text: r.title })); } },
+      { t: "Estado", f: function (r) { return badge(r.status); } },
+      { t: "Ciclo", f: function (r) { return String(r.cycle); } },
+      { t: "Prioridade", f: function (r) { return badge(r.business_priority); } },
+      { t: "Progresso", f: function (r) {
+          var pct = Math.max(0, Math.min(100, Number(r.progress_pct) || 0));
+          var fill = h("div"); fill.style.width = pct + "%";
+          return h("div", {}, h("div", { "class": "bar" }, fill), h("span", { "class": "muted", text: r.tasks_completed + "/" + r.tasks_total + " tarefas" }));
+        } },
+      { t: "Requisitos cobertos", f: function (r) { return r.requirements_covered + "/" + r.requirements_total; } },
+      { t: "Plano", f: function (r) { return badge(r.plan_approval); } },
+      { t: "Aceite", f: function (r) { return badge(r.acceptance); } }
+    ], D.features, "Nenhuma feature.");
+  };
+
+  views.tasks = function () {
+    var box = h("div"), sel = h("select", { "aria-label": "Filtrar por feature" });
+    sel.appendChild(h("option", { value: "", text: "Todas as features" }));
+    D.features.forEach(function (f) { sel.appendChild(h("option", { value: f.feature_id, text: f.feature_id + " · " + f.title })); });
+    var holder = h("div");
+    function draw() {
+      holder.textContent = "";
+      var rows = D.tasks.filter(function (t) { return !sel.value || t.feature_id === sel.value; });
+      holder.appendChild(table([
+        { t: "Tarefa", f: function (r) { return h("div", {}, h("strong", { text: r.task_id }), h("div", { text: r.title })); } },
+        { t: "Estado", f: function (r) { return badge(r.status); } },
+        { t: "Agente", f: function (r) { return r.agent_id + (r.role ? " (" + r.role + ")" : ""); } },
+        { t: "Depende de", f: function (r) { return list(r.depends_on); } },
+        { t: "Aguardando", f: function (r) { return list(r.blocked_by); } },
+        { t: "Risco", f: function (r) { return badge(r.risk_level); } },
+        { t: "Amb.", f: function (r) { return r.environment; } },
+        { t: "Critérios", f: function (r) { return String(r.criteria_total); } },
+        { t: "Reprov.", f: function (r) { return String(r.rejection_count); } }
+      ], rows, "Nenhuma tarefa."));
+    }
+    sel.addEventListener("change", draw);
+    box.appendChild(h("p", {}, "Filtro: ", sel)); box.appendChild(holder); draw();
+    box.appendChild(h("h2", { text: "Execuções entregues" }));
+    box.appendChild(table([
+      { t: "Relatório", f: function (r) { return r.report_id; } },
+      { t: "Tarefa", f: function (r) { return r.task_id; } },
+      { t: "Status", f: function (r) { return r.status; } },
+      { t: "Testes (ok/falha/ignorados)", f: function (r) { return r.tests.passed + "/" + r.tests.failed + "/" + r.tests.skipped; } },
+      { t: "Critérios (ok/não ok/não verif.)", f: function (r) { return r.criteria.met + "/" + r.criteria.not_met + "/" + r.criteria.not_verifiable; } },
+      { t: "Evidências", f: function (r) { return String(r.evidence_count); } },
+      { t: "Terminou", f: function (r) { return when(r.finished_at); } }
+    ], D.executions, "Nenhuma execução entregue ainda."));
+    return box;
+  };
+
+  views.rtm = function () {
+    return table([
+      { t: "Feature", f: function (r) { return r.feature_id; } },
+      { t: "Requisito", f: function (r) { return h("div", {}, h("strong", { text: r.requirement_id + " v" + r.version }), h("div", { text: r.statement })); } },
+      { t: "Estado", f: function (r) { return badge(r.status); } },
+      { t: "Tarefas", f: function (r) { return list(r.task_ids); } },
+      { t: "Critérios", f: function (r) { return list(r.criterion_ids); } },
+      { t: "Tarefas ausentes", f: function (r) { return r.missing_task_ids.length ? h("span", { "class": "badge bad", text: list(r.missing_task_ids) }) : "—"; } }
+    ], D.rtm, "Sem requisitos rastreados.");
+  };
+
+  function approvalCard(a) {
+    var meta = [lab(a.request_type), "risco " + lab(a.risk_level).toLowerCase(), "expira " + when(a.expires_at)];
+    var c = h("div", { "class": "block" },
+      h("div", {}, h("strong", { text: a.title }), " ", badge(a.status), " ", badge(a.risk_level)),
+      h("div", { "class": "muted", text: meta.join(" · ") }),
+      h("p", { text: a.summary }));
+    if (a.operation) c.appendChild(h("div", { text: "Operação: " + a.operation.operation + " · " + a.operation.resource_class + " em " + a.operation.environment + (a.operation.destructive ? " · DESTRUTIVA" : "") }));
+    c.appendChild(h("div", { "class": "muted", text: "Bloqueia: " + list(a.blocked_task_ids) + (a.independent_work_continues ? " · o trabalho independente continua" : "") }));
+    if (a.required_acknowledgements.length) c.appendChild(h("div", { "class": "muted", text: "Confirmações exigidas: " + list(a.required_acknowledgements) }));
+    c.appendChild(h("div", { "class": "muted", text: "A decisão é feita no Approval Center; este painel só exibe." }));
+    return c;
+  }
+  views.approvals = function () {
+    var box = h("div");
+    box.appendChild(h("h2", { text: "Pendentes (" + D.approvals.pending.length + ")" }));
+    if (!D.approvals.pending.length) box.appendChild(h("p", { "class": "muted", text: "Nada aguardando aprovação." }));
+    D.approvals.pending.forEach(function (a) { box.appendChild(approvalCard(a)); });
+    box.appendChild(h("h2", { text: "Decididas recentemente" }));
+    box.appendChild(table([
+      { t: "Pedido", f: function (r) { return h("div", {}, h("strong", { text: r.request_id }), h("div", { text: r.title })); } },
+      { t: "Tipo", f: function (r) { return lab(r.request_type); } },
+      { t: "Resultado", f: function (r) { return badge(r.status); } },
+      { t: "Decidido por", f: function (r) { return r.decided ? r.decided.decided_by + " em " + when(r.decided.decided_at) : "—"; } }
+    ], D.approvals.recent, "Nenhuma decisão registrada."));
+    return box;
+  };
+
+  views.decisions = function () {
+    var box = h("div");
+    if (!D.decisions.length) box.appendChild(h("p", { "class": "muted", text: "Nenhuma decisão registrada." }));
+    D.decisions.forEach(function (d) {
+      var c = h("div", { "class": "block" },
+        h("div", {}, h("strong", { text: d.title }), " ", badge(d.status), " ", h("span", { "class": "muted", text: lab(d.request_type) })));
+      if (d.selected_option) {
+        c.appendChild(h("p", {}, h("strong", { text: "Escolhida: " }), d.selected_option.label + " — " + d.selected_option.description));
+        c.appendChild(h("div", { "class": "muted", text: "Decidido em " + when(d.decided_at) + (d.followed_recommendation === true ? " · seguiu a recomendação" : d.followed_recommendation === false ? " · divergiu da recomendação" : "") }));
+      } else c.appendChild(h("p", { "class": "muted", text: "Decisão ainda não tomada." }));
+      if (d.recommendation) c.appendChild(h("div", { "class": "muted", text: "Recomendação (" + d.recommendation.option_id + "): " + d.recommendation.rationale }));
+      if (d.discarded_alternatives.length) {
+        var det = h("details", {}, h("summary", { text: "Alternativas descartadas (" + d.discarded_alternatives.length + ")" }));
+        d.discarded_alternatives.forEach(function (o) { det.appendChild(h("div", {}, h("strong", { text: o.label }), " — " + o.description + (o.risks.length ? " · riscos: " + o.risks.join("; ") : ""))); });
+        c.appendChild(det);
+      }
+      box.appendChild(c);
+    });
+    return box;
+  };
+
+  views.agents = function () {
+    return table([
+      { t: "Agente", f: function (r) { return h("div", {}, h("strong", { text: r.name }), h("div", { "class": "muted", text: r.agent_id })); } },
+      { t: "Papel", f: function (r) { return r.role; } },
+      { t: "Status", f: function (r) { return badge(r.status); } },
+      { t: "Contrato", f: function (r) { return "v" + r.contract_version; } },
+      { t: "Em andamento", f: function (r) { return list(r.tasks_in_progress); } },
+      { t: "Tarefas atribuídas", f: function (r) { return String(r.tasks_assigned_total); } }
+    ], D.agents, "Nenhum agente cadastrado.");
+  };
+
+  views.risks = function () {
+    return table([
+      { t: "Severidade", f: function (r) { return badge(r.severity); } },
+      { t: "Risco", f: function (r) { return r.description; } },
+      { t: "Origem", f: function (r) { return (r.source === "feature" ? "Feature " : "Pedido ") + r.source_id + " · " + r.feature_id; } },
+      { t: "Mitigação", f: function (r) { return r.mitigation || "—"; } }
+    ], D.risks, "Nenhum risco registrado.");
+  };
+
+  views.timeline = function () {
+    var ul = h("ul", { "class": "timeline" });
+    D.timeline.forEach(function (e) {
+      ul.appendChild(h("li", {},
+        h("div", {}, h("strong", { text: e.summary })),
+        h("div", { "class": "muted", text: when(e.timestamp) + " · " + e.event_type + " · " + e.actor_type + ":" + e.actor_id + (e.task_id ? " · " + e.task_id : "") + " · #" + e.sequence })));
+    });
+    if (!D.timeline.length) return h("p", { "class": "muted", text: "Nenhum evento." });
+    return h("div", { "class": "block" }, ul);
+  };
+
+  views.deps = function () {
+    var g = D.graphs.dependencies, box = h("div"), slot = h("div", { id: "graph", "class": "block" });
+    box.appendChild(h("p", { "class": "muted", text: "Setas partem da tarefa de que outra depende. Verde: concluída · amarelo: em andamento · vermelho: bloqueada ou ausente." }));
+    if (g.missing_nodes.length) box.appendChild(h("p", {}, h("span", { "class": "badge bad", text: "Dependências inexistentes: " + g.missing_nodes.join(", ") })));
+    box.appendChild(slot);
+    function fallback(why) {
+      slot.textContent = "";
+      slot.appendChild(h("p", { "class": "muted", text: why }));
+      slot.appendChild(h("pre", { text: g.mermaid }));
+    }
+    if (!g.nodes.length) { slot.textContent = "Sem tarefas."; return box; }
+    function render() {
+      var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      window.mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "default" });
+      window.mermaid.render("depgraph" + Date.now(), g.mermaid).then(function (res) {
+        slot.innerHTML = res.svg; // saida do Mermaid em modo strict
+      }).catch(function () { fallback("Não foi possível desenhar o diagrama. Código Mermaid:"); });
+    }
+    if (window.mermaid) render();
+    else {
+      var s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
+      s.onload = render;
+      s.onerror = function () { fallback("Mermaid indisponível (sem internet?). Código do diagrama:"); };
+      document.head.appendChild(s);
+    }
+    return box;
+  };
+
+  var TABS = [["overview","Visão geral"],["features","Features"],["tasks","Tarefas"],["rtm","Rastreabilidade"],
+              ["approvals","Aprovações"],["decisions","Decisões"],["agents","Agentes"],["risks","Riscos"],
+              ["timeline","Linha do tempo"],["deps","Dependências"]];
+  var nav = document.getElementById("tabs");
+
+  function show(name) {
+    if (!views[name]) name = "overview";
+    Array.prototype.forEach.call(nav.children, function (b) { b.setAttribute("aria-current", b.dataset.tab === name ? "true" : "false"); });
+    view.textContent = "";
+    view.appendChild(views[name]());
+    if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+  }
+
+  function boot() {
+    if (!D) {
+      view.appendChild(h("p", { text: "data.js não encontrado. Gere os dados com build_panel.py e deixe data.js ao lado desta página." }));
+      return;
+    }
+    var m = D.manifest, intg = document.getElementById("integrity");
+    var msg = { ok: "Integridade do histórico verificada: cadeia, assinaturas e head conferem.",
+                warning: "Atenção: integridade verificada com ressalvas.",
+                broken: "INTEGRIDADE COMPROMETIDA: o histórico de auditoria não confere. Não confie nos dados abaixo até investigar." }[m.integrity.status];
+    intg.className = m.integrity.status;
+    intg.textContent = msg;
+    m.integrity.errors.concat(m.integrity.warnings).forEach(function (t) { intg.appendChild(h("div", { "class": "muted", text: "• " + t })); });
+    document.getElementById("sub").textContent = "Projeto " + (m.project_id || "—") + " · visão derivada, regenerada a partir dos contratos e do log";
+    document.getElementById("foot").textContent = "Gerado em " + when(m.generated_at) + " · construtor " + m.builder_version +
+      " · log " + (m.source.log_id || "—") + " até a sequência " + (m.source.head_sequence === null ? "—" : m.source.head_sequence) +
+      " (" + (m.source.head_hash ? m.source.head_hash.slice(0, 12) : "—") + ")";
+    TABS.forEach(function (t) {
+      var b = h("button", { type: "button", "data-tab": t[0], text: t[1] });
+      b.addEventListener("click", function () { show(t[0]); });
+      nav.appendChild(b);
+    });
+    show(location.hash.replace("#", "") || "overview");
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

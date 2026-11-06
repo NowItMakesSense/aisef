@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.local/schemas/execution-report/0.1.0",
+  "title": "AISEF Execution Report",
+  "description": "RASCUNHO v0.1. Entrega estruturada de um agente executor. Deve ser consistente com o relatorio tecnico legivel que o acompanha (duplo formato obrigatorio). O executor nao atesta a propria entrega: este relatorio vai para validacao independente quando o Task Contract exigir.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "report_id", "task_id", "contract_version", "agent", "status",
+    "timing", "attempts", "files", "changes", "tests", "evidence",
+    "criteria_results", "problems", "risks", "pending", "limitations",
+    "intervention", "technical_report", "integrity"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "report_id": { "$ref": "#/$defs/id" },
+    "task_id": { "$ref": "#/$defs/id" },
+    "contract_version": { "type": "integer", "minimum": 1, "description": "Versao exata do Task Contract executado." },
+    "feature_id": { "$ref": "#/$defs/id" },
+    "reopen_cycle": { "type": "integer", "minimum": 1, "default": 1 },
+
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id", "agent_contract_version"],
+      "properties": {
+        "agent_id": { "type": "string" },
+        "agent_contract_version": { "type": "integer", "minimum": 1 },
+        "role": { "type": "string" }
+      }
+    },
+
+    "status": {
+      "enum": ["executed", "blocked", "failed", "needs_intervention"],
+      "description": "executed = agente terminou. Nao significa validada nem concluida: isso cabe ao validador e ao orquestrador."
+    },
+
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["started_at", "finished_at"],
+      "properties": {
+        "started_at": { "type": "string", "format": "date-time" },
+        "finished_at": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "attempts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fix_attempts_used", "specialist_consultations_used"],
+      "properties": {
+        "fix_attempts_used": { "type": "integer", "minimum": 0 },
+        "specialist_consultations_used": { "type": "integer", "minimum": 0 },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["n", "cause", "action", "result"],
+            "properties": {
+              "n": { "type": "integer", "minimum": 1 },
+              "cause": { "type": "string" },
+              "action": { "type": "string" },
+              "result": { "enum": ["resolved", "unresolved", "partial"] }
+            }
+          }
+        }
+      }
+    },
+
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created", "modified", "deleted"],
+      "properties": {
+        "created": { "type": "array", "items": { "$ref": "#/$defs/file_entry" } },
+        "modified": { "type": "array", "items": { "$ref": "#/$defs/file_entry" } },
+        "deleted": { "type": "array", "items": { "$ref": "#/$defs/file_entry" } }
+      }
+    },
+
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["summary", "reason"],
+        "properties": {
+          "summary": { "type": "string" },
+          "reason": { "type": "string", "description": "Por que foi feito, ligado a requisito ou decisao." },
+          "requirement_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+          "files": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+
+    "tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executed", "passed", "failed", "skipped"],
+      "properties": {
+        "executed": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "new_tests": { "type": "array", "items": { "type": "string" } },
+        "regression_run": { "type": "boolean" },
+        "commands": { "type": "array", "items": { "type": "string" } },
+        "evidence_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+      }
+    },
+
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "ref", "secrets_redacted"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "type": { "enum": ["test_output", "command_output", "diff", "file_hash", "static_analysis", "report", "screenshot", "other"] },
+          "ref": { "type": "string", "description": "Referencia ao artefato guardado. Nunca conteudo com segredos." },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "secrets_redacted": { "const": true, "description": "Segredos nunca entram em evidencias, logs ou relatorios." }
+        }
+      }
+    },
+
+    "criteria_results": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Deve cobrir todos os criterios de aceite do Task Contract.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["criterion_id", "required", "result", "evidence_ids"],
+        "properties": {
+          "criterion_id": { "$ref": "#/$defs/id" },
+          "required": { "type": "boolean" },
+          "result": { "enum": ["met", "not_met", "not_verifiable"] },
+          "evidence_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+          "notes": { "type": "string" }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "result": { "const": "met" } }, "required": ["result"] },
+            "then": { "properties": { "evidence_ids": { "minItems": 1 } } }
+          }
+        ]
+      }
+    },
+
+    "problems": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "risks": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "pending": { "type": "array", "items": { "type": "string" } },
+    "limitations": { "type": "array", "items": { "type": "string" } },
+
+    "scope_discoveries": {
+      "type": "array",
+      "description": "Algo nao previsto encontrado. O agente interrompe a parte afetada e reporta ao orquestrador; nunca altera o escopo por conta propria.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "impact", "affected_part_stopped"],
+        "properties": {
+          "description": { "type": "string" },
+          "impact": { "type": "string" },
+          "affected_part_stopped": { "type": "boolean" }
+        }
+      }
+    },
+
+    "operations_log_ref": { "type": "string", "description": "Referencia as operacoes sensiveis executadas via Execution Gateway, para cruzar com a auditoria." },
+
+    "intervention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["needed"],
+      "properties": {
+        "needed": { "type": "boolean" },
+        "reason": {
+          "enum": [
+            "scope_exceeded", "environment_changed", "unexpected_risk",
+            "architectural_decision_needed", "mandatory_approval_needed",
+            "requirement_conflict", "criteria_unverifiable", "max_attempts_reached",
+            "critical_risk_operation"
+          ]
+        },
+        "details": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "needed": { "const": true } }, "required": ["needed"] },
+          "then": { "required": ["reason", "details"] }
+        }
+      ]
+    },
+
+    "technical_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "sha256"],
+      "description": "Segundo formato obrigatorio: relatorio tecnico legivel. O hash permite checar que ele corresponde a este JSON.",
+      "properties": {
+        "ref": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_at", "event_log_ref"],
+      "properties": {
+        "created_at": { "type": "string", "format": "date-time" },
+        "event_log_ref": { "type": "string" },
+        "report_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "$comment": "Regra de consistencia: 'executed' nao pode coexistir com criterio obrigatorio nao atendido ou nao verificavel.",
+      "if": { "properties": { "status": { "const": "executed" } }, "required": ["status"] },
+      "then": {
+        "properties": {
+          "criteria_results": {
+            "not": {
+              "contains": {
+                "type": "object",
+                "properties": {
+                  "required": { "const": true },
+                  "result": { "enum": ["not_met", "not_verifiable"] }
+                },
+                "required": ["required", "result"]
+              }
+            }
+          },
+          "intervention": { "properties": { "needed": { "const": false } } }
+        }
+      }
+    },
+    {
+      "$comment": "Regra de consistencia: blocked ou needs_intervention exigem intervencao declarada.",
+      "if": { "properties": { "status": { "enum": ["blocked", "needs_intervention"] } }, "required": ["status"] },
+      "then": { "properties": { "intervention": { "properties": { "needed": { "const": true } } } } }
+    }
+  ],
+
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$" },
+    "file_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string" },
+        "sha256_after": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "lines_added": { "type": "integer", "minimum": 0 },
+        "lines_removed": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "severity"],
+      "properties": {
+        "description": { "type": "string" },
+        "severity": { "enum": ["low", "medium", "high", "critical"] },
+        "mitigation": { "type": "string" }
+      }
+    }
+  }
+}

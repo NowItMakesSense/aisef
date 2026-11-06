@@ -1,0 +1,29 @@
+{
+  "description": "AISEF: Execution Gateway (PreToolUse) e Audit & Evidence (PostToolUse). So atuam em projetos com .aisef/config.json.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" gateway.py pre",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" audit_hook.py post",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.local/schemas/engineering-blueprint/0.1.0",
+  "title": "AISEF Engineering Blueprint",
+  "description": "RASCUNHO v0.1. Desenho tecnico de UMA feature (arquitetura, backend, frontend, banco, seguranca, DevOps, testes), derivado do Feature Contract e anterior as tarefas. Cada elemento aponta para os requisitos que o justificam. O usuario aprova o blueprint; mudancas geram nova versao. Referencias entre documentos (requisitos existem, versao da feature, decisoes aprovadas) sao checadas pelo check_project.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "blueprint_id", "contract_version", "feature_id", "feature_contract_version",
+               "title", "summary", "architecture", "security", "test_strategy", "approval", "state", "audit"],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "blueprint_id": { "$ref": "#/$defs/id" },
+    "contract_version": { "type": "integer", "minimum": 1 },
+    "supersedes": { "type": ["string", "null"] },
+    "feature_id": { "$ref": "#/$defs/id" },
+    "feature_contract_version": { "type": "integer", "minimum": 1, "description": "Versao do Feature Contract em que o desenho se baseia." },
+    "title": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+
+    "architecture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["components", "interactions", "decisions"],
+      "properties": {
+        "components": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "name", "kind", "responsibility", "requirement_ids"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "name": { "type": "string", "minLength": 1 },
+              "kind": { "enum": ["service", "module", "library", "ui", "job", "datastore", "external"] },
+              "responsibility": { "type": "string", "minLength": 1 },
+              "owner_role": { "enum": ["backend", "frontend", "database", "devops", "security", "qa", null] },
+              "requirement_ids": { "$ref": "#/$defs/idList" }
+            }
+          }
+        },
+        "interactions": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "from", "to", "protocol", "description"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "from": { "$ref": "#/$defs/id" },
+              "to": { "$ref": "#/$defs/id" },
+              "protocol": { "enum": ["function_call", "http", "grpc", "queue", "sql", "file", "other"] },
+              "description": { "type": "string" },
+              "authenticated": { "type": "boolean" }
+            }
+          }
+        },
+        "decisions": {
+          "type": "array",
+          "description": "Decisoes arquiteturais (ADR) que este desenho adota. Precisam ter aprovacao registrada do usuario.",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["id", "version"],
+            "properties": { "id": { "$ref": "#/$defs/id" }, "version": { "type": "integer", "minimum": 1 } }
+          }
+        }
+      }
+    },
+
+    "backend": {
+      "type": "object", "additionalProperties": false, "required": ["endpoints"],
+      "properties": {
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "component_id", "method", "path", "auth", "errors", "requirement_ids"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "component_id": { "$ref": "#/$defs/id" },
+              "method": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+              "path": { "type": "string", "pattern": "^/" },
+              "description": { "type": "string" },
+              "auth": { "enum": ["none", "authenticated", "role_based"] },
+              "roles": { "type": "array", "items": { "type": "string" } },
+              "request": { "type": ["object", "null"], "description": "JSON Schema (ou descricao) do corpo." },
+              "response": { "type": ["object", "null"] },
+              "errors": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["status", "code"],
+                           "properties": { "status": { "type": "integer", "minimum": 400, "maximum": 599 }, "code": { "type": "string" }, "description": { "type": "string" } } } },
+              "requirement_ids": { "$ref": "#/$defs/idList" }
+            },
+            "allOf": [
+              { "if": { "properties": { "auth": { "const": "role_based" } }, "required": ["auth"] }, "then": { "required": ["roles"], "properties": { "roles": { "minItems": 1 } } } },
+              { "if": { "properties": { "auth": { "enum": ["authenticated", "role_based"] } }, "required": ["auth"] },
+                "then": { "properties": { "errors": { "contains": { "properties": { "status": { "enum": [401, 403] } }, "required": ["status"] } } } } }
+            ]
+          }
+        }
+      }
+    },
+
+    "frontend": {
+      "type": "object", "additionalProperties": false, "required": ["screens"],
+      "properties": {
+        "screens": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "name", "route", "calls_endpoint_ids", "requirement_ids"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "name": { "type": "string" },
+              "route": { "type": "string", "pattern": "^/" },
+              "component_id": { "$ref": "#/$defs/id" },
+              "calls_endpoint_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+              "states": { "type": "array", "items": { "enum": ["loading", "empty", "error", "success", "forbidden"] } },
+              "requirement_ids": { "$ref": "#/$defs/idList" }
+            }
+          }
+        }
+      }
+    },
+
+    "database": {
+      "type": "object", "additionalProperties": false, "required": ["entities"],
+      "properties": {
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "name", "fields", "data_class", "requirement_ids"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "name": { "type": "string" },
+              "fields": {
+                "type": "array", "minItems": 1,
+                "items": {
+                  "type": "object", "additionalProperties": false, "required": ["name", "type"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "type": { "type": "string" },
+                    "nullable": { "type": "boolean" },
+                    "primary_key": { "type": "boolean" },
+                    "references": { "type": "object", "additionalProperties": false, "required": ["entity_id", "field"],
+                                    "properties": { "entity_id": { "$ref": "#/$defs/id" }, "field": { "type": "string" } } },
+                    "pii": { "type": "boolean" },
+                    "secret": { "type": "boolean", "description": "Campo guarda segredo (hash de senha, chave). Nunca vai para log nem para o painel." }
+                  }
+                }
+              },
+              "indexes": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["fields"],
+                           "properties": { "fields": { "type": "array", "items": { "type": "string" }, "minItems": 1 }, "unique": { "type": "boolean" } } } },
+              "data_class": { "enum": ["public", "internal", "confidential", "restricted"] },
+              "requirement_ids": { "$ref": "#/$defs/idList" }
+            }
+          }
+        },
+        "migrations": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "description", "destructive", "reversible"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "description": { "type": "string" },
+              "entity_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+              "destructive": { "type": "boolean" },
+              "reversible": { "type": "boolean" },
+              "rollback": { "type": ["string", "null"] }
+            },
+            "allOf": [
+              { "if": { "properties": { "reversible": { "const": true } }, "required": ["reversible"] }, "then": { "required": ["rollback"], "properties": { "rollback": { "type": "string", "minLength": 1 } } } },
+              { "if": { "properties": { "destructive": { "const": true } }, "required": ["destructive"] }, "then": { "properties": { "reversible": { "const": true } }, "description": "Migracao destrutiva so entra no blueprint se tiver rollback; a execucao ainda exige aprovacao reforcada (T1)." } }
+            ]
+          }
+        }
+      }
+    },
+
+    "security": {
+      "type": "object", "additionalProperties": false, "required": ["threats", "secrets_handling"],
+      "properties": {
+        "threats": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "description", "severity", "mitigation", "component_ids"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "description": { "type": "string" },
+              "severity": { "enum": ["low", "medium", "high", "critical"] },
+              "mitigation": { "type": "string", "minLength": 1 },
+              "component_ids": { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 1 },
+              "residual_risk_accepted": { "type": "boolean" }
+            }
+          }
+        },
+        "secrets_handling": { "type": "string", "minLength": 1, "description": "Onde vivem os segredos e como nunca chegam a log, painel ou repositorio (T3)." },
+        "authn_authz": { "type": "string" }
+      }
+    },
+
+    "devops": {
+      "type": "object", "additionalProperties": false, "required": ["environments", "rollback"],
+      "properties": {
+        "environments": { "type": "array", "items": { "enum": ["dev", "staging", "prod"] }, "minItems": 1, "uniqueItems": true },
+        "pipeline_steps": { "type": "array", "items": { "type": "string" } },
+        "deploy_strategy": { "enum": ["manual", "rolling", "blue_green", "canary", null] },
+        "rollback": { "type": "string", "minLength": 1 },
+        "observability": { "type": "array", "items": { "type": "string" } }
+      },
+      "allOf": [
+        { "if": { "properties": { "environments": { "contains": { "const": "prod" } } }, "required": ["environments"] },
+          "then": { "required": ["deploy_strategy"], "properties": { "deploy_strategy": { "enum": ["manual", "rolling", "blue_green", "canary"] } } } }
+      ]
+    },
+
+    "test_strategy": {
+      "type": "object", "additionalProperties": false, "required": ["levels"],
+      "properties": {
+        "levels": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["level", "covers"],
+            "properties": {
+              "level": { "enum": ["unit", "integration", "contract", "e2e", "security", "performance", "manual"] },
+              "covers": { "$ref": "#/$defs/idList" },
+              "notes": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "approval": {
+      "type": "object", "additionalProperties": false, "required": ["status"],
+      "properties": {
+        "status": { "enum": ["pending", "approved", "rejected", "changes_requested"] },
+        "approved_by": { "type": ["string", "null"] },
+        "approved_at": { "type": ["string", "null"], "format": "date-time" },
+        "request_ref": { "type": "string", "description": "APR-... que registrou a decisao." }
+      },
+      "allOf": [
+        { "if": { "properties": { "status": { "const": "approved" } }, "required": ["status"] },
+          "then": { "required": ["approved_by", "approved_at", "request_ref"], "properties": { "approved_by": { "const": "user" }, "approved_at": { "type": "string" } } } }
+      ]
+    },
+
+    "state": {
+      "type": "object", "additionalProperties": false, "required": ["status"],
+      "properties": { "status": { "enum": ["draft", "proposed", "approved", "superseded"] } }
+    },
+
+    "audit": {
+      "type": "object", "additionalProperties": false, "required": ["created_by", "created_at"],
+      "properties": {
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "change_reason": { "type": ["string", "null"] }
+      }
+    }
+  },
+
+  "allOf": [
+    { "if": { "properties": { "state": { "properties": { "status": { "const": "approved" } }, "required": ["status"] } }, "required": ["state"] },
+      "then": { "properties": { "approval": { "properties": { "status": { "const": "approved" } } } } } }
+  ],
+
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+    "idList": { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 1, "uniqueItems": true }
+  }
+}
