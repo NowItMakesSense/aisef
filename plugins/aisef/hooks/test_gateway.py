@@ -112,6 +112,18 @@ open(cfg_path, "w", encoding="utf-8").write(cfg_text)
 case("WebFetch comum -> allow", "WebFetch", "allow", url="https://docs.python.org/3/library/json.html", prompt="x")
 case("WebFetch levando token na query -> deny", "WebFetch", "deny", url="https://x.example/c?token=abcdef0123456789abcd", prompt="x")
 case("WebFetch levando JWT -> deny", "WebFetch", "deny", url="https://x.example/c/eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.x", prompt="x")
+print("--- skills, plugins e MCP (buscar e livre, instalar pede aprovacao)")
+case("buscar skill -> allow", "Bash", "allow", command="DISABLE_TELEMETRY=1 npx --yes skills find stripe")
+case("listar plugins disponiveis -> allow", "Bash", "allow", command="claude plugin list --json --available")
+case("instalar skill -> ask", "Bash", "ask", command="npx skills add stripe/ai@stripe-best-practices -a claude-code -y")
+case("instalar skill com npx --yes -> ask", "Bash", "ask", command="npx --yes skills add vercel-labs/skills@find-skills -g")
+case("instalar plugin -> ask", "Bash", "ask", command="claude plugin install sentry@claude-plugins-official --scope project")
+case("adicionar marketplace -> ask", "Bash", "ask", command="claude plugin marketplace add acme/plugins")
+case("adicionar servidor MCP -> ask", "Bash", "ask", command="claude mcp add --transport http sentry https://mcp.sentry.dev/mcp")
+case("Write em .mcp.json -> ask", "Write", "ask", file_path=os.path.join(proj, ".mcp.json"))
+case("Write de skill em .claude/skills -> ask", "Write", "ask", file_path=os.path.join(proj, ".claude", "skills", "x", "SKILL.md"))
+case("subagente instalando skill -> deny", "Bash", "deny", _agent="aisef:backend", command="npx skills add a/b@c -y")
+
 case("modo bypass: o que pediria aprovacao e negado", "Bash", "deny", _mode="bypassPermissions", command="git commit -m x")
 case("modo bypass: operacao livre segue livre", "Bash", "allow", _mode="bypassPermissions", command="git status")
 case("modo normal: commit continua ask", "Bash", "ask", _mode="default", command="git commit -m x")
@@ -258,6 +270,29 @@ total += 1
 ok = (aisef_project.native_settings(proj, apply=True)[1] == {"ask": [], "deny": [], "settings": []}
       and settings["permissions"]["disableBypassPermissionsMode"] == "disable")
 print(("OK    " if ok else "FALHA ") + "settings: segunda execucao nao muda nada")
+fails += not ok
+total += 1
+ok = (settings["env"]["DO_NOT_TRACK"] == "1" and "Bash(npx skills add:*)" in settings["permissions"]["ask"]
+      and "Bash(claude mcp add:*)" in settings["permissions"]["ask"])
+print(("OK    " if ok else "FALHA ") + "settings: telemetria das CLIs desligada e instalar skill/plugin/MCP pede aprovacao")
+fails += not ok
+settings["env"]["DO_NOT_TRACK"] = "0"
+aisef_project.write_json(os.path.join(proj, ".claude", "settings.json"), settings)
+aisef_project.native_settings(proj, apply=True)
+total += 1
+ok = json.load(open(os.path.join(proj, ".claude", "settings.json"), encoding="utf-8"))["env"]["DO_NOT_TRACK"] == "0"
+print(("OK    " if ok else "FALHA ") + "settings: valor de DO_NOT_TRACK definido pelo usuario e respeitado")
+fails += not ok
+
+print("--- bibliotecas na pasta de usuario do pip (python -I)")
+r = subprocess.run([sys.executable, "-I", "-c", "import sys, site; sys.path.insert(0, %r); import aisef_project; "
+                    "print(sys.path.index(site.getusersitepackages()) == len(sys.path) - 1)"
+                    % os.path.join(os.path.dirname(HERE), "core")], capture_output=True, text=True, timeout=30)
+total += 1
+ok = r.stdout.strip() == "True"
+print(("OK    " if ok else "FALHA ") + "pasta de usuario do pip entra no fim do sys.path (sem precedencia)")
+if not ok:
+    print("      ", r.stdout, r.stderr[-300:])
 fails += not ok
 
 print("--- doctor (SessionStart)")

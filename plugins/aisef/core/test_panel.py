@@ -14,6 +14,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import userlibs  # noqa: E402,F401
 import jsonschema  # noqa: E402
 
 import build_panel  # noqa: E402

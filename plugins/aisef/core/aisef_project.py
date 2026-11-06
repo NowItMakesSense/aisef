@@ -409,6 +409,8 @@ NATIVE_ASK_RULES = [
     "Bash(docker exec:*)", "Bash(docker compose exec:*)", "Bash(kubectl exec:*)", "Bash(kubectl delete:*)",
     "Bash(terraform apply:*)", "Bash(terraform destroy:*)", "Bash(helm install:*)", "Bash(helm upgrade:*)",
     "Bash(printenv:*)", "Bash(cat .env*)",
+    "Bash(npx skills add:*)", "Bash(npx skills update:*)", "Bash(claude plugin install:*)",
+    "Bash(claude plugin marketplace add:*)", "Bash(claude mcp add:*)", "Edit(./.mcp.json)", "Write(./.mcp.json)",
     "Read(./.env)", "Read(./.env.*)", "Read(./**/.env)", "Read(./**/*.pem)", "Read(./**/*.key)", "Read(./secrets/**)",
     "Edit(./.env)", "Edit(./.env.*)", "Write(./.env)", "Write(./.env.*)",
     "Edit(./.aisef/approvals/**)", "Write(./.aisef/approvals/**)", "Edit(./.aisef/authorizations/**)",
@@ -436,6 +438,12 @@ def native_settings(project, apply=False):
     if perms.get("disableBypassPermissionsMode") != "disable":
         perms["disableBypassPermissionsMode"] = "disable"
         added["settings"].append("disableBypassPermissionsMode=disable")
+    # CLIs de busca (npx skills) mandam uso anonimo por padrao; DO_NOT_TRACK desliga sem mexer no Claude Code.
+    # Um valor que o usuario ja definiu e respeitado.
+    env = current.setdefault("env", {})
+    if "DO_NOT_TRACK" not in env:
+        env["DO_NOT_TRACK"] = "1"
+        added["settings"].append("env.DO_NOT_TRACK=1")
     if apply and (added["ask"] or added["deny"] or added["settings"]):
         write_json(path, current)
     return path, added

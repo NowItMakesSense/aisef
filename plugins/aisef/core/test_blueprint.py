@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Testes do schema do Engineering Blueprint (validacao isolada de um documento)."""
 import copy, json, os, sys
-import jsonschema
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import userlibs  # noqa: F401
+import jsonschema
 import make_demo_project as demo
 S = json.load(open(os.path.join(HERE, "engineering-blueprint.schema.v0.1.json")))
 V = jsonschema.Draft202012Validator(S, format_checker=jsonschema.FormatChecker())

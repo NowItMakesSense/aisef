@@ -29,12 +29,12 @@ import json
 import os
 import sys
 
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
-# `serialization` custa ~130 ms de import e so serve para PEM: importado sob demanda (o hook roda a cada chamada).
-
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import audit_chain  # noqa: E402
+import audit_chain  # noqa: E402  (antes do cryptography: acrescenta a pasta de usuario do pip)
+
+from cryptography.exceptions import InvalidSignature  # noqa: E402
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey  # noqa: E402
+# `serialization` custa ~130 ms de import e so serve para PEM: importado sob demanda (o hook roda a cada chamada).
 
 EVENT_DOMAIN = b"aisef-audit-event-v1"
 HEAD_DOMAIN = b"aisef-audit-head-v1"

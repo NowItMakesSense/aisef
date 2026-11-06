@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Marketplace do AISEF: workflow de engenharia com IA reutilizavel em qualquer projeto.",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "aisef",
       "source": "./plugins/aisef",
       "description": "Orquestrador, especialistas, contratos, Execution Gateway, Approval Center, auditoria assinada e painel.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "category": "development"
     }
   ]

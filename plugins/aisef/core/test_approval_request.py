@@ -2,9 +2,12 @@
 """Testes do schema approval-request.v0.1. Uso: python3 -I test_approval_request.py <schema.json>"""
 import copy
 import json
+import os
 import sys
 
-import jsonschema
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import userlibs  # noqa: E402,F401
+import jsonschema  # noqa: E402
 
 schema = json.load(open(sys.argv[1], encoding="utf-8"))
 jsonschema.Draft202012Validator.check_schema(schema)

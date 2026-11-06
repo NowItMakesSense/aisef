@@ -40,7 +40,7 @@ python -I plugins/aisef/core/aisef_new.py example blueprint
    - propõe as regras nativas em `.claude/settings.json` e a seção do `AGENTS.md`.
 
    Tudo o que altera configuração abre o prompt nativo de permissão.
-2. **Descobrir.** Num projeto existente, a `aisef-discovery` lê o código, as migrations e os docs antes de perguntar qualquer coisa. O resultado fica em `.aisef/discovery.md`.
+2. **Descobrir.** Num projeto existente, a `aisef-discovery` lê o código, as migrations e os docs antes de perguntar qualquer coisa. O resultado fica em `.aisef/discovery.md`. Em seguida, a `aisef-tooling` sugere skills, plugins e servidores MCP ligados ao que foi descoberto (`.aisef/tooling.md`) e só instala os que você escolher.
 3. **Especificar.** Peça a feature. O modelo escreve o brief e roda `aisef_new.py feature`. Você recebe o pedido de aprovação do plano.
 4. **Aprovar.** A `aisef-approve` mostra impacto, riscos e rollback, e pergunta. Você aprova no prompt nativo. O contrato passa a `approved_for_execution` e as tarefas, a `ready`.
 5. **Executar.** O orquestrador delega aos agentes dentro do escopo aprovado:

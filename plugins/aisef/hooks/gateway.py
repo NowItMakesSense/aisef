@@ -49,10 +49,16 @@ OBFUSCATED_RE = re.compile(
 WEBFETCH_SECRET_RE = re.compile(
     r"[?&](?:token|access_token|api_?key|apikey|key|secret|password|passwd|auth|session|sig|signature)=[^&\s]{12,}|"
     r"\bgh[pousr]_[A-Za-z0-9]{30,}|\bAKIA[0-9A-Z]{16}\b|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.", re.I)
+# Instalar skill, plugin ou servidor MCP muda o que o agente consegue fazer: o usuario decide cada um.
+# Buscar (npx skills find, claude plugin list) segue livre.
+TOOLING_INSTALL_RE = re.compile(
+    r"\b(?:npx|bunx|pnpm\s+dlx|yarn\s+dlx)\s+(?:(?:-y|--yes)\s+)?skills(?:@\S+)?\s+(?:add|install|update)\b|"
+    r"\bclaude\s+(?:plugins?\s+(?:install|i|enable|update|marketplace\s+add)|mcp\s+add(?:-json|-from-claude-desktop)?)\b",
+    re.I)
 CONFIG_PATH_RE = re.compile(
     r"(?:^|/)(?:\.github/workflows/|\.gitlab-ci\.yml$|Jenkinsfile$|azure-pipelines\.yml$|\.circleci/|"
     r"Dockerfile[^/]*$|docker-compose[^/]*\.ya?ml$|compose\.ya?ml$|[^/]+\.tf$|[^/]+\.tfvars$|helm/|charts/|k8s/|"
-    r"kubernetes/|\.claude/settings[^/]*\.json$)", re.I)
+    r"kubernetes/|\.claude/settings[^/]*\.json$|\.claude/(?:skills|agents|commands)/|\.mcp\.json$)", re.I)
 AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:approvals|authorizations|contracts/agents)/|(?:^|[/\s\"'=>])\.aisef/(?:config|policy\.local)\.json\b")
 AISEF_AUDIT_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:audit|keys)/")
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
@@ -201,6 +207,8 @@ def classify_bash(cmd, patterns, env):
         found.append(("repo_code", "write", env, True, "remocao de volumes/containers"))
     if OBFUSCATED_RE.search(cmd):
         found.append(("unclassified", "execute", env, False, "codigo ofuscado, baixado ou passado por pipe para um interpretador"))
+    if TOOLING_INSTALL_RE.search(cmd):
+        found.append(("unclassified", "execute", env, False, "instalacao de skill, plugin ou servidor MCP"))
     if AISEF_AUDIT_RE.search(norm(cmd)) and not re.search(r"audit_chain\.py\s+verify|aisef_project\.py\s+(?:verify|status)", cmd):
         raise Decision("deny", "o log de auditoria e as chaves do AISEF so podem ser alterados pelo hook de auditoria")
     if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b|agents\b[^;&|]*--activate\b|settings\b[^;&|]*--apply\b|rotate-key\b)", cmd):

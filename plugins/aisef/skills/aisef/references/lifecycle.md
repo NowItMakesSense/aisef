@@ -3,6 +3,7 @@
 ## Projeto novo
 1. **aisef-init** cria `.aisef/` e o log de auditoria.
 2. **aisef-discovery** conduz a descoberta (problema, dores, publico, objetivos, escopo, requisitos funcionais e nao funcionais, regras de negocio, excecoes, integracoes, seguranca, dados, UX, testes).
+   Ao final, **aisef-tooling** sugere skills, plugins e MCPs ligados ao discovery; so instala o que o usuario escolher.
 3. Decisoes de stack e arquitetura sao contextualizadas (modelo de dados, consistencia, operacao, custos, conhecimento da equipe...). Explique o que e, para que serve, quando usar e evitar, pros, contras, custos e alternativas. Arquitetura evolutiva: resolva o necessario agora e registre as decisoes (ADR no blueprint).
 4. Para cada feature: Feature Contract -> Blueprint -> Tasks (skill **aisef-feature**).
 

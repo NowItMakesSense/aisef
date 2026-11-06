@@ -36,7 +36,7 @@ python -I CORE/aisef_project.py agents --project . --activate [--roles backend,q
 O comando abre o prompt nativo de permissao (a decisao e do usuario) e registra a aprovacao no log.
 
 ## 5. Segunda camada de protecao (pergunte antes)
-O gateway e um hook; se ele falhar ou for desligado, as regras nativas do Claude Code continuam valendo. Mostre o que falta com `python -I CORE/aisef_project.py settings --project .` e, com o OK do usuario, grave com `--apply` (mescla em `.claude/settings.json` sem apagar nada; abre o prompt nativo). As regras incluem `disableBypassPermissionsMode`; mesmo sem elas, em modo bypass o gateway nega tudo o que pediria aprovacao. Ferramentas MCP pedem aprovacao ate o usuario libera-las em `.aisef/config.json` -> `"mcp_allow": ["mcp__servidor__ferramenta", "mcp__docs__*"]` (so leitura e o que ele confia). Recomende tambem o sandbox do Claude Code (`/sandbox`): o gateway le comandos por padroes e reduz o risco, mas nao e uma fronteira de seguranca.
+O gateway e um hook; se ele falhar ou for desligado, as regras nativas do Claude Code continuam valendo. Mostre o que falta com `python -I CORE/aisef_project.py settings --project .` e, com o OK do usuario, grave com `--apply` (mescla em `.claude/settings.json` sem apagar nada; abre o prompt nativo). As regras incluem `env.DO_NOT_TRACK=1` (desliga a telemetria das CLIs de busca, como `npx skills`; um valor do usuario e respeitado), pedem aprovacao para instalar skill, plugin ou MCP e incluem `disableBypassPermissionsMode`; mesmo sem elas, em modo bypass o gateway nega tudo o que pediria aprovacao. Ferramentas MCP pedem aprovacao ate o usuario libera-las em `.aisef/config.json` -> `"mcp_allow": ["mcp__servidor__ferramenta", "mcp__docs__*"]` (so leitura e o que ele confia). Recomende tambem o sandbox do Claude Code (`/sandbox`): o gateway le comandos por padroes e reduz o risco, mas nao e uma fronteira de seguranca.
 
 ## 6. Documente para outras ferramentas (pergunte antes de editar)
 Proponha acrescentar `CORE/templates/AGENTS.aisef.md` ao `AGENTS.md` do projeto (crie se nao existir; ferramentas como Codex, Cursor e Gemini leem esse arquivo) e uma linha no `CLAUDE.md`:
@@ -45,7 +45,16 @@ Este projeto usa o AISEF (plugin aisef): estado em .aisef/, regras em AGENTS.md 
 ```
 Mostre o texto e so grave com OK. Nunca sobrescreva arquivos existentes em silencio.
 
-## 7. Proximo passo
+## 7. Pesquisa de ferramentas (pergunte antes)
+A **aisef-tooling** sugere skills, plugins e MCPs para o projeto e pesquisa skills com a skill `find-skills`
+(`vercel-labs/skills`). Se ela ainda nao estiver em `.claude/skills/` nem em `~/.claude/skills/`, ofereca instalar no
+projeto (AskUserQuestion). Com o OK:
+```
+DISABLE_TELEMETRY=1 npx --yes skills add vercel-labs/skills@find-skills -a claude-code -y
+```
+O gateway abre o prompt nativo. Sem ela, a aisef-tooling usa `npx skills find` direto; nada deixa de funcionar.
+
+## 8. Proximo passo
 - Projeto existente: rode **aisef-discovery** no modo "projeto existente".
 - Projeto novo: rode **aisef-discovery** no modo "projeto novo".
 

@@ -63,3 +63,8 @@ Decisões tomadas pelo usuário na conversa "Continuação de projeto com GPT" (
 - **Regras nativas de segunda camada são `ask`, não `deny`,** para não impedir o que a política permite com aprovação. O gateway passa a registrar no log as tentativas que nega ou leva à aprovação.
 - **Log:** checkpoints assinados, segmentos arquivados, rotação de chave (a antiga é aposentada) e âncoras externas.
 - **Avaliações das skills:** os casos com shell só rodam em Linux e macOS, porque o Windows não tem sandbox para o Bash.
+
+## Sugestão de ferramentas (2026-11-06)
+- **Nova skill `aisef-tooling`**, que roda no fim da discovery e sob demanda. Ela usa fontes prontas em vez de uma busca própria: a skill `find-skills` (skills.sh), o MCP Registry oficial e os marketplaces de plugins.
+- **A `find-skills` é oferecida no `aisef-init`, não exigida.** Sem ela, a busca usa `npx skills find` direto.
+- **Instalar skill, plugin ou MCP pede aprovação no gateway.** Isso muda o que o agente consegue fazer. A instalação é no escopo do projeto, e o passo de instalação da `find-skills` (`-g -y`) não é usado.

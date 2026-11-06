@@ -34,7 +34,7 @@ No início de cada sessão, um doctor avisa se falta alguma coisa. Quando está 
 ## Uso
 
 1. Na pasta do projeto, peça "iniciar o AISEF neste projeto". Num projeto existente, o AISEF investiga o que já existe antes de propor qualquer coisa.
-2. Quando ele pedir, aprove os agentes e as regras nativas de segunda camada.
+2. Quando ele pedir, aprove os agentes e as regras nativas de segunda camada. Depois da descoberta, o AISEF sugere skills, plugins e servidores MCP para o projeto (`aisef-tooling`) e só instala os que você escolher.
 3. Peça o trabalho em linguagem natural:
    - **Feature:** o modelo escreve um brief de umas 20 linhas, e o `aisef_new.py` gera a partir dele os contratos, as tarefas, a RTM e o pedido de aprovação, tudo já validado. Você aprova o plano, a execução acontece dentro do escopo aprovado e a feature só fecha com o seu aceite.
    - **Mudança pequena** (typo, ajuste trivial, patch de dependência que não quebra nada): vai pelo caminho rápido de manutenção, sem blueprint e sem aprovações extras.

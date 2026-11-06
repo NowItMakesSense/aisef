@@ -55,7 +55,7 @@ A step-by-step walkthrough with the demo project is in [docs/walkthrough.md](doc
 
 | Component | Role |
 |---|---|
-| Skills | `aisef` (orchestrator), `aisef-init`, `aisef-discovery`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
+| Skills | `aisef` (orchestrator), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
 | Agents | `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, each capped by an Agent Contract; generated from one source (`tools/gen_agents.py`) so prompts and contracts never drift |
 | Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`) |
 | Core | 9 JSON Schemas, permission policy, `check_project.py`, signed audit chain, generators, panel |

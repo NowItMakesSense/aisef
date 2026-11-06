@@ -29,7 +29,7 @@ Leia `references/lifecycle.md` para o detalhe de cada fase. Resumo:
 
 | Fase | Saida (em `.aisef/`) | Quem aprova |
 |---|---|---|
-| 1. Descoberta / Impact Analysis | `discovery.md` (skill **aisef-discovery**) | - |
+| 1. Descoberta / Impact Analysis | `discovery.md` (skill **aisef-discovery**) e `tooling.md` (skill **aisef-tooling**) | - (instalar ferramenta: usuario) |
 | 2. Feature Contract | `contracts/features/FEAT-*.json` (skill **aisef-feature**) | usuario |
 | 3. Engineering Blueprint | `blueprints/BP-*.json` | usuario |
 | 4. Plano de tarefas + RTM | `contracts/tasks/T-*.json` | usuario (plano) |
