@@ -172,6 +172,28 @@ reinf["consumed"] = {"at": iso(datetime.timedelta(0)), "operation_event_ref": "E
 aisef_project.write_json(os.path.join(proj, ".aisef", "authorizations", "RA-1.json"), reinf)
 case("reforcada ja usada -> deny", "Bash", "deny", command="git push --force origin main")
 
+print("--- reforcada com prefixo 'cd <raiz do projeto>' (0.5.0)")
+reinf2 = {"kind": "reinforced", "approval_id": "RA-2", "operation": "git branch -D feature/y",
+          "status": "approved", "expires_at": iso(datetime.timedelta(minutes=20))}
+aisef_project.write_json(os.path.join(proj, ".aisef", "authorizations", "RA-2.json"), reinf2)
+case("operacao exata sem prefixo -> ask", "Bash", "ask", command="git branch -D feature/y")
+case("cd <projeto> && operacao exata -> ask", "Bash", "ask", command="cd %s && git branch -D feature/y" % proj)
+case("cd \"<projeto>\"; operacao exata -> ask", "Bash", "ask", command='cd "%s"; git branch -D feature/y' % proj)
+case("cd <projeto>/ com barras normais -> ask", "Bash", "ask", command="cd %s/ && git branch -D feature/y" % proj.replace("\\", "/"))
+if len(proj) > 2 and proj[1] == ":":
+    gitbash = "/" + proj[0].lower() + proj[2:].replace("\\", "/")
+    case("cd no estilo Git Bash (/c/...) -> ask", "Bash", "ask", command="cd %s && git branch -D feature/y" % gitbash)
+case("cd . (cwd = projeto) -> ask", "Bash", "ask", command="cd . && git branch -D feature/y")
+case("cd para outro diretorio -> deny", "Bash", "deny", command="cd %s && git branch -D feature/y" % work)
+case("prefixo cd nao esconde comando extra -> deny", "Bash", "deny",
+     command="cd %s && git branch -D feature/y && git branch -D main" % proj)
+os.remove(os.path.join(proj, ".aisef", "authorizations", "RA-2.json"))
+
+print("--- pull request (0.5.0): operacao Git com aprovacao propria")
+case("gh pr create -> ask", "Bash", "ask", command='gh pr create --base main --head feat/x --title "feat: x" --body "..."')
+case("gh pr view/list seguem livres", "Bash", "allow", command="gh pr view 12 --json state,mergedAt && gh pr list")
+case("gh pr merge continua pedindo aprovacao", "Bash", "ask", command="gh pr merge 12 --squash")
+
 print("--- Approval Center")
 import make_demo_project  # noqa: E402
 demo = os.path.join(work, "demo")
@@ -228,6 +250,7 @@ aisef_project.activate_agents(proj)
 case("backend ativo edita codigo -> allow", "Edit", "allow", _agent="aisef:backend", file_path=os.path.join(proj, "src", "app.py"))
 case("backend pode solicitar commit -> ask", "Bash", "ask", _agent="aisef:backend", command="git commit -m x")
 case("backend nao pode push (fora do teto) -> deny", "Bash", "deny", _agent="aisef:backend", command="git push")
+case("backend nao abre PR (fora do teto) -> deny", "Bash", "deny", _agent="aisef:backend", command="gh pr create --fill")
 case("backend le .env (fora do teto) -> deny", "Read", "deny", _agent="aisef:backend", file_path=os.path.join(proj, ".env"))
 case("validator: git status -> allow", "Bash", "allow", _agent="aisef:validator", command="git status")
 case("validator: git commit -> deny (Git so leitura)", "Bash", "deny", _agent="aisef:validator", command="git commit -m x")

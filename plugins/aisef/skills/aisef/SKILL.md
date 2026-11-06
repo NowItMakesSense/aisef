@@ -1,6 +1,6 @@
 ---
 name: aisef
-description: 'Orquestrador AISEF - conduz o trabalho de engenharia num projeto que tem .aisef/ (descoberta, Feature Contract, Engineering Blueprint, Task Contracts, delegacao a especialistas, validacao independente, aceite da feature), com controle humano nas decisoes e rastreabilidade completa; mudancas pequenas (typo, texto, ajuste trivial, patch de dependencia) vao pelo caminho rapido de manutencao. Use sempre que o usuario pedir QUALQUER mudanca de codigo ou documentacao num projeto que tem .aisef/ - implementar, corrigir, ajustar, planejar, continuar, reabrir ou revisar - ou disser "aisef", "orquestrar", "proxima tarefa", "aceitar feature", mesmo sem citar esta skill. Para comecar um projeto use aisef-init.'
+description: 'Orquestrador AISEF - conduz o trabalho de engenharia num projeto que tem .aisef/ (descoberta, Feature Contract, Engineering Blueprint, Task Contracts, delegacao a especialistas, validacao independente, aceite da feature), com controle humano nas decisoes e rastreabilidade completa; mudancas pequenas (typo, texto, ajuste trivial, patch de dependencia) vao pelo caminho rapido de manutencao. Use sempre que o usuario pedir QUALQUER mudanca de codigo ou documentacao num projeto que tem .aisef/ - implementar, corrigir, ajustar, planejar, continuar, reabrir ou revisar - ou disser "aisef", "orquestrar", "proxima tarefa", "modo continuo", "seguir sozinho", "aceitar feature", mesmo sem citar esta skill. Para comecar um projeto use aisef-init.'
 ---
 
 # AISEF - orquestrador
@@ -39,6 +39,40 @@ Leia `references/lifecycle.md` para o detalhe de cada fase. Resumo:
 
 Depois de aprovado o plano, execute **sem interrupcoes desnecessarias** dentro do escopo e das permissoes.
 
+## Modo continuo (loop engineering)
+Com o plano aprovado, siga sozinho tarefa apos tarefa e feature apos feature; pare so quando precisar de uma decisao humana. A cada ciclo:
+```
+python -I CORE/aisef_project.py next --project . [--feature FEAT-001] [--json]
+```
+O `next` deriva o estado do log (`delegation`/`task_started` -> em andamento, `task_executed`, `task_validated`, `task_rejected`, `task_completed`) e devolve as acoes, sem executar nada. Trate nesta ordem:
+1. `await_decision`: leve ao usuario (**aisef-approve**); so a tarefa bloqueada espera, o resto continua.
+2. `complete`: **aisef-check**, estado do contrato para `completed`, `append` de `task_completed` (comando pronto na acao).
+3. `validate`: validador independente com a rota `--validator` da acao, em background.
+4. `feature_acceptance`: relatorio final e pedido `feature_acceptance` com `aisef_project.py request`.
+5. `create_branch`: rode o comando antes da primeira onda da feature (ver "Branch por feature").
+6. `dispatch`: para cada tarefa da onda, `pack` + rota da acao, `append` de `delegation` e uma chamada de Agent com `run_in_background: true`; todas na mesma mensagem.
+7. `wait`: espere a notificacao dos agentes. Ao receber, volte ao `next`.
+
+Pare quando `stop_reason` vier preenchido e resuma ao usuario o que foi feito e o que depende dele:
+- `critical_risk`: pare na hora, nada mais e despachado.
+- `attempts_exhausted`: limite de correcoes atingido (contrato ou `orchestration-defaults`); escale.
+- `user_decision_pending`: so restam decisoes do usuario.
+- `nothing_ready`: nada pronto (tudo concluido ou aceito).
+Pare tambem se o **aisef-check** acusar erro, se a integridade do log falhar ou se o usuario pedir.
+
+**Com o `/loop` do Claude Code:** use o modo autoritmado (sem intervalo), por exemplo `/loop siga o AISEF em modo continuo na FEAT-001`. Cada iteracao comeca pelo `next`; os subagentes em background notificam a conclusao e acordam a sessao; se so restar espera sem agente em voo, agende um `ScheduleWakeup` longo como fallback. Com `stop_reason`, encerre o loop (nao agende nova iteracao).
+
+**Aprovacoes continuam do usuario.** O modo continuo nunca roda `decide`, nunca responde prompt de permissao e nunca contorna o gateway; commit, push, PR, merge e release seguem pedindo aprovacao por operacao. Detalhes em `references/lifecycle.md`.
+
+## Branch por feature (opcional)
+Se `.aisef/config.json` tiver
+```json
+"git": {"branch_per_feature": true, "delete_branch_after_merge": true, "branch_prefix": "feat/", "remote": "origin", "base_branch": "main"}
+```
+- ao iniciar a execucao de uma feature, o `next` sugere `create_branch` (`git switch -c feat/<id sem FEAT->`); crie antes da primeira onda;
+- com a feature aceita e o **merge do PR confirmado** (pergunte ao usuario ou veja `gh pr view <branch> --json state,mergedAt`), o `next` sugere `delete_merged_branch` com dois comandos: remoto (`git push origin --delete <branch>`) e local (`git branch -d <branch>`). Cada exclusao e operacao Git reforcada: um pedido `git_operation`/`branch_delete` e uma autorizacao reforcada com a `operation` exata, por comando (**aisef-approve**). Saia da branch antes de apagar a local.
+O `next` so sugere; quem executa e voce, e o gateway continua decidindo.
+
 ## Caminho rapido (mudancas pequenas)
 Use em vez do ciclo completo **somente se todas** forem verdade: nao muda comportamento observavel; nao toca API, schema de banco, seguranca, CI/CD, configuracao de producao nem dependencia com quebra; cabe em poucos arquivos (guia: ate ~50 linhas). Exemplos: typo, texto, renomear variavel local, patch de dependencia, ajuste de lint. Na duvida, nao e rapido.
 ```
@@ -65,7 +99,8 @@ Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedid
   ```
   python -I CORE/aisef_project.py waves --project . --feature FEAT-001
   ```
-  Dispare todas as tarefas de uma onda em paralelo (uma chamada de Agent por tarefa, na mesma mensagem). Recalcule as ondas depois de cada validacao: uma tarefa liberada antes da onda terminar pode entrar. Dois agentes nunca editam o mesmo arquivo; o comando ja separa tarefas com paths conflitantes.
+  Dispare todas as tarefas de uma onda em paralelo (uma chamada de Agent por tarefa, na mesma mensagem). Recalcule as ondas depois de cada validacao: uma tarefa liberada antes da onda terminar pode entrar. Dois agentes nunca editam o mesmo arquivo; o comando ja separa tarefas com paths conflitantes. No modo continuo, o `next` ja faz isso e tambem segura tarefas que conflitam com outras em andamento.
+- **Teto x escopo:** antes de delegar, o **aisef-check** acusa `AGENT-PATH-CEILING` quando um path da tarefa exige recurso fora do teto do agente (ex.: `docker-compose.yml` exige `config_ci_iac`, que o `backend` nao tem). Divida a tarefa ou troque o agente em vez de deixar o gateway negar no meio.
 - **Memoria de projeto:** descobertas que valem alem da tarefa (comportamento nao documentado, armadilha de ambiente, decisao implicita no codigo) viram entrada com fonte, nunca com segredo:
   ```
   python -I CORE/aisef_context.py remember --project . --summary "..." --source-kind file --source-ref <caminho> [--tags a,b] [--task T-001]

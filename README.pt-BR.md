@@ -38,13 +38,14 @@ No início de cada sessão, um doctor avisa se falta alguma coisa. Quando está 
 3. Peça o trabalho em linguagem natural:
    - **Feature:** o modelo escreve um brief de umas 20 linhas, e o `aisef_new.py` gera a partir dele os contratos, as tarefas, a RTM e o pedido de aprovação, tudo já validado. Você aprova o plano, a execução acontece dentro do escopo aprovado e a feature só fecha com o seu aceite.
    - **Mudança pequena** (typo, ajuste trivial, patch de dependência que não quebra nada): vai pelo caminho rápido de manutenção, sem blueprint e sem aprovações extras.
-4. Acompanhe tudo no painel (`aisef-panel`). O Mermaid é baixado uma vez, com versão fixa e conferência por SHA-256, para `~/.aisef/vendor/`; depois disso o painel funciona sem internet.
+4. **Modo contínuo:** com o plano aprovado, o AISEF segue sozinho, tarefa após tarefa e feature após feature. O `aisef_project.py next` calcula as próximas ações: disparar a onda atual em paralelo, validar de forma independente, concluir, pedir o aceite da feature. Ele só para quando precisa de você: aprovação pendente, risco crítico, limite de tentativas atingido ou nada mais pronto. Funciona com o `/loop` do Claude Code no modo autoritmado. As aprovações continuam sendo suas. Opcionalmente, uma branch Git por feature, apagada depois do merge do PR (cada exclusão é uma aprovação reforçada).
+5. Acompanhe tudo no painel (`aisef-panel`). O Mermaid é baixado uma vez, com versão fixa e conferência por SHA-256, para `~/.aisef/vendor/`; depois disso o painel funciona sem internet.
 
 O passo a passo completo, usando o projeto de demonstração, está em [docs/walkthrough.md](docs/walkthrough.md).
 
 ## Como o gateway decide
 
-- **Git:** status, log e diff são livres. Commit, push, merge e release pedem, cada um, a sua própria aprovação. Force push, reescrita de histórico e apagar branch exigem aprovação reforçada.
+- **Git:** status, log e diff são livres. Commit, push, pull request, merge e release pedem, cada um, a sua própria aprovação. Force push, reescrita de histórico e apagar branch exigem aprovação reforçada.
 - **Arquivos sensíveis:** `.env`, chaves e credenciais pedem aprovação.
 - **Banco de dados e deploy:** o ambiente de destino é desconhecido, então ficam bloqueados como se fossem produção.
 - **Código ofuscado ou baixado** (`curl | sh`, `base64 -d | bash`, `eval`): pede aprovação.

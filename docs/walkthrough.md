@@ -8,7 +8,7 @@ Com o repositório clonado e o venv criado (veja o README):
 
 ```
 python -I plugins/aisef/core/make_demo_project.py /tmp/demo
-python -I plugins/aisef/core/check_project.py --project /tmp/demo --policy plugins/aisef/core/permission-policy.v0.1.json --defaults plugins/aisef/core/orchestration-defaults.v0.1.json
+python -I plugins/aisef/core/check_project.py --project /tmp/demo --policy plugins/aisef/core/permission-policy.v0.1.json --defaults plugins/aisef/core/orchestration-defaults.v0.1.json --now 2026-11-05T15:00:00-03:00
 python -I plugins/aisef/core/build_panel.py --project /tmp/demo --out /tmp/demo/panel --with-page
 ```
 

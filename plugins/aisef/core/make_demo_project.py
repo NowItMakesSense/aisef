@@ -16,6 +16,9 @@ sys.path.insert(0, HERE)
 import audit_signing  # noqa: E402
 
 T0 = "2026-11-05T14:00:00-03:00"
+# O demo e uma foto fixa: escopo e pedido pendente vencem em 2026-11-06 14:00 (-03:00). Checagens do demo
+# usam este relogio (check_project --now), senao passam a acusar expiracao depois dessa data.
+DEMO_NOW = "2026-11-05T15:00:00-03:00"
 
 
 def ts(minute):

@@ -17,6 +17,7 @@ python -I CORE/aisef_project.py verify --project .
 
 ## Como reportar
 - Liste cada erro com o codigo da regra (ex.: `RTM-*`, `AUTH-*`, `BP-*`) e o arquivo, e diga o que corrigir.
+- `AGENT-PATH-CEILING`: um path do escopo da tarefa exige recurso fora do teto do agente (mesma classificacao do gateway: config/CI/IaC, arquivo sensivel, `.aisef/`). Divida a tarefa ou troque o agente antes de delegar. `CONFIG-GIT`: opcao `git` invalida em `config.json`.
 - **Erro bloqueia** a transicao de estado (tarefa para `completed`, feature para aceite). Aviso nao bloqueia, mas mencione.
 - Integridade comprometida: **pare**, mostre o erro ao usuario e nao tente "consertar" o log; correcoes sao eventos novos (`correction`), nunca edicao.
 - Nunca diga que passou sem ter rodado e lido a saida.

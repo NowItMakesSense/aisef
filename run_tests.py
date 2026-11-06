@@ -30,6 +30,8 @@ SUITES = [
     ("append: ator e correcoes", [os.path.join(CORE, "test_append_actor.py")]),
     ("roteador de modelo (politica + CLI)", [os.path.join(CORE, "test_route.py")]),
     ("ondas automaticas (waves)", [os.path.join(CORE, "test_waves.py")]),
+    ("modo continuo (next) e branch por feature", [os.path.join(CORE, "test_next.py")]),
+    ("Approval Center: request e decide reforcado", [os.path.join(CORE, "test_request_decide.py")]),
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("hook consultivo graph_nudge", [os.path.join(HOOKS, "test_graph_nudge.py")]),
     ("agentes gerados da fonte unica", [os.path.join(ROOT, "tools", "gen_agents.py"), "--check"]),
@@ -48,7 +50,8 @@ demo = os.path.join(work, "demo")
 r = subprocess.run([sys.executable, "-I", os.path.join(CORE, "make_demo_project.py"), demo], capture_output=True, text=True, encoding="utf-8", env=env)
 r = subprocess.run([sys.executable, "-I", os.path.join(CORE, "check_project.py"), "--project", demo, "--strict",
                     "--policy", os.path.join(CORE, "permission-policy.v0.1.json"),
-                    "--defaults", os.path.join(CORE, "orchestration-defaults.v0.1.json")],
+                    "--defaults", os.path.join(CORE, "orchestration-defaults.v0.1.json"),
+                    "--now", "2026-11-05T15:00:00-03:00"],  # relogio do demo (make_demo_project.DEMO_NOW)
                    capture_output=True, text=True, encoding="utf-8", env=env)
 print("%-40s %s  %s" % ("demo: check_project --strict", "OK   " if r.returncode == 0 else "FALHA", r.stdout.strip().splitlines()[-1]))
 if r.returncode != 0:

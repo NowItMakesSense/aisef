@@ -63,7 +63,7 @@
       "additionalProperties": false,
       "required": ["operation", "branch", "covers_only_this_operation"],
       "properties": {
-        "operation": { "enum": ["commit", "push", "merge", "release_publish", "force_push", "history_rewrite", "branch_delete"] },
+        "operation": { "enum": ["commit", "push", "pull_request", "merge", "release_publish", "force_push", "history_rewrite", "branch_delete"] },
         "branch": { "type": "string" },
         "target_branch": { "type": "string" },
         "commit_refs": { "type": "array", "items": { "type": "string" } },

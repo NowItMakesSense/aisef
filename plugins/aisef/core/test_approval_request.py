@@ -114,6 +114,10 @@ d["presented"] = REINFORCED_PRESENTED; d["operation"]["destructive"] = True
 check("git force_push completo aceito", ok(d))
 d["operation"]["destructive"] = False
 check("git force_push marcado como nao destrutivo rejeitado", not ok(d))
+d = copy.deepcopy(samples["git_operation"])
+d["git"]["operation"] = "pull_request"; d["operation"]["operation"] = "gh pr create --base main --head feat/x"
+check("git pull_request (abrir PR) aceito como operacao nao destrutiva, sem confirmacoes reforcadas", ok(d))
+bad("git com operacao desconhecida rejeitado", "git_operation", lambda d: d["git"].__setitem__("operation", "open_pr"))
 bad("decisao arquitetural com 1 opcao rejeitada", "architecture_decision", lambda d: d["options"].pop())
 bad("decisao arquitetural sem recomendacao rejeitada", "architecture_decision", lambda d: d.pop("recommendation"))
 bad("mudanca de escopo sem opcoes rejeitada", "scope_change_decision", lambda d: d.pop("options"))

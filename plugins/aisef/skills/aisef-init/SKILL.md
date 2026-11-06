@@ -28,6 +28,8 @@ python -I CORE/aisef_project.py init --project . --project-id <ID> --name "<nome
 ```
 Isso cria `.aisef/{contracts/{features,tasks,agents},blueprints,approvals,authorizations,reports,audit,keys}`, `config.json` e o evento genesis. A chave **privada** e o head assinado ficam em `~/.aisef/` (fora do repositorio). Nunca leia nem copie esses arquivos.
 
+Pergunte tambem se o usuario quer **uma branch por feature** (e apagar a branch depois do merge do PR). Se sim, com o OK, acrescente em `config.json` (a edicao pede aprovacao): `"git": {"branch_per_feature": true, "delete_branch_after_merge": true, "branch_prefix": "feat/"}`. Detalhes na skill **aisef**, secao "Branch por feature".
+
 ## 4. Ative os agentes (decisao do usuario)
 O init criou os Agent Contracts do orquestrador e dos 8 agentes do plugin em `.aisef/contracts/agents/*.json`, com `status: "draft"`. Agente em draft e bloqueado pelo gateway. Mostre ao usuario, numa tabela, o teto de cada um (recursos, Git, ambiente maximo; o `validator` so tem Git de leitura) e pergunte se aprova (AskUserQuestion: todos, alguns, nenhum agora). Com o OK:
 ```

@@ -23,7 +23,9 @@ Regras (codigo -> o que verifica):
     TASK-*          referencias da tarefa (requisitos, criterios, ciclo)
     DEP-*           dependencias inexistentes, ciclos, entre features
     PAR-*           paralelismo: conflito de arquivos entre tarefas simultaneas
-    AGENT-*         agente da tarefa (existe, versao, papel, ativo, ambiente, recursos)
+    AGENT-*         agente da tarefa (existe, versao, papel, ativo, ambiente, recursos); AGENT-PATH-CEILING:
+                    path do escopo que exige recurso fora do teto do agente (mesma classificacao do gateway)
+    CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
     VAL-*           validacao independente (existe validador, validador diferente do executor)
     PERM-* / AUTH-* permissoes da tarefa x politica e autorizacoes (existe, escopo, ambiente, validade)
     BP-*            blueprint x feature (versao, requisitos, componentes, endpoints, entidades, decisoes aprovadas, cobertura)
@@ -51,6 +53,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import audit_chain  # noqa: E402
 import check_policy_consistency as pol  # noqa: E402
+
+sys.path.insert(1, os.path.join(os.path.dirname(HERE), "hooks"))
+import gateway as gw  # noqa: E402  (mesma classificacao de caminhos do Execution Gateway)
+
+gw_patterns = gw.load_patterns()
 
 KINDS = {
     "features": ("contracts/features/*.json", "feature-contract.schema.v0.1.json", "feature_id"),
@@ -445,8 +452,21 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             elif any(overlaps(x, y) for x in pa for y in pb):
                 rep.warn("PAR-PATH-OVERLAP", "tarefas %s/%s" % (a, b), "tarefas paralelas com caminhos permitidos que se sobrepoem")
 
+    # ------------------------------------------------------------------ config (0.5.0)
+    cfg_path = os.path.join(project, "config.json")
+    if os.path.exists(cfg_path):
+        import aisef_project  # noqa: E402 (import tardio)
+        try:
+            with open(cfg_path, encoding="utf-8") as fh:
+                cfg = json.load(fh)
+        except (OSError, ValueError) as exc:
+            rep.err("CONFIG-GIT", "config.json", "ilegivel: %s" % exc)
+            cfg = {}
+        for problem in aisef_project.git_settings(cfg if isinstance(cfg, dict) else {})[1]:
+            rep.err("CONFIG-GIT", "config.json", problem)
+
     # ------------------------------------------------------------------ tarefas
-    validators = [a for a in agents.values() if a["role"] == "validator" and a["status"] == "active"]
+    validators =[a for a in agents.values() if a["role"] == "validator" and a["status"] == "active"]
     for tid, t in tasks.items():
         where = "tarefa " + tid
         f = feats.get(t["feature_id"])
@@ -489,6 +509,16 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             outside = [r for r in t["permissions"].get("resources", []) if r not in ag["permission_ceiling"]["resources"]]
             if outside:
                 rep.err("AGENT-RESOURCE", where, "recursos fora do teto do agente: %s" % outside)
+            # 0.5.0: cada path do escopo, classificado como o gateway classifica uma escrita, cabe no teto?
+            ceiling = set(ag["permission_ceiling"]["resources"])
+            closed = t["state"]["status"] in ("completed", "cancelled")
+            for p in list(t["scope"].get("paths_allowed", [])) + list(t["scope"].get("exclusive_files", [])):
+                resource, label = gw.write_resource(p, gw_patterns)
+                if resource in ("aisef_audit", "aisef_decision") or resource not in ceiling:
+                    (rep.warn if closed else rep.err)(
+                        "AGENT-PATH-CEILING", where,
+                        "%s exige %s (%s), fora do teto do agente %s %s: o gateway negaria a escrita no meio da execucao"
+                        % (p, resource, label, ag["agent_id"], sorted(ceiling)))
 
         if t["validation"]["independent_validator_required"]:
             role = t["assigned_agent"].get("role") or (ag or {}).get("role")

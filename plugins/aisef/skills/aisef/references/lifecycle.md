@@ -22,6 +22,31 @@ Implementacao, testes, revisao e documentacao. Contexto progressivo para cada ag
 - **referenciado**: caminhos de docs e codigo relevantes (com origem e versao);
 - **sob demanda**: o resto, que o agente pede ao orquestrador.
 
+## Modo continuo (loop engineering)
+Depois do plano aprovado, o orquestrador conduz sozinho: `next` -> dispatch em paralelo da onda -> validacao independente -> complete -> `next`... ate um criterio de parada. Ele so leva ao usuario o que e do usuario.
+
+**Estado efetivo.** O `aisef_project.py next` combina o estado do Task Contract com o ultimo evento de ciclo de vida no log: `delegation`, `task_started` e `task_resumed` -> em andamento; `task_paused` -> bloqueada; `task_executed` -> executed; `task_validated` -> validated; `task_rejected` -> reprovada (volta para dispatch com `--attempt` + 1); `task_completed` -> completed. `cancelled` e `blocked` no contrato prevalecem. Por isso registre `delegation` ao despachar: sem ele, a tarefa ainda parece pronta e seria despachada de novo.
+
+**Acoes** (`--json` para ler em codigo):
+
+| Acao | Quando | O que fazer |
+|---|---|---|
+| `dispatch` | tarefas `ready` (ou reprovadas) com dependencias satisfeitas, sem pedido bloqueando e sem conflito de paths com tarefas em andamento; so a onda atual | pack + rota de cada uma, `delegation`, Agent em background, todas na mesma mensagem |
+| `validate` | `executed` sem `task_validated` | validador com a rota `--validator --executor-level` da acao |
+| `complete` | `validated` sem `task_completed` | aisef-check, contrato `completed`, `append` de `task_completed` |
+| `wait` | delegadas ou iniciadas | esperar a notificacao dos agentes |
+| `await_decision` | pedido `pending` (com o que ele bloqueia), `scope_discovery` sem pedido registrado depois, intervencao pedida no Execution Report, limite de tentativas, risco critico | aisef-approve; para `scope_discovery`, crie o pedido `scope_change_decision` com `request` |
+| `feature_acceptance` | todas as tarefas da feature concluidas e nenhum pedido de aceite do ciclo | relatorio final + pedido `feature_acceptance` |
+| `create_branch` / `delete_merged_branch` | opcao `git` do config (ver SKILL) | rodar o comando / pedir cada exclusao reforcada |
+| `idle` | nada a fazer | encerrar |
+
+**Criterios de parada (`stop_reason`).** `critical_risk` para na hora, mesmo com trabalho pronto (intervencao `critical_risk_operation` ou risco `critical` no relatorio mais recente de uma tarefa aberta). `attempts_exhausted` (reprovacoes acima de `limits.max_fix_attempts` ou de `orchestration-defaults`) e `user_decision_pending` so param quando nao resta trabalho automatizavel: o trabalho independente continua. `nothing_ready` quando nada mais esta pronto. Enquanto houver agente em voo, `stop_reason` fica vazio e a acao e `wait`.
+
+**Com o `/loop`.** Modo autoritmado: cada iteracao chama `next` e executa as acoes; subagentes em background acordam a sessao ao terminar; sem agente em voo e com espera, um `ScheduleWakeup` longo e o fallback. Com `stop_reason`, o loop termina com um resumo para o usuario. O loop nunca decide: aprovacoes, aceite e operacoes Git continuam com o usuario, pelo prompt nativo.
+
+## Branch por feature
+Opcao `git` em `.aisef/config.json` (o **aisef-check** valida em `CONFIG-GIT`): `branch_per_feature` cria `prefixo + id da feature sem FEAT-` ao iniciar a execucao; `delete_branch_after_merge` apaga a branch remota e a local depois do merge confirmado do PR. Cada exclusao e uma operacao Git reforcada propria (pedido `git_operation`/`branch_delete` + autorizacao reforcada com a `operation` exata); o `next` mostra, por comando, se ja existe pedido e o status dele.
+
 ## Priorizacao
 Dependencias, bloqueios, impacto na entrega, risco tecnico e prioridade do usuario. Voce pode reorganizar a fila tecnica, nunca a prioridade de negocio sem autorizacao.
 

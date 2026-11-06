@@ -152,6 +152,34 @@ def norm(path):
     return (path or "").replace("\\", "/")
 
 
+def load_patterns(path=PATTERNS_PATH):
+    raw = load_json(path)
+    return {
+        "cmd": [(re.compile(r["regex"], re.I), r["label"], r["category"]) for r in raw["commands"]],
+        "path": re.compile(raw["paths"]["regex"], re.I),
+        "safe": re.compile(raw["paths"]["allow"], re.I),
+    }
+
+
+def is_sensitive_path(path, patterns):
+    return bool(patterns["path"].search(path) and not patterns["safe"].search(path))
+
+
+def write_resource(path, patterns):
+    """Recurso que uma ESCRITA no caminho exige (o mesmo criterio do gateway para Edit/Write):
+    aisef_audit (sempre negado), aisef_decision, sensitive_files, config_ci_iac ou repo_code."""
+    p = norm(path)
+    if AISEF_AUDIT_RE.search(p):
+        return "aisef_audit", "log de auditoria/chaves do AISEF"
+    if AISEF_PROTECTED_RE.search(p):
+        return "aisef_decision", "aprovacoes/autorizacoes/config do AISEF"
+    if is_sensitive_path(p, patterns):
+        return "sensitive_files", "arquivo sensivel"
+    if CONFIG_PATH_RE.search(p):
+        return "config_ci_iac", "config/CI/IaC"
+    return "repo_code", "codigo"
+
+
 def classify_bash(cmd, patterns, env):
     """Retorna lista de (recurso, acao, ambiente, destrutivo, rotulo). Vazia = repo_code em dev."""
     found = []
@@ -197,6 +225,8 @@ def classify_bash(cmd, patterns, env):
                     (sub == "restore" and "--staged" not in rest) or
                     (sub == "stash" and re.search(r"\s(?:drop|clear)\b", rest)))
         found.append(("git", op, env, op in ("force_push", "branch_delete") or bool(discards), "git " + sub))
+    if re.search(r"\bgh\s+pr\s+create\b", cmd):
+        found.append(("git", "pull_request", env, False, "abertura de pull request"))
     if re.search(r"\bgh\s+(?:release\s+create|pr\s+merge)\b|\bnpm\s+publish\b|\btwine\s+upload\b|\bcargo\s+publish\b", cmd):
         found.append(("git", "release_publish", env, False, "release/publicacao"))
     if DEPLOY_RE.search(cmd) or DEPLOY_DESTRUCTIVE_RE.search(cmd):
@@ -250,7 +280,38 @@ def scope_covers(project, resource, env, now, max_days=None):
     return None
 
 
-def reinforced_for(project, operation, now):
+CD_PREFIX_RE = re.compile(r"""^\s*cd\s+(?:"([^"]*)"|'([^']*)'|([^\s;&|]+))\s*(?:&&|;)\s*""")
+
+
+def _same_dir(path, project, cwd=None):
+    """`path` (de um `cd`) aponta para a raiz do projeto? Aceita caminho relativo ao cwd e o estilo Git Bash (/c/...)."""
+    m = re.match(r"^/([a-zA-Z])(/.*)?$", path)
+    if os.name == "nt" and m:
+        path = m.group(1) + ":" + (m.group(2) or "/")
+    if not os.path.isabs(path):
+        path = os.path.join(cwd or project, path)
+
+    def canon(p):
+        return os.path.normcase(os.path.normpath(os.path.abspath(p)))
+    return canon(path) == canon(project)
+
+
+def strip_project_cd(cmd, project, cwd=None):
+    """Remove prefixos `cd <raiz do projeto> &&` e `cd <raiz do projeto>;` antes de comparar com a operacao exata
+    aprovada. Um `cd` para outro diretorio fica no comando: ali a operacao seria outra."""
+    while True:
+        m = CD_PREFIX_RE.match(cmd)
+        if not m:
+            break
+        target = next(g for g in m.groups() if g is not None)
+        if not _same_dir(target, project, cwd):
+            break
+        cmd = cmd[m.end():]
+    return cmd.strip()
+
+
+def reinforced_for(project, operation, now, cwd=None):
+    operation = strip_project_cd(operation, project, cwd)
     for path in glob.glob(os.path.join(project, ".aisef", "authorizations", "*.json")):
         try:
             a = load_json(path)
@@ -258,7 +319,7 @@ def reinforced_for(project, operation, now):
             continue
         if a.get("kind") != "reinforced" or a.get("status") != "approved" or a.get("consumed"):
             continue
-        if (a.get("operation") or "").strip() != operation.strip():
+        if strip_project_cd(a.get("operation") or "", project, cwd) != operation:
             continue
         try:
             if now <= datetime.datetime.fromisoformat(a["expires_at"]):
@@ -319,17 +380,15 @@ def decide(data, project, policy, patterns, config, now):
         paths = [norm(inp.get(k)) for k in ("file_path", "path", "notebook_path", "pattern", "glob") if isinstance(inp.get(k), str)]
         operation = tool + " " + " ".join(paths)
         for p in paths:
-            sensitive = patterns["path"].search(p) and not patterns["safe"].search(p)
             if tool in EDIT_TOOLS:
-                if AISEF_AUDIT_RE.search(p):
+                resource, label = write_resource(p, patterns)
+                if resource == "aisef_audit":
                     raise Decision("deny", "o log de auditoria e as chaves do AISEF so podem ser alterados pelo hook de auditoria")
-                if AISEF_PROTECTED_RE.search(p) and not is_pending_request(tool, p, inp):
-                    items.append(("aisef_decision", "write", env, False, "aprovacoes/autorizacoes/config do AISEF"))
-                elif sensitive:
-                    items.append(("sensitive_files", "write", env, False, "arquivo sensivel"))
-                elif CONFIG_PATH_RE.search(p):
-                    items.append(("config_ci_iac", "write", env, False, "config/CI/IaC"))
-            elif tool in READ_TOOLS and sensitive:
+                if resource == "aisef_decision" and is_pending_request(tool, p, inp):
+                    continue  # propor pedido pendente nao e decidir
+                if resource != "repo_code":
+                    items.append((resource, "write", env, False, label))
+            elif tool in READ_TOOLS and is_sensitive_path(p, patterns):
                 items.append(("sensitive_files", "read_content", env, False, "arquivo sensivel"))
 
     if tool.startswith("mcp__"):
@@ -373,7 +432,7 @@ def decide(data, project, policy, patterns, config, now):
     if worst in ("approve_scope", "approve_operation"):
         return "ask", reason + ". Aprove so se isso estiver dentro do que voce autorizou."
     if worst == "approve_reinforced":
-        appr = reinforced_for(project, operation, now)
+        appr = reinforced_for(project, operation, now, data.get("cwd"))
         if appr:
             return "ask", reason + ". Aprovacao reforcada %s encontrada para esta operacao exata: confirme para consumi-la." % appr
         return "deny", (reason + ". Exige aprovacao reforcada de uso unico (diff, impacto, rollback, justificativa). "
@@ -396,12 +455,7 @@ def main():
         local = os.path.join(project, ".aisef", "policy.local.json")
         if os.path.exists(local):
             policy = merge_policy(policy, load_json(local))
-        raw = load_json(PATTERNS_PATH)
-        patterns = {
-            "cmd": [(re.compile(r["regex"], re.I), r["label"], r["category"]) for r in raw["commands"]],
-            "path": re.compile(raw["paths"]["regex"], re.I),
-            "safe": re.compile(raw["paths"]["allow"], re.I),
-        }
+        patterns = load_patterns()
         now = datetime.datetime.now(datetime.timezone.utc)
         decision, reason = decide(data, project, policy, patterns, config, now)
     except Decision as d:

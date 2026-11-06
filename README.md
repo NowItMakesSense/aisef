@@ -14,7 +14,7 @@ Most agent workflows either give you **process without enforcement** (skills tha
 
 - **Process:** discovery, then Feature Contract, then Engineering Blueprint, then task contracts, then execution. Every task is validated by a different agent, and the feature closes with your acceptance. Requirements are traceable end to end (RTM), and more than 60 cross-document consistency rules are checked.
 - **Enforcement:** a `PreToolUse` gateway applies the permission policy:
-  - Each git operation needs its own approval (commit ≠ push ≠ merge).
+  - Each git operation needs its own approval (commit ≠ push ≠ pull request ≠ merge).
   - Secret files ask for approval; databases and deploys are denied.
   - Each subagent is capped by its Agent Contract (the validator, for example, can only read git).
   - Destructive operations go up one approval level.
@@ -47,7 +47,8 @@ A `SessionStart` doctor tells you if something is missing, and stays silent othe
 3. Ask for work in plain language:
    - **Feature:** the model writes a ~20-line brief, and `aisef_new.py` expands it into valid contracts, tasks, RTM and a plan-approval request. You approve the plan, execution runs inside the approved scope, and the feature closes only with your acceptance.
    - **Small change** (typo, trivial fix, non-breaking dependency patch): goes through a quick maintenance path, with no blueprint and no extra approvals.
-4. See everything in the panel (`aisef-panel`): features, tasks, traceability, approvals, decisions, risks, timeline, dependencies, and an engineering page with architecture and ER diagrams. Mermaid is fetched once (pinned version, SHA-256 checked) into `~/.aisef/vendor/`, so the panel works offline from then on.
+4. **Continuous mode:** once a plan is approved, AISEF keeps going on its own, task after task and feature after feature (`aisef_project.py next` computes the next actions: dispatch the current wave in parallel, independent validation, completion, feature acceptance). It stops only when it needs you: a pending approval, a critical risk, exhausted fix attempts, or nothing left to do. Works with Claude Code's `/loop` in self-paced mode. Approvals stay yours. Optionally, one Git branch per feature, deleted after the PR is merged (each deletion is a reinforced approval).
+5. See everything in the panel (`aisef-panel`): features, tasks, traceability, approvals, decisions, risks, timeline, dependencies, and an engineering page with architecture and ER diagrams. Mermaid is fetched once (pinned version, SHA-256 checked) into `~/.aisef/vendor/`, so the panel works offline from then on.
 
 A step-by-step walkthrough with the demo project is in [docs/walkthrough.md](docs/walkthrough.md) (Portuguese).
 

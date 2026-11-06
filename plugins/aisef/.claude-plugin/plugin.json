@@ -1,6 +1,6 @@
 {
   "name": "aisef",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "AISEF - engenharia de software assistida por IA com controle humano: orquestrador, especialistas, contratos em JSON Schema, Execution Gateway que aplica a politica de permissoes (Git, segredos, banco, deploy), Approval Center, auditoria imutavel assinada com Ed25519 e painel HTML. Para projetos novos e existentes.",
   "author": {
     "name": "Fernando",

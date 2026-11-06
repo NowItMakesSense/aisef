@@ -60,12 +60,13 @@
       "status_log_diff": "allow",
       "commit":          "approve_operation",
       "push":            "approve_operation",
+      "pull_request":    "approve_operation",
       "merge":           "approve_operation",
       "release_publish": "approve_operation",
       "force_push":      "approve_reinforced",
       "history_rewrite": "approve_reinforced",
       "branch_delete":   "approve_reinforced",
-      "$rule": "Aprovar commit nao aprova push, merge ou release. Cada operacao exige sua propria aprovacao."
+      "$rule": "Aprovar commit nao aprova push, pull request, merge ou release. Cada operacao exige sua propria aprovacao."
     }
   },
 
