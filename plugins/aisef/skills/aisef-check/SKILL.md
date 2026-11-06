@@ -21,6 +21,11 @@ python -I CORE/aisef_project.py verify --project .
 - Integridade comprometida: **pare**, mostre o erro ao usuario e nao tente "consertar" o log; correcoes sao eventos novos (`correction`), nunca edicao.
 - Nunca diga que passou sem ter rodado e lido a saida.
 
+## Manutencao do log (so com OK do usuario)
+- O log cria sozinho um checkpoint assinado a cada 500 eventos (com ancora externa em `~/.aisef/anchors/`) e arquiva segmentos grandes em `.aisef/audit/archive/`; a cadeia continua entre eles. Limites em `config.json` -> `audit`.
+- `python -I CORE/aisef_project.py anchor --project .`: ancora o ponto atual agora (antes de uma entrega, por exemplo).
+- `python -I CORE/aisef_project.py rotate-key --project .`: troca a chave de assinatura; a antiga e apagada e qualquer evento novo assinado por ela vira erro. Use se a chave pode ter vazado ou periodicamente.
+
 Para verificar se a politica e os schemas do plugin estao coerentes entre si (manutencao do plugin):
 ```
 python -I CORE/check_policy_consistency.py CORE/permission-policy.v0.1.json CORE/authorization.schema.v0.1.json CORE/approval-request.schema.v0.1.json

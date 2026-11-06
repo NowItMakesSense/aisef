@@ -29,22 +29,23 @@ python -I CORE/aisef_project.py init --project . --project-id <ID> --name "<nome
 Isso cria `.aisef/{contracts/{features,tasks,agents},blueprints,approvals,authorizations,reports,audit,keys}`, `config.json` e o evento genesis. A chave **privada** e o head assinado ficam em `~/.aisef/` (fora do repositorio). Nunca leia nem copie esses arquivos.
 
 ## 4. Ative os agentes (decisao do usuario)
-O init criou os Agent Contracts dos 8 agentes do plugin em `.aisef/contracts/agents/*.json`, com `status: "draft"`. Agente em draft e bloqueado pelo gateway. Mostre ao usuario, numa tabela, o teto de cada um (recursos, Git, ambiente maximo; o `validator` so tem Git de leitura) e pergunte se aprova (AskUserQuestion: todos, alguns, nenhum agora). Com o OK:
+O init criou os Agent Contracts do orquestrador e dos 8 agentes do plugin em `.aisef/contracts/agents/*.json`, com `status: "draft"`. Agente em draft e bloqueado pelo gateway. Mostre ao usuario, numa tabela, o teto de cada um (recursos, Git, ambiente maximo; o `validator` so tem Git de leitura) e pergunte se aprova (AskUserQuestion: todos, alguns, nenhum agora). Com o OK:
 ```
 python -I CORE/aisef_project.py agents --project . --activate [--roles backend,qa]
 ```
 O comando abre o prompt nativo de permissao (a decisao e do usuario) e registra a aprovacao no log.
 
-## 5. Documente para outras ferramentas (pergunte antes de editar)
-Proponha acrescentar ao `CLAUDE.md` (e ao `AGENTS.md`, se existir) uma secao curta:
+## 5. Segunda camada de protecao (pergunte antes)
+O gateway e um hook; se ele falhar ou for desligado, as regras nativas do Claude Code continuam valendo. Mostre o que falta com `python -I CORE/aisef_project.py settings --project .` e, com o OK do usuario, grave com `--apply` (mescla em `.claude/settings.json` sem apagar nada; abre o prompt nativo). Recomende tambem o sandbox do Claude Code (`/sandbox`): o gateway le comandos por padroes e reduz o risco, mas nao e uma fronteira de seguranca.
+
+## 6. Documente para outras ferramentas (pergunte antes de editar)
+Proponha acrescentar `CORE/templates/AGENTS.aisef.md` ao `AGENTS.md` do projeto (crie se nao existir; ferramentas como Codex, Cursor e Gemini leem esse arquivo) e uma linha no `CLAUDE.md`:
 ```
-## AISEF
-Este projeto usa o AISEF (plugin aisef). Estado em .aisef/. Use /aisef para trabalhar em features.
-Commit, push, merge, release, arquivos sensiveis e banco passam pelo Execution Gateway.
+Este projeto usa o AISEF (plugin aisef): estado em .aisef/, regras em AGENTS.md (secao AISEF).
 ```
 Mostre o texto e so grave com OK. Nunca sobrescreva arquivos existentes em silencio.
 
-## 6. Proximo passo
+## 7. Proximo passo
 - Projeto existente: rode **aisef-discovery** no modo "projeto existente".
 - Projeto novo: rode **aisef-discovery** no modo "projeto novo".
 

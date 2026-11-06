@@ -1,6 +1,18 @@
 # Changelog
 
 ## Não publicado
+- **Geradores por brief e caminho rápido:** `aisef_new.py feature`, `blueprint` e `quick`. Quando você aprova o plano, isso passa para o Feature Contract.
+- **Gateway:**
+  - pede aprovação para código ofuscado ou baixado;
+  - registra no log as tentativas que nega ou leva à aprovação;
+  - instala regras nativas `ask`/`deny` (`settings --apply`).
+- **Hooks:**
+  - de ~540 para ~250 ms por chamada no Windows;
+  - novo doctor no SessionStart;
+  - o log não grava mais eventos sem assinatura quando falta a chave privada.
+- **Log:** checkpoints, segmentos arquivados, `rotate-key` e `anchor`.
+- **Avaliações:** casos de `claude plugin eval` em `plugins/aisef/evals/`.
+- **Documentação:** ícone, README em inglês e em português, passo a passo com capturas e template de `AGENTS.md`.
 - **Decisões aplicadas:**
   - lista T1 ampliada;
   - autorização de escopo com validade máxima de 7 dias (política, gateway, `decide` e regra `AUTH-SCOPE-TOO-LONG`).

@@ -1,6 +1,6 @@
 ---
 name: aisef
-description: 'Orquestrador AISEF - conduz o trabalho de engenharia num projeto que tem .aisef/ (descoberta, Feature Contract, Engineering Blueprint, Task Contracts, delegacao a especialistas, validacao independente, aceite da feature), com controle humano nas decisoes e rastreabilidade completa. Use sempre que o usuario pedir para implementar, planejar, continuar, reabrir ou revisar uma feature num projeto com .aisef/, ou disser "aisef", "orquestrar", "proxima tarefa", "aceitar feature", mesmo sem citar esta skill. Para comecar um projeto use aisef-init.'
+description: 'Orquestrador AISEF - conduz o trabalho de engenharia num projeto que tem .aisef/ (descoberta, Feature Contract, Engineering Blueprint, Task Contracts, delegacao a especialistas, validacao independente, aceite da feature), com controle humano nas decisoes e rastreabilidade completa; mudancas pequenas (typo, texto, ajuste trivial, patch de dependencia) vao pelo caminho rapido de manutencao. Use sempre que o usuario pedir QUALQUER mudanca de codigo ou documentacao num projeto que tem .aisef/ - implementar, corrigir, ajustar, planejar, continuar, reabrir ou revisar - ou disser "aisef", "orquestrar", "proxima tarefa", "aceitar feature", mesmo sem citar esta skill. Para comecar um projeto use aisef-init.'
 ---
 
 # AISEF - orquestrador

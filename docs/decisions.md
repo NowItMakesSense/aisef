@@ -56,3 +56,10 @@ Decisões tomadas pelo usuário na conversa "Continuação de projeto com GPT" (
 - **Execution Gateway por hook PreToolUse.** As aprovações usam o prompt nativo de permissão (`ask`), que o modelo não consegue responder. Nível reforçado sem registro aprovado para a operação exata resulta em `deny`.
 - **Banco a partir de uma sessão:** o ambiente alvo é desconhecido, então a política trata como produção. Na prática, fica bloqueado por padrão.
 - **Chave privada e head** ficam em `~/.aisef/`, fora do repositório.
+
+## Melhorias pós-análise (2026-11-05)
+- **Briefs em vez de JSON escrito à mão** (`aisef_new.py`), para economizar tokens.
+- **Caminho rápido** de manutenção (`FEAT-MAINT`) para mudanças pequenas.
+- **Regras nativas de segunda camada são `ask`, não `deny`,** para não impedir o que a política permite com aprovação. O gateway passa a registrar no log as tentativas que nega ou leva à aprovação.
+- **Log:** checkpoints assinados, segmentos arquivados, rotação de chave (a antiga é aposentada) e âncoras externas.
+- **Avaliações das skills:** os casos com shell só rodam em Linux e macOS, porque o Windows não tem sandbox para o Bash.
