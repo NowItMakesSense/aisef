@@ -29,6 +29,8 @@ Regras (codigo -> o que verifica):
     BP-*            blueprint x feature (versao, requisitos, componentes, endpoints, entidades, decisoes aprovadas, cobertura)
     STATE-*         estado da tarefa/feature x relatorios e eventos de auditoria
     REPORT-*        relatorio x contrato (versao, criterios, evidencias, arquivos dentro do escopo, tentativas)
+    ROUTE-*         roteamento de modelo: nivel do validador (execution_profile) nunca menor que o do executor
+                    (relatorio de avaliacao = relatorio de agente avaliador que nao e o executor da tarefa)
     APPROVAL-*      aprovacoes x tarefas, autorizacoes geradas, eventos e validade
     LOG-*           log x contratos (ids, versoes, ordem do tempo, atores)
     POLICY-SCHEMA   politica x schemas (via check_policy_consistency)
@@ -557,6 +559,15 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             rep.err("STATE-NO-COMPLETE-EVENT", where, "concluida sem evento task_completed")
 
     # ------------------------------------------------------------------ relatorios
+    # Relatorio de avaliacao (validacao/QA/seguranca) usa o mesmo schema do de execucao: e o relatorio de um
+    # agente de papel avaliador (contrato do agente, ou agent.role) que NAO e o executor da tarefa.
+    def is_eval_report(r):
+        t_ = tasks.get(r["task_id"])
+        if t_ is None or r["agent"]["agent_id"] == t_["assigned_agent"]["agent_id"]:
+            return False
+        ag_ = agents.get(r["agent"]["agent_id"])
+        return (ag_["role"] if ag_ else r["agent"].get("role")) in ("validator", "qa", "security")
+
     for r in reports:
         where = "relatorio " + r["report_id"]
         t = tasks.get(r["task_id"])
@@ -565,7 +576,7 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             continue
         if r["contract_version"] != t["contract_version"]:
             rep.err("REPORT-VERSION", where, "executou a v%d, o contrato esta na v%d" % (r["contract_version"], t["contract_version"]))
-        if r["agent"]["agent_id"] != t["assigned_agent"]["agent_id"]:
+        if r["agent"]["agent_id"] != t["assigned_agent"]["agent_id"] and not is_eval_report(r):
             rep.err("REPORT-AGENT", where, "entregue por %s, mas a tarefa e de %s" % (r["agent"]["agent_id"], t["assigned_agent"]["agent_id"]))
         want = {c["id"]: c["required"] for c in t["acceptance_criteria"]}
         got = {c["criterion_id"]: c["required"] for c in r["criteria_results"]}
@@ -598,6 +609,23 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             sp = defaults["failure_handling"]["max_specialist_consultations"]
         if sp is not None and r["attempts"]["specialist_consultations_used"] > sp:
             rep.err("REPORT-CONSULTATIONS", where, "consultas a especialista acima do limite (%d)" % sp)
+
+    # ------------------------------------------------------------------ roteamento de modelo (execution_profile)
+    # O validador nunca pode ter nivel menor que o do executor (Model Policy). Compara o relatorio de avaliacao
+    # com o do executor da mesma tarefa na tentativa mais recente (ou o ultimo na ordem dos arquivos).
+    def newest(rs):
+        return max(enumerate(rs), key=lambda ir: ((ir[1]["execution_profile"].get("attempt") or 1), ir[0]))[1]
+
+    for tid in tasks:
+        profiled = [r for r in reports if r["task_id"] == tid and r.get("execution_profile")]
+        ex = [r for r in profiled if r["agent"]["agent_id"] == tasks[tid]["assigned_agent"]["agent_id"]]
+        ev = [r for r in profiled if is_eval_report(r)]
+        if ex and ev:
+            e_, v_ = newest(ex), newest(ev)
+            if v_["execution_profile"]["level"] < e_["execution_profile"]["level"]:
+                rep.err("ROUTE-VALIDATOR-WEAKER", "relatorio " + v_["report_id"],
+                        "nivel do validador L%d menor que o do executor L%d (relatorio %s)"
+                        % (v_["execution_profile"]["level"], e_["execution_profile"]["level"], e_["report_id"]))
 
     # ------------------------------------------------------------------ aprovacoes e autorizacoes
     for rid, a in approvals.items():
@@ -680,6 +708,28 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
     # ------------------------------------------------------------------ log
     last = None
     projects = {a["project_id"] for a in approvals.values()}
+    # Correcoes (0.4.0): o log e imutavel; um evento 'correction' posterior registra que outro evento estava
+    # errado. Erros de ATOR do evento corrigido viram aviso citando a correcao. Autovalidacao nunca e perdoada.
+    seq_by_id = {e["event_id"]: e["sequence"] for e in log}
+    corrected = {}
+    for e in log:
+        if e["event_type"] != "correction":
+            continue
+        target = e.get("corrects_event_id")
+        where = "evento %d (%s)" % (e["sequence"], e["event_id"])
+        if target not in seq_by_id:
+            rep.err("LOG-CORRECTION-UNKNOWN", where, "corrige o evento inexistente %s" % target)
+        elif seq_by_id[target] >= e["sequence"]:
+            rep.err("LOG-CORRECTION-ORDER", where, "corrige %s, que nao e anterior a correcao" % target)
+        else:
+            corrected.setdefault(target, e["event_id"])
+
+    def actor_issue(code, where, event_id, message):
+        if event_id in corrected:
+            rep.warn(code, where, "%s (corrigido por %s)" % (message, corrected[event_id]))
+        else:
+            rep.err(code, where, message)
+
     for e in log:
         where = "evento %d (%s)" % (e["sequence"], e["event_id"])
         t = parse_time(e["timestamp"])
@@ -691,12 +741,12 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         if e.get("task_id") and e["task_id"] not in tasks:
             rep.err("LOG-UNKNOWN-TASK", where, "tarefa %s nao existe" % e["task_id"])
         if e["actor"]["type"] in ("agent", "validator") and e["actor"]["id"] not in agents:
-            rep.err("LOG-UNKNOWN-AGENT", where, "agente %s nao existe" % e["actor"]["id"])
+            actor_issue("LOG-UNKNOWN-AGENT", where, e["event_id"], "agente %s nao existe" % e["actor"]["id"])
         if e["actor"]["type"] == "validator" and e["actor"]["id"] in agents and agents[e["actor"]["id"]]["role"] != "validator":
-            rep.err("LOG-VALIDATOR-ROLE", where, "ator 'validator' com agente de papel %s" % agents[e["actor"]["id"]]["role"])
+            actor_issue("LOG-VALIDATOR-ROLE", where, e["event_id"], "ator 'validator' com agente de papel %s" % agents[e["actor"]["id"]]["role"])
         tk = tasks.get(e.get("task_id"))
         if tk and e["event_type"] in ("task_started", "task_executed") and e["actor"]["id"] != tk["assigned_agent"]["agent_id"]:
-            rep.err("LOG-TASK-ACTOR", where, "%s por %s, mas a tarefa e de %s" % (e["event_type"], e["actor"]["id"], tk["assigned_agent"]["agent_id"]))
+            actor_issue("LOG-TASK-ACTOR", where, e["event_id"], "%s por %s, mas a tarefa e de %s" % (e["event_type"], e["actor"]["id"], tk["assigned_agent"]["agent_id"]))
         if tk and e["event_type"] == "task_validated" and e["actor"]["id"] == tk["assigned_agent"]["agent_id"]:
             rep.err("VAL-SELF-ATTEST", where, "o executor validou a propria entrega")
         sub = e.get("subject")
@@ -720,6 +770,12 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             rep.err("POLICY-SCHEMA", "politica", c)
     else:
         rep.warn("POLICY-SKIPPED", "(validador)", "politica nao fornecida: regras PERM/AUTH-NOT-SCOPABLE e POLICY-SCHEMA puladas")
+
+    # ------------------------------------------------------------------ memoria de projeto (0.4.0)
+    import check_knowledge  # noqa: E402 (import tardio: so quando ha .aisef/knowledge)
+    if os.path.isdir(os.path.join(project, "knowledge")):
+        for code, where, msg in check_knowledge.validate(project):
+            rep.add("warning" if code in check_knowledge.WARNINGS else "error", code, where, msg)
     return rep
 
 

@@ -2,6 +2,8 @@
 name: domain
 description: 'Especialista de dominio de negocio do AISEF: esclarece regras de negocio, glossario e casos de excecao a partir do que esta documentado, sem inventar. Use quando o orquestrador AISEF precisar interpretar requisitos ou regras de negocio.'
 tools: Read, Grep, Glob, WebSearch, WebFetch
+model: haiku
+effort: low
 ---
 
 <!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->

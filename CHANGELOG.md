@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.0 - 2026-11-06
+- **Modelo e effort por tarefa (`aisef_route.py`, `core/model-policy.v0.1.json`):**
+  - Seleção híbrida, com custo primeiro. Cada papel tem um padrão, e os agentes ganham `model` e `effort` no frontmatter.
+  - Sinais do Task Contract sobem um nível na escada L0 (haiku/low) a L6 (opus/high): risco alto, recursos sensíveis (segurança, schema, CI/CD, deploy), `complexity: complex` e mais de 10 paths. `complexity: trivial` desce um nível.
+  - Cada tentativa que falha sobe um nível. Fable só com `--allow-fable`.
+  - O validador roda no menor nível que seja pelo menos o do executor e use outro modelo.
+  - O roteador avisa quando variáveis de ambiente anulam a escolha.
+  - O Task Contract ganha `complexity`, e o Execution Report ganha `execution_profile`.
+  - O `aisef-check` acusa `ROUTE-VALIDATOR-WEAKER`.
+- **Ondas automáticas (`aisef_project.py waves`):**
+  - Calcula ondas de tarefas prontas a partir de dependências, `parallelizable`, paths sem conflito e recursos compartilhados. Na dúvida, trata como conflito.
+  - O painel mostra as ondas na aba de dependências.
+- **Context engineering (`aisef_context.py`):**
+  - `pack` monta o pacote da tarefa em três camadas: obrigatório, referenciado e sob demanda.
+  - `remember` grava a memória de projeto em `.aisef/knowledge/`, com fonte e recusando segredos. O `aisef-check` valida as entradas.
+  - O hook consultivo `graph_nudge` lembra de consultar o grafo antes de Grep/Glob. Ele nunca bloqueia e falha aberto.
+- **Grafo de código:**
+  - A `aisef-tooling` e a `aisef-init` recomendam o codebase-memory-mcp (código) e o Graphify (docs e decisões), com instalação no escopo do projeto e só as ferramentas de leitura em `mcp_allow`.
+  - Riscos verificados: o README e o SECURITY.md do codebase-memory divergem sobre a checagem de versão.
+- **Log: correções e ator certo:**
+  - `append` recusa, antes de gravar, `task_started`/`task_executed` que não sejam do agente da tarefa e ator `agent`/`validator` sem `--actor-id`.
+  - Novo `--corrects` para eventos `correction`.
+  - O `aisef-check` rebaixa a aviso o erro de ator de um evento corrigido. A autovalidação nunca é perdoada.
+  - O exemplo da skill `aisef` induzia o erro e foi corrigido.
+
 ## 0.3.0 - 2026-11-06
 - **Sugestão de ferramentas (`aisef-tooling`):** no fim da discovery ou quando você pedir, sugere skills (via `find-skills`/skills.sh), servidores MCP (MCP Registry oficial, API v0.1) e plugins (`claude plugin list --available`). Cada sugestão é ligada a um item do discovery, verificada (fonte, sinais, risco) e gravada em `.aisef/tooling.md`. Só instala o que você escolher, no escopo do projeto.
 - **`aisef-init`** oferece instalar a skill `find-skills`.

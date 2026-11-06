@@ -232,7 +232,7 @@
         "dependencies": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["nodes", "edges", "missing_nodes", "mermaid"],
+          "required": ["nodes", "edges", "missing_nodes", "waves", "mermaid"],
           "properties": {
             "nodes": {
               "type": "array",
@@ -258,6 +258,58 @@
               }
             },
             "missing_nodes": { "type": "array", "items": { "type": "string" }, "description": "Dependencias citadas que nao existem como tarefa." },
+            "waves": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Ondas automaticas de execucao (aisef_project.compute_waves): cada onda roda em paralelo dentro do plano aprovado.",
+              "required": ["waves", "deferred", "excluded", "satisfied", "error"],
+              "properties": {
+                "waves": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["wave", "tasks"],
+                    "properties": {
+                      "wave": { "type": "integer", "minimum": 1 },
+                      "tasks": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["task_id", "title", "feature_id", "role", "agent_id", "paths"],
+                          "properties": {
+                            "task_id": { "type": "string" }, "title": { "type": "string" },
+                            "feature_id": { "type": ["string", "null"] }, "role": { "type": ["string", "null"] },
+                            "agent_id": { "type": ["string", "null"] }, "paths": { "type": "array", "items": { "type": "string" } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "deferred": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["task", "reason", "wave"],
+                    "properties": { "task": { "type": "string" }, "reason": { "type": "string" }, "wave": { "type": ["integer", "null"] } }
+                  }
+                },
+                "excluded": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["task", "status", "reason"],
+                    "properties": { "task": { "type": "string" }, "status": { "type": "string" }, "reason": { "type": "string" } }
+                  }
+                },
+                "satisfied": { "type": "array", "items": { "type": "string" } },
+                "error": { "type": ["string", "null"], "description": "Ciclo ou dependencia inexistente; nesse caso nao ha ondas." }
+              }
+            },
             "mermaid": { "type": "string", "description": "Codigo Mermaid ja saneado: rotulos so com caracteres seguros." }
           }
         }

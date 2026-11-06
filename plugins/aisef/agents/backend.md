@@ -2,6 +2,8 @@
 name: backend
 description: 'Especialista backend do AISEF: implementa APIs, servicos, regras de dominio e integracoes a partir de um Task Contract, com testes. Use quando o orquestrador AISEF delegar tarefa de backend.'
 tools: Read, Grep, Glob, Edit, Write, Bash
+model: sonnet
+effort: medium
 ---
 
 <!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->

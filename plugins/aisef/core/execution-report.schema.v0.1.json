@@ -30,6 +30,21 @@
       }
     },
 
+    "execution_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "effort", "level"],
+      "description": "Opcional. Modelo e effort realmente usados por quem produziu este relatorio (executor ou validador), conforme o roteador (aisef_route.py). O check_project exige que o nivel do validador nao seja menor que o do executor.",
+      "properties": {
+        "model": { "enum": ["haiku", "sonnet", "opus", "fable"] },
+        "effort": { "enum": ["low", "medium", "high"] },
+        "level": { "type": "integer", "minimum": 0, "maximum": 7, "description": "Nivel na escada da Model Policy (L0..L6; L7 = fable, so com pedido explicito)." },
+        "attempt": { "type": "integer", "minimum": 1, "description": "Tentativa (1 = primeira, sem escalonamento)." },
+        "routed_by": { "type": "string", "description": "Ex.: aisef_route (roteador) ou user (escolha manual)." },
+        "reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
     "status": {
       "enum": ["executed", "blocked", "failed", "needs_intervention"],
       "description": "executed = agente terminou. Nao significa validada nem concluida: isso cabe ao validador e ao orquestrador."

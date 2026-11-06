@@ -99,6 +99,10 @@ check("grafo: 3 nos, 2 arestas (T-001 -> T-002 -> T-003), nenhum ausente",
       len(g["nodes"]) == 3 and [(e["from"], e["to"]) for e in g["edges"]] == [("T-001", "T-002"), ("T-002", "T-003")] and g["missing_nodes"] == [])
 check("Mermaid comeca com 'flowchart TD' e tem a aresta n_T_001 --> n_T_002",
       g["mermaid"].startswith("flowchart TD") and "n_T_001 --> n_T_002" in g["mermaid"])
+gw = g["waves"]
+check("ondas: nenhuma executavel (T-002 em andamento), T-003 sem onda aguardando T-002, T-001 satisfeita",
+      gw["error"] is None and gw["waves"] == [] and gw["satisfied"] == ["T-001"]
+      and [(x["task"], x["wave"]) for x in gw["deferred"]] == [("T-003", None)])
 for name in ("manifest", "overview", "features", "tasks", "rtm", "approvals", "decisions", "agents", "risks", "timeline", "graphs", "executions", "source_errors"):
     if not os.path.exists(os.path.join(base, "panel", "data", name + ".json")):
         check("arquivo por area gerado: " + name, False)
@@ -163,6 +167,8 @@ check("RTM acusa vinculo quebrado para a tarefa excluida",
       next(r for r in bb["rtm"] if r["requirement_id"] == "REQ-002")["status"] == "broken_link"
       and next(r for r in bb["rtm"] if r["requirement_id"] == "REQ-002")["missing_task_ids"] == ["T-002"])
 check("grafo registra a dependencia inexistente (T-002) como no ausente", bb["graphs"]["dependencies"]["missing_nodes"] == ["T-002"])
+check("ondas: dependencia inexistente vira erro no painel (sem ondas) e nao derruba o construtor",
+      "T-002" in (bb["graphs"]["dependencies"]["waves"]["error"] or "") and bb["graphs"]["dependencies"]["waves"]["waves"] == [])
 check("dados continuam validos no schema", not list(validator.iter_errors(bb)))
 
 d = fresh("badjson")

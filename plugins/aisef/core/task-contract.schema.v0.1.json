@@ -22,6 +22,7 @@
     "parent_task_id": { "type": ["string", "null"], "description": "Preenchido quando esta e uma subtarefa." },
     "kind": { "enum": ["task", "subtask"], "default": "task" },
     "reopen_cycle": { "type": "integer", "minimum": 1, "default": 1, "description": "Ciclo da feature (reabertura cria novo ciclo)." },
+    "complexity": { "enum": ["trivial", "normal", "complex"], "default": "normal", "description": "Opcional. Sinal para o roteador de modelo (aisef_route.py): trivial = -1 nivel, complex = +1. Ausente equivale a normal." },
 
     "title": { "type": "string", "minLength": 3, "maxLength": 140 },
     "objective": { "type": "string", "minLength": 10 },

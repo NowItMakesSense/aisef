@@ -27,6 +27,11 @@ SUITES = [
     ("gateway + auditoria + Approval Center", [os.path.join(HOOKS, "test_gateway.py")]),
     ("geradores (briefs e caminho rapido)", [os.path.join(CORE, "test_generators.py")]),
     ("ciclo de vida do log", [os.path.join(CORE, "test_audit_lifecycle.py")]),
+    ("append: ator e correcoes", [os.path.join(CORE, "test_append_actor.py")]),
+    ("roteador de modelo (politica + CLI)", [os.path.join(CORE, "test_route.py")]),
+    ("ondas automaticas (waves)", [os.path.join(CORE, "test_waves.py")]),
+    ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
+    ("hook consultivo graph_nudge", [os.path.join(HOOKS, "test_graph_nudge.py")]),
     ("agentes gerados da fonte unica", [os.path.join(ROOT, "tools", "gen_agents.py"), "--check"]),
 ]
 

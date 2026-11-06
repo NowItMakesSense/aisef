@@ -96,6 +96,20 @@ check("quick: tarefas seguintes ja nascem ready, sem validador independente",
       and t2["acceptance_criteria"][0]["verification"]["command"] == "pytest -q")
 check("quick: FEAT-MAINT acumula as tarefas na RTM", load(proj, "contracts/features/FEAT-MAINT.json")["rtm"][0]["task_ids"]
       == ["T-MAINT-001", "T-MAINT-002"])
+cx = json.loads(json.dumps(aisef_new.EXAMPLES["feature"]))
+cx.update(id="FEAT-005", requirements={"REQ-020": "Registrar tentativas de redefinicao"})
+cx["tasks"] = [dict(cx["tasks"][0], id="T-020", reqs=["REQ-020"], criteria={"AC-20": "Tentativas ficam registradas (teste automatizado)"},
+                    complexity="complex")]
+aisef_new.cmd_feature(proj, cx)
+check("complexity do brief e gravada no Task Contract", load(proj, "contracts/tasks/T-020.json").get("complexity") == "complex")
+check("complexity ausente no brief: campo nao e gravado (contratos antigos seguem validos)",
+      "complexity" not in load(proj, "contracts/tasks/T-010.json"))
+cy = json.loads(json.dumps(cx))
+cy["id"] = "FEAT-006"
+cy["tasks"][0].update(id="T-021", complexity="enorme")
+check("complexity invalida e recusada sem gravar nada",
+      expect_exit(lambda: aisef_new.cmd_feature(proj, cy))
+      and not os.path.exists(os.path.join(proj, ".aisef", "contracts", "features", "FEAT-006.json")))
 check("tudo limpo no check_project e log integro", clean(proj) == [] and not ap.verify(proj)[0])
 
 shutil.rmtree(work, ignore_errors=True)

@@ -2,6 +2,8 @@
 name: qa
 description: 'QA do AISEF: avalia testes, cobertura dos criterios de aceite, regressoes e qualidade de uma entrega. Use quando o orquestrador AISEF pedir avaliacao de qualidade ou testes de integracao e regressao.'
 tools: Read, Grep, Glob, Bash
+model: sonnet
+effort: low
 ---
 
 <!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->

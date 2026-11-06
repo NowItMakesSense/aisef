@@ -32,6 +32,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import audit_chain  # noqa: E402
+import aisef_project  # noqa: E402
 
 BUILDER_VERSION = "0.1.0"
 SEVERITY = {"low": 0, "medium": 1, "high": 2, "critical": 3}
@@ -345,6 +346,12 @@ def derive(loaded, log, integrity):
     for m in missing_nodes:
         lines.append("  class %s blocked" % mermaid_id("n_", m))
 
+    try:
+        waves = aisef_project.compute_waves(tasks)
+        waves["error"] = None
+    except aisef_project.WaveError as e:
+        waves = {"waves": [], "deferred": [], "excluded": [], "satisfied": [], "error": str(e)}
+
     exec_rows = []
     for rp in reports:
         cr = rp["criteria_results"]
@@ -378,7 +385,7 @@ def derive(loaded, log, integrity):
         "approvals": {"pending": pending, "recent": decided_items[:10]},
         "decisions": decisions, "agents": agent_rows, "risks": risk_rows, "timeline": timeline,
         "graphs": {"dependencies": {"nodes": nodes, "edges": edges, "missing_nodes": missing_nodes,
-                                    "mermaid": "\n".join(lines)}},
+                                    "waves": waves, "mermaid": "\n".join(lines)}},
         "executions": exec_rows,
     }
 

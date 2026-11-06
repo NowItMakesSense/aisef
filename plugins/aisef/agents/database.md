@@ -2,6 +2,8 @@
 name: database
 description: 'Especialista de banco de dados do AISEF: modela entidades, escreve migrations com rollback e revisa schema, sem nunca conectar ao banco. Use quando o orquestrador AISEF delegar tarefa de dados ou migracao.'
 tools: Read, Grep, Glob, Edit, Write
+model: sonnet
+effort: medium
 ---
 
 <!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->

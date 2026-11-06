@@ -336,6 +336,31 @@
     var g = D.graphs.dependencies, box = h("div"), slot = h("div", { id: "graph", "class": "block" });
     box.appendChild(h("p", { "class": "muted", text: "Setas partem da tarefa de que outra depende. Verde: concluída · amarelo: em andamento · vermelho: bloqueada ou ausente." }));
     if (g.missing_nodes.length) box.appendChild(h("p", {}, h("span", { "class": "badge bad", text: "Dependências inexistentes: " + g.missing_nodes.join(", ") })));
+    var W = g.waves, wb = h("div", { "class": "block", id: "waves" });
+    wb.appendChild(h("h3", { text: "Ondas de execução" }));
+    wb.appendChild(h("p", { "class": "muted", text: "O orquestrador dispara cada onda em paralelo; a onda seguinte começa quando a anterior conclui." }));
+    if (W.error) wb.appendChild(h("p", {}, h("span", { "class": "badge bad", text: W.error })));
+    else if (!W.waves.length) wb.appendChild(h("p", { "class": "muted", text: "Nenhuma tarefa executável (estado ready)." }));
+    W.waves.forEach(function (w) {
+      var d = h("div", { "class": "wave" });
+      d.appendChild(h("strong", { text: "Onda " + w.wave + " · " + w.tasks.length + " em paralelo" }));
+      var ul = h("ul");
+      w.tasks.forEach(function (t) { ul.appendChild(h("li", { text: t.task_id + " [" + (t.role || "?") + "] " + t.title })); });
+      d.appendChild(ul); wb.appendChild(d);
+    });
+    if (W.deferred.length) {
+      wb.appendChild(h("strong", { text: "Adiadas" }));
+      var ud = h("ul");
+      W.deferred.forEach(function (x) { ud.appendChild(h("li", { text: x.task + (x.wave ? " (onda " + x.wave + ")" : "") + ": " + x.reason })); });
+      wb.appendChild(ud);
+    }
+    if (W.excluded.length) {
+      wb.appendChild(h("strong", { text: "Fora das ondas" }));
+      var ue = h("ul");
+      W.excluded.forEach(function (x) { ue.appendChild(h("li", { text: x.task + ": " + x.reason })); });
+      wb.appendChild(ue);
+    }
+    box.appendChild(wb);
     box.appendChild(slot);
     if (!g.nodes.length) { slot.textContent = "Sem tarefas."; return box; }
     drawMermaid(slot, g.mermaid);

@@ -2,6 +2,8 @@
 name: frontend
 description: 'Especialista frontend do AISEF: implementa telas, componentes e fluxos de UX a partir de um Task Contract, com testes. Use quando o orquestrador AISEF delegar tarefa de interface.'
 tools: Read, Grep, Glob, Edit, Write, Bash
+model: sonnet
+effort: low
 ---
 
 <!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->
