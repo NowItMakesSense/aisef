@@ -15,6 +15,7 @@ Opcionais:
 
 Regras (codigo -> o que verifica):
     SCHEMA          documento invalido no proprio schema (ficou fora das demais checagens)
+    PROJECT-EMPTY   a pasta nao tem documento AISEF nem log (--project errado nao passa como "0 erros")
     ID-DUP / ID-FILE   id duplicado; nome do arquivo diferente do id
     REQ-HISTORY     historico do requisito inconsistente com a versao atual
     PLAN-*          plano de tarefas x contratos de tarefa (existencia, versao, feature, dependencias, papel)
@@ -71,6 +72,7 @@ KINDS = {
 READ_ACTIONS = {"read", "read_content", "read_rows", "status_log_diff"}
 STARTED = {"in_progress", "executed", "validated", "completed"}
 NEEDS_REPORT = {"executed", "validated", "completed"}
+MAINT_FEATURE = "FEAT-MAINT"  # feature permanente do caminho rapido (aisef_new.MAINT_FEATURE)
 DECIDER_EVENTS = {"approval_granted", "approval_rejected", "decision_recorded", "feature_accepted", "authorization_granted"}
 
 
@@ -154,10 +156,37 @@ def write_like_levels(policy, resource, env):
     return out
 
 
+def resolve_project(project):
+    """Aceita a raiz do repositorio (como os demais comandos, `--project .`) ou a propria pasta .aisef."""
+    inner = os.path.join(project, ".aisef")
+    if os.path.isfile(os.path.join(inner, "config.json")) and not os.path.isfile(os.path.join(project, "config.json")):
+        return inner
+    return project
+
+
+def apply_effective_states(docs, log):
+    """Estado efetivo da tarefa = contrato combinado com o ultimo evento de ciclo de vida do log, a mesma regra do
+    `next` (aisef_next.effective_state). Sem isso, um contrato que ficou em 'ready' depois do task_completed era
+    checado como tarefa aberta (teto de paths, autorizacao de escopo, dependencias incompletas)."""
+    import aisef_next as nx
+    last = {}
+    for e in log:
+        if e.get("task_id") and e.get("event_type") in nx.EVENT_STATE:
+            last[e["task_id"]] = nx.EVENT_STATE[e["event_type"]]
+    for _, t in docs["tasks"]:
+        st = t.get("state") or {}
+        if t.get("task_id") in last and "status" in st:
+            st["status"] = nx.effective_state(st["status"], last[t["task_id"]])
+
+
 def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=None):
     rep = Report()
     now = parse_time(now) if isinstance(now, str) else (now or datetime.datetime.now(datetime.timezone.utc))
+    project = resolve_project(project)
     docs, log = load_project(project, schemas_dir, rep)
+    if not log and not any(docs.values()) and not rep.findings:
+        rep.err("PROJECT-EMPTY", project, "nenhum documento AISEF nem log de auditoria: confira o --project (raiz do repo ou .aisef)")
+    apply_effective_states(docs, log)
     policy = json.load(open(policy_path, encoding="utf-8")) if policy_path else None
     defaults = json.load(open(defaults_path, encoding="utf-8")) if defaults_path else None
 
@@ -543,7 +572,7 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                 if "approve_scope" in lv:
                     needs_scope.append(r)
             if needs_scope and not sid:
-                rep.err("PERM-SCOPE-REQUIRED", where, "recursos %s exigem autorizacao de escopo em %s" % (needs_scope, env))
+                (rep.warn if t["state"]["status"] in ("completed", "cancelled") else rep.err)("PERM-SCOPE-REQUIRED", where, "recursos %s exigem autorizacao de escopo em %s" % (needs_scope, env))
             if sid:
                 au = auths.get(sid)
                 if au is None or au.get("kind") != "scope":
@@ -566,22 +595,29 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         # estado x relatorio x eventos
         st = t["state"]["status"]
         types = task_types(tid)
+        # caminho rapido (FEAT-MAINT, sem validador independente): o orquestrador faz, testa e conclui direto,
+        # sem task_started, task_executed nem Execution Report; o task_completed continua obrigatorio
+        quick = t.get("feature_id") == MAINT_FEATURE and not t["validation"]["independent_validator_required"]
         if st in STARTED:
             if f is not None and f["approval"]["plan"]["status"] != "approved":
                 rep.err("STATE-UNAPPROVED-PLAN", where, "tarefa '%s' com plano da feature nao aprovado" % st)
-            if "task_started" not in types:
+            if "task_started" not in types and not quick:
                 rep.err("STATE-NO-START-EVENT", where, "estado '%s' sem evento task_started" % st)
             for d in graph.get(tid, []):
                 if d in tasks and tasks[d]["state"]["status"] != "completed" and not t.get("dependencies", {}).get("parallelizable"):
                     rep.err("STATE-DEP-INCOMPLETE", where, "iniciada com a dependencia %s ainda nao concluida" % d)
-        if st in NEEDS_REPORT:
+        if st in NEEDS_REPORT and not quick:
             rp = [r for r in reports if r["task_id"] == tid]
             if not rp:
                 rep.err("STATE-NO-REPORT", where, "estado '%s' sem Execution Report" % st)
-            elif not any(r["status"] == "executed" for r in rp):
-                rep.err("STATE-REPORT-STATUS", where, "estado '%s', mas nenhum relatorio com status 'executed'" % st)
+            # executor parou com intervencao e a parte bloqueada foi resolvida fora dele (outra tarefa ou
+            # correcao do orquestrador): se o validador independente validou depois, o que ficou para tras
+            # no relatorio ou no evento do executor e historico (aviso), nao erro
+            late = rep.warn if st in ("validated", "completed") and "task_validated" in types else rep.err
+            if rp and not any(r["status"] == "executed" for r in rp):
+                late("STATE-REPORT-STATUS", where, "estado '%s', mas nenhum relatorio com status 'executed'" % st)
             if "task_executed" not in types:
-                rep.err("STATE-NO-EXEC-EVENT", where, "estado '%s' sem evento task_executed" % st)
+                late("STATE-NO-EXEC-EVENT", where, "estado '%s' sem evento task_executed" % st)
         if st in ("validated", "completed") and t["validation"]["independent_validator_required"]:
             if "task_validated" not in types:
                 rep.err("STATE-NO-VALIDATION", where, "estado '%s' exige validacao independente, sem evento task_validated" % st)

@@ -110,6 +110,10 @@ cy["tasks"][0].update(id="T-021", complexity="enorme")
 check("complexity invalida e recusada sem gravar nada",
       expect_exit(lambda: aisef_new.cmd_feature(proj, cy))
       and not os.path.exists(os.path.join(proj, ".aisef", "contracts", "features", "FEAT-006.json")))
+ap.append(proj, {"event_type": "task_completed", "actor": {"type": "orchestrator", "id": "orchestrator"},
+                 "feature_id": "FEAT-MAINT", "task_id": "T-MAINT-002", "summary": "T-MAINT-002 concluida: patch aplicado, testes verdes"})
+check("quick: tarefa concluida direto (sem task_started, task_executed nem relatorio) e valida no check_project",
+      not [f for f in clean(proj) if f["rule"].startswith("STATE-")])
 check("tudo limpo no check_project e log integro", clean(proj) == [] and not ap.verify(proj)[0])
 
 shutil.rmtree(work, ignore_errors=True)

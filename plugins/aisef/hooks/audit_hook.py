@@ -57,11 +57,37 @@ def main():
     if len(summary) < 3:
         summary = "tool_used"
     try:
-        aisef_project.append(project, {"event_type": "tool_used", "actor": {"type": "orchestrator", "id": "claude-code"},
-                                       "summary": summary[:500], "data": detail, "panel_visible": False})
+        event = aisef_project.append(project, {"event_type": "tool_used", "actor": {"type": "orchestrator", "id": "claude-code"},
+                                               "summary": summary[:500], "data": detail, "panel_visible": False})
     except Exception as exc:
         sys.stderr.write("AISEF: evento de auditoria NAO registrado (%s)\n" % exc)
         sys.exit(1)  # nao bloqueia, mas o aviso aparece para o usuario
+    if tool == "Bash":
+        try:
+            consume_reinforced(project, inp.get("command") or "", data.get("cwd"), event)
+        except Exception as exc:
+            sys.stderr.write("AISEF: aprovacao reforcada NAO marcada como usada (%s)\n" % exc)
+
+
+def consume_reinforced(project, command, cwd, event):
+    """A operacao exata rodou (PostToolUse): a aprovacao reforcada que a liberou vira 'used', com o evento que
+    a consumiu. Sem isso ela ficava 'approved' ate vencer e o aisef-check acusava AUTH-REINFORCED-EXPIRED."""
+    import datetime
+    import aisef_project
+    sys.path.insert(1, HERE)
+    import gateway
+    now = datetime.datetime.now(datetime.timezone.utc)
+    appr = gateway.reinforced_for(project, command, now, cwd)
+    if not appr:
+        return
+    path = os.path.join(project, ".aisef", "authorizations", appr + ".json")
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8") as fh:
+        doc = json.load(fh)
+    doc["status"] = "used"
+    doc["consumed"] = {"at": event.get("timestamp") or now.isoformat(), "operation_event_ref": event["event_id"]}
+    aisef_project.write_json(path, doc)
 
 
 if __name__ == "__main__":
