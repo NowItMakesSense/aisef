@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.1 - 2026-11-06
+- **`check_project` aceita a raiz do repositório:** `--project .` (como os demais comandos) passa a checar `.aisef/` quando existe `.aisef/config.json`. Antes, a raiz não tinha documento nenhum e o validador respondia "0 erro(s)" sem checar nada; no uso real isso escondeu 22 erros.
+- **Nova regra `PROJECT-EMPTY`:** pasta sem documento AISEF e sem log de auditoria é erro, e não passa mais como projeto limpo.
+- **`check_project` usa o estado efetivo da tarefa** (contrato + último evento do log, a mesma regra do `next`). Contrato que ficou em `ready` depois do `task_completed` não é mais checado como tarefa aberta, e as regras de estado passam a valer para o que de fato aconteceu.
+- **Caminho rápido no `check_project`:** tarefa da `FEAT-MAINT` sem validador independente conclui direto, sem `task_started`, `task_executed` nem Execution Report (como a skill manda); o `task_completed` continua obrigatório.
+- **`PERM-SCOPE-REQUIRED` em tarefa concluída vira aviso** (histórico), como já era o `AGENT-PATH-CEILING`.
+- **Intervenção resolvida fora do executor:** se a tarefa foi validada pelo validador independente depois, relatório sem status `executed` (`STATE-REPORT-STATUS`) e ausência de `task_executed` (`STATE-NO-EXEC-EVENT`) viram aviso; sem a validação continuam erro.
+- **Execution Report aceita `sha256_before`** em `files` (hash do arquivo antes da alteração), que os agentes já gravavam.
+- **Aprovação reforçada consumida:** o hook de auditoria (PostToolUse) marca a reforçada como `used`, com `consumed.operation_event_ref` apontando o `tool_used` da operação exata. Antes nada a consumia, ela vencia como `approved` e o `aisef-check` acusava `AUTH-REINFORCED-EXPIRED`.
+- **`next` tolera relatório fora do schema:** `risks` com texto em vez de objeto, ou `intervention` que não é objeto, não derrubam mais o comando (antes: `AttributeError`). O resultado ganha `warnings` com o relatório a corrigir e manda rodar o `aisef-check`.
+
 ## 0.5.0 - 2026-11-06
 - **Modo contínuo (`aisef_project.py next`, `core/aisef_next.py`):**
   - Calcula as próximas ações a partir dos contratos, aprovações, relatórios e do log: `dispatch` (onda atual, com os comandos de rota e de pack), `validate`, `complete`, `wait`, `await_decision`, `feature_acceptance`, `create_branch`, `delete_merged_branch` e `idle`. Não executa nada.

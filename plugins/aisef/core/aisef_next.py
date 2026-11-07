@@ -130,7 +130,7 @@ def compute_next(project, feature=None, now=None, git_state=None):
                 last_started[tid] = _parse(e["timestamp"])
     state = {tid: effective_state(t["state"]["status"], ev_state.get(tid)) for tid, t in tasks.items()}
 
-    actions, decisions, blocked, critical = [], [], {}, []
+    actions, decisions, blocked, critical, warnings = [], [], {}, [], []
 
     def block(tid, why):
         blocked.setdefault(tid, why)
@@ -178,9 +178,13 @@ def compute_next(project, feature=None, now=None, git_state=None):
             continue
         if last_started.get(tid) and last_started[tid] > fin:
             continue  # tarefa ja redespachada depois do relatorio
-        inter = r.get("intervention") or {}
+        inter = r.get("intervention") if isinstance(r.get("intervention"), dict) else {}
+        risks = r.get("risks") if isinstance(r.get("risks"), list) else []
+        if not isinstance(r.get("intervention"), (dict, type(None))) or any(not isinstance(x, dict) for x in risks):
+            warnings.append("relatorio %s fora do schema (risks/intervention): rode o aisef-check e corrija o relatorio"
+                            % r.get("report_id"))
         is_critical = inter.get("reason") == "critical_risk_operation" or any(
-            (x or {}).get("severity") == "critical" for x in r.get("risks", []))
+            isinstance(x, dict) and x.get("severity") == "critical" for x in risks)
         if not (inter.get("needed") or is_critical):
             continue
         block(tid, "intervencao pedida em %s" % r.get("report_id"))
@@ -352,7 +356,7 @@ def compute_next(project, feature=None, now=None, git_state=None):
     if not actions:
         actions = [{"kind": "idle"}]
     return {"feature": feature, "actions": actions, "stop_reason": stop, "stop_detail": detail,
-            "deferred": deferred, "wave_error": wave_error,
+            "deferred": deferred, "wave_error": wave_error, "warnings": warnings,
             "states": {tid: state[tid] for tid in sorted(state) if in_scope(tasks[tid].get("feature_id"))}}
 
 
@@ -394,5 +398,7 @@ def format_next(res):
             lines.append("  %s: %s" % (d["task"], d["reason"]))
     if res.get("wave_error"):
         lines.append("ERRO nas ondas: " + res["wave_error"])
+    for w in res.get("warnings", []):
+        lines.append("AVISO " + w)
     lines.append("stop_reason: %s%s" % (res["stop_reason"], " (%s)" % res["stop_detail"] if res["stop_detail"] else ""))
     return "\n".join(lines)

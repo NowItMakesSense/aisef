@@ -223,5 +223,77 @@ sev = severities(log_edit(self_attest_corrected), "VAL-SELF-ATTEST")
 print(("OK    " if sev == {"error"} else "FALHA ") + "autovalidacao continua erro mesmo com correcao" + ("" if sev == {"error"} else "  (veio %s)" % sev))
 fails += sev != {"error"}
 
+# --project pode ser a raiz do repositorio (com .aisef/) ou a propria .aisef: os dois checam o mesmo
+total += 1
+d = tempfile.mkdtemp(dir=os.environ.get("TMPDIR"))
+try:
+    repo = os.path.join(d, "repo"); demo.make(os.path.join(repo, ".aisef"))
+    with open(os.path.join(repo, ".aisef", "config.json"), "w", encoding="utf-8") as fh:
+        json.dump({"project_id": "PRJ-DEMO"}, fh)
+    edit(".aisef/reports/RPT-001.json", lambda r: r.update(risks=["texto solto"]))(repo)
+    from_root = sorted(cp.check(repo, HERE, POL, DEF, NOW).codes())
+    from_dir = sorted(cp.check(os.path.join(repo, ".aisef"), HERE, POL, DEF, NOW).codes())
+    ok = from_root == from_dir and "SCHEMA" in from_root
+    print(("OK    " if ok else "FALHA ") + "raiz do repo e .aisef dao o mesmo resultado (e o schema e checado)"
+          + ("" if ok else "  (raiz %s, .aisef %s)" % (from_root, from_dir)))
+    fails += not ok
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+# pasta sem nenhum documento AISEF nao pode passar como "0 erros"
+total += 1
+d = tempfile.mkdtemp(dir=os.environ.get("TMPDIR"))
+try:
+    codes = cp.check(d, HERE, POL, DEF, NOW).codes()
+    ok = "PROJECT-EMPTY" in codes
+    print(("OK    " if ok else "FALHA ") + "pasta sem documentos AISEF e erro PROJECT-EMPTY" + ("" if ok else "  (veio %s)" % sorted(codes)))
+    fails += not ok
+finally:
+    shutil.rmtree(d, ignore_errors=True)
+
+# estado efetivo: contrato parado em 'ready' com o log dizendo task_completed vale como concluida (como no next)
+total += 1
+codes = run(edit(T1, lambda t: t["state"].update(status="ready"))).codes()
+ok = not codes
+print(("OK    " if ok else "FALHA ") + "contrato desatualizado usa o estado efetivo do log" + ("" if ok else "  (veio %s)" % sorted(codes)))
+fails += not ok
+
+
+# tarefa ja concluida sem autorizacao de escopo: historico, vira aviso (o gateway ja barrou ou liberou na hora)
+total += 1
+sev = severities(edit(T1, lambda d: d["permissions"].update(scope_authorization_id=None)), "PERM-SCOPE-REQUIRED")
+print(("OK    " if sev == {"warning"} else "FALHA ") + "escopo ausente em tarefa concluida e aviso" + ("" if sev == {"warning"} else "  (veio %s)" % sev))
+fails += sev != {"warning"}
+total += 1
+sev = severities(edit(T2, lambda d: d["permissions"].update(scope_authorization_id=None)), "PERM-SCOPE-REQUIRED")
+print(("OK    " if "error" in sev else "FALHA ") + "escopo ausente em tarefa aberta continua erro" + ("" if "error" in sev else "  (veio %s)" % sev))
+fails += "error" not in sev
+
+# hash anterior do arquivo modificado e evidencia valida no relatorio
+total += 1
+codes = run(edit("reports/RPT-001.json", lambda r: r["files"].update(
+    modified=[{"path": "src/auth/jwt.py", "sha256_before": "b" * 64, "sha256_after": "c" * 64}]))).codes()
+ok = "SCHEMA" not in codes
+print(("OK    " if ok else "FALHA ") + "files.modified aceita sha256_before" + ("" if ok else "  (veio %s)" % sorted(codes)))
+fails += not ok
+
+
+# executor parou com intervencao, a parte bloqueada foi resolvida fora dele e o validador validou depois:
+# relatorio sem status 'executed' vira aviso; sem a validacao independente continua erro
+def blocked_report(r):
+    r.update(status="blocked", intervention={"needed": True, "reason": "scope_exceeded", "details": "parte parada e reportada"})
+
+total += 1
+sev = severities(edit("reports/RPT-001.json", blocked_report), "STATE-REPORT-STATUS")
+print(("OK    " if sev == {"warning"} else "FALHA ") + "relatorio bloqueado com validacao posterior e aviso" + ("" if sev == {"warning"} else "  (veio %s)" % sev))
+fails += sev != {"warning"}
+def drop_validated(ev):
+    ev[:] = [e for e in ev if e["event_type"] != "task_validated"]
+total += 1
+sev = severities(both(edit("reports/RPT-001.json", blocked_report), log_edit(drop_validated)), "STATE-REPORT-STATUS")
+print(("OK    " if "error" in sev else "FALHA ") + "relatorio bloqueado sem validacao continua erro" + ("" if "error" in sev else "  (veio %s)" % sev))
+fails += "error" not in sev
+
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

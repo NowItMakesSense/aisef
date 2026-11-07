@@ -246,6 +246,23 @@ check("feature aceita com a branch ainda local: sugere apagar remota e local, ca
 r = nx.compute_next(p11, git_state={"current": "main", "branches": {"main"}})
 check("branch local ja apagada: nada a sugerir", not action(r, "delete_merged_branch"), r)
 
+
+print("--- relatorio fora do schema")
+p12 = new_project("rptinvalido", [feature(tids=["T-1"])], [task("T-1")])
+ev(p12, "delegation", "T-1")
+ap.write_json(os.path.join(ap.aisef_dir(p12), "reports", "RPT-T-1.json"), {
+    "report_id": "RPT-T-1", "task_id": "T-1", "feature_id": "FEAT-LOGIN", "status": "executed",
+    "timing": {"started_at": ap.now_iso(), "finished_at": ap.now_iso()},
+    "risks": ["risco escrito como texto", {"description": "ok", "severity": "low"}], "intervention": "texto"})
+try:
+    r = nx.compute_next(p12)
+    crashed = None
+except Exception as exc:  # noqa: BLE001
+    r, crashed = {}, repr(exc)
+check("risks/intervention fora do schema nao derrubam o next", crashed is None, crashed)
+check("next avisa o relatorio fora do schema e manda rodar o aisef-check",
+      any("RPT-T-1" in w and "aisef-check" in w for w in r.get("warnings", [])), r)
+
 print("--- CLI")
 cli = os.path.join(HERE, "aisef_project.py")
 pr = subprocess.run([sys.executable, "-I", cli, "next", "--project", p3, "--json"], capture_output=True, text=True, env=dict(os.environ))

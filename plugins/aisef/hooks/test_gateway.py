@@ -371,6 +371,22 @@ check("head externo fica fora do projeto", os.path.exists(aisef_project.external
 check("chave privada fica fora do projeto", os.path.exists(aisef_project.private_key_path("PRJ-T"))
       and not any(f.endswith(".pem") and "PRIVATE" in open(os.path.join(dp, f), encoding="utf-8").read()
                   for dp, _, fs in os.walk(proj) for f in fs))
+
+print("--- reforcada consumida pelo hook de auditoria (0.5.1)")
+ra = {"kind": "reinforced", "approval_id": "RA-7", "operation": "git branch -D feature/z", "status": "approved",
+      "issued_at": iso(datetime.timedelta(minutes=-1)), "expires_at": iso(datetime.timedelta(minutes=20))}
+ra_path = os.path.join(proj, ".aisef", "authorizations", "RA-7.json")
+aisef_project.write_json(ra_path, ra)
+run("audit_hook.py", {"tool_name": "Bash", "tool_input": {"command": "git branch -D feature/outra"}})
+check("comando diferente nao consome a reforcada", json.load(open(ra_path, encoding="utf-8"))["status"] == "approved")
+run("audit_hook.py", {"tool_name": "Bash", "tool_input": {"command": "cd %s && git branch -D feature/z" % proj}})
+used = json.load(open(ra_path, encoding="utf-8"))
+last = [json.loads(line) for line in open(os.path.join(proj, ".aisef", "audit", "log.jsonl"), encoding="utf-8")][-1]
+check("operacao exata executada marca a reforcada como 'used' com o evento que a consumiu",
+      used["status"] == "used" and used.get("consumed", {}).get("operation_event_ref") == last["event_id"]
+      and last["event_type"] == "tool_used")
+case("reforcada consumida pelo hook nao libera de novo -> deny", "Bash", "deny", command="git branch -D feature/z")
+
 lines = open(os.path.join(proj, ".aisef", "audit", "log.jsonl"), encoding="utf-8").read().splitlines()
 with open(os.path.join(proj, ".aisef", "audit", "log.jsonl"), "w", encoding="utf-8") as fh:
     fh.write("\n".join(lines[:-1]) + "\n")

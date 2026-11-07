@@ -272,6 +272,7 @@
       "required": ["path"],
       "properties": {
         "path": { "type": "string" },
+        "sha256_before": { "type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Hash do arquivo antes da alteracao (so em modified/deleted)." },
         "sha256_after": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
         "lines_added": { "type": "integer", "minimum": 0 },
         "lines_removed": { "type": "integer", "minimum": 0 }
