@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.1 - 2026-11-18
+- **Aprendizado contínuo revisado (`core/aisef_learn.py`, ADR 0017):**
+  - lições a partir de **erros rotulados** (reprovações, `precheck`, bloqueios do gateway, `scope_discovery`, correções, problemas de relatórios), agrupados sem modelo (`propose`);
+  - só viram lição com a **aprovação do usuário** (`accept`; o gateway abre o prompt nativo, e um subagente não aprova);
+  - a **confiança é calculada em código** (`update`: sobe com sucesso, cai com reprovação, decai sem uso, aposenta abaixo de 0,2);
+  - entra só no pacote da tarefa relevante, com confiança ≥ 0,5, como referência;
+  - fica em `.aisef/knowledge/`, versionada (o time herda);
+  - schema da memória com `lesson` e `status: retired`; nova regra `KNW-LESSON-EVIDENCE`.
+- **Estado depois de `/compact` e `/resume`:** o doctor (`SessionStart` agora com `compact`) reinjeta fase, tarefas em andamento e decisões pendentes. O `next` traz `guide.compact_hint` nos marcos de fase sem agente em voo.
+- **Painel:** a aba Agora mostra as lições (confiança, uso, aposentadas) e os agentes despachados por modelo.
+- **Perfis de hook do ECC: descartados**, porque o gateway precisa rodar sempre (ADR 0017).
+
 ## 0.8.0 - 2026-11-18
 - **Painel ao vivo (`build_panel.py --serve`):** servidor da stdlib em `127.0.0.1` que regenera os dados quando `.aisef/` muda. A página se atualiza sozinha a cada 3 s. No Windows o navegador não lê arquivo local por `file://`, daí o servidor. O modo estático continua.
 - **Aba "Agora" (nova, a primeira):**

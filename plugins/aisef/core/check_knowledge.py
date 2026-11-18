@@ -20,7 +20,8 @@ import userlibs  # noqa: E402,F401  (jsonschema pode estar na pasta de usuario d
 import aisef_context as ctx  # noqa: E402
 
 SCHEMA = os.path.join(HERE, "knowledge-entry.schema.v0.1.json")
-WARNINGS = frozenset({"KNW-SOURCE-FILE-MISSING", "KNW-SOURCE-DECISION-UNKNOWN", "KNW-SOURCE-TASK-MISSING"})
+WARNINGS = frozenset({"KNW-SOURCE-FILE-MISSING", "KNW-SOURCE-DECISION-UNKNOWN", "KNW-SOURCE-TASK-MISSING",
+                      "KNW-LESSON-EVIDENCE"})
 
 
 def _json(path):
@@ -48,11 +49,21 @@ def _known_decisions(aisef_dir):
     return ids
 
 
+def _event_ids(aisef_dir):
+    try:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import audit_chain
+        return {e.get("event_id") for e in audit_chain.read_log_dir(os.path.join(aisef_dir, "audit"))}
+    except Exception:
+        return set()
+
+
 def validate(aisef_dir):
     """Erros e avisos da memoria do projeto. Pasta .aisef/knowledge ausente: nada a validar."""
     import jsonschema
     kdir = os.path.join(aisef_dir, "knowledge")
-    out = []
+    out, event_ids = [], None
     if not os.path.isdir(kdir):
         return out
     project = os.path.dirname(os.path.abspath(aisef_dir))
@@ -109,6 +120,13 @@ def validate(aisef_dir):
         for field in ("supersedes", "superseded_by"):
             if e.get(field) and e[field] not in entries:
                 out.append(("KNW-LINK", where, "%s aponta para %s, que nao existe" % (field, e[field])))
+        les = e.get("lesson") or {}
+        if les:
+            if event_ids is None:
+                event_ids = _event_ids(aisef_dir)
+            gone = [x for x in les.get("evidence_events", []) if str(x).startswith("E") and x not in event_ids]
+            if gone:
+                out.append(("KNW-LESSON-EVIDENCE", where, "evidencia da licao nao esta no log: %s" % ", ".join(gone)))
         if e["status"] == "superseded" and e.get("superseded_by") in entries and entries[e["superseded_by"]][1].get("supersedes") not in (None, kid):
             out.append(("KNW-LINK", where, "%s diz ser substituida por %s, que substitui outra entrada" % (kid, e["superseded_by"])))
     return out

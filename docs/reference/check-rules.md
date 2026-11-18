@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**147 regras** em 26 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**148 regras** em 26 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -158,4 +158,4 @@ Opções do config.json.
 
 Entradas de .aisef/knowledge com fonte e sem segredos.
 
-`KNW-FEATURE-MISSING`, `KNW-FILENAME`, `KNW-ID-DUP`, `KNW-ID-NAME`, `KNW-JSON`, `KNW-LINK`, `KNW-SCHEMA`, `KNW-SECRET`, `KNW-SOURCE-DECISION-UNKNOWN`, `KNW-SOURCE-FILE-MISSING`, `KNW-SOURCE-TASK-MISSING`, `KNW-TASK-MISSING`
+`KNW-FEATURE-MISSING`, `KNW-FILENAME`, `KNW-ID-DUP`, `KNW-ID-NAME`, `KNW-JSON`, `KNW-LESSON-EVIDENCE`, `KNW-LINK`, `KNW-SCHEMA`, `KNW-SECRET`, `KNW-SOURCE-DECISION-UNKNOWN`, `KNW-SOURCE-FILE-MISSING`, `KNW-SOURCE-TASK-MISSING`, `KNW-TASK-MISSING`

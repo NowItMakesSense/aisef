@@ -144,7 +144,10 @@ def project_phase(project, feats, tasks, approvals, actions):
         phase = "specify" if not real else "done"
     else:
         phase = "done"
-    return {"phase": phase, "steps": STEPS[phase], "matt_equivalents": MATT_EQUIVALENTS}
+    compact = phase in ("approve_plan", "review", "decide", "done") and "wait" not in kinds
+    return {"phase": phase, "steps": STEPS[phase], "matt_equivalents": MATT_EQUIVALENTS,
+            "compact_hint": ("Marco de fase sem agente em voo: bom momento para /compact (o estado esta no disco e o "
+                             "AISEF o reinjeta depois)") if compact else None}
 
 
 def compute_next(project, feature=None, now=None, git_state=None):

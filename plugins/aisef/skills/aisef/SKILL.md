@@ -118,6 +118,21 @@ Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedid
 - **Falhas:** limites em `CORE/orchestration-defaults.v0.1.json` (3 correcoes automaticas, 1 consulta a especialista, depois escala ao usuario). Cada correcao sobe um nivel no roteador. Risco critico: pare na hora.
 - **Substituicao de agente:** handoff estruturado preservando contrato, historico, evidencias, alteracoes, testes, problemas e permissoes originais.
 
+## Aprendizado continuo (licoes revisadas)
+O AISEF aprende com os **erros que ele mesmo registra**: reprovacoes (do validador e do `precheck`), bloqueios do gateway, `scope_discovery`, correcoes e problemas dos relatorios. Nunca aprende sozinho:
+1. **No fim de cada onda e no aceite da feature**, rode `python -I CORE/aisef_learn.py propose --project .`. Ele agrupa os sinais sem modelo, so desde a ultima rodada.
+2. Para cada grupo relevante, redija um `trigger` ("quando...") e uma `action` ("faca/evite..."), curtos e verificaveis. Se houver muitos grupos, use um subagente Haiku.
+3. Mostre a lista ao usuario (AskUserQuestion, multiSelect). **So o que ele escolher** vira licao:
+   ```
+   python -I CORE/aisef_learn.py accept --project . --proposal P-1 --trigger "..." --action "..." [--tags a,b]
+   ```
+   O gateway abre o prompt nativo, porque e uma decisao do usuario. Licao nunca leva segredo.
+4. Depois de cada onda, rode `python -I CORE/aisef_learn.py update --project .`. A confianca sobe quando a tarefa que recebeu a licao passa, cai quando e reprovada e decai sem uso; abaixo de 0,2 a licao e aposentada.
+
+A licao entra **so no pacote da tarefa relevante**, com a confianca e marcada como referencia (nao como ordem); o `dispatch` registra quem recebeu o que. Ela fica em `.aisef/knowledge/`, versionada, e o time herda.
+
+**Contexto:** o doctor reinjeta o estado (fase, tarefas em andamento, decisoes pendentes) depois de `/compact` e `/resume`. Quando o `next` trouxer `guide.compact_hint`, sugira `/compact` ao usuario: e um marco de fase sem agente em voo.
+
 ## Auditoria
 O hook registra cada operacao automaticamente. Registre voce os marcos (contrato criado, delegacao, estado, decisao):
 

@@ -166,8 +166,9 @@ def load_knowledge(aisef_dir):
 def _relevant_knowledge(entries, task, feature_id, files, tokens, limit=KNOWLEDGE_LIMIT):
     fileset = set(files)
     scored = []
+    import aisef_learn
     for e in entries:
-        if e.get("status", "active") != "active":
+        if e.get("status", "active") != "active" or not aisef_learn.injectable(e):
             continue
         score, why = 0, []
         if e.get("task_id") == task["task_id"]:
@@ -193,8 +194,11 @@ def _relevant_knowledge(entries, task, feature_id, files, tokens, limit=KNOWLEDG
             score += min(len(overlap), 3)
             why.append("termos: " + ",".join(overlap[:3]))
         if score:
-            scored.append((-score, e["id"], {"id": e["id"], "summary": e.get("summary", ""), "source": src,
-                                             "tags": e.get("tags", []), "score": score, "why": why}))
+            item = {"id": e["id"], "summary": e.get("summary", ""), "source": src,
+                    "tags": e.get("tags", []), "score": score, "why": why}
+            if e.get("lesson"):
+                item.update(lesson=True, confidence=e["lesson"]["confidence"], action=e["lesson"]["action"])
+            scored.append((-score, e["id"], item))
     scored.sort(key=lambda x: (x[0], x[1]))
     return [s[2] for s in scored[:limit]], max(0, len(scored) - limit)
 
@@ -448,6 +452,9 @@ def render_pack(p):
     L += ["- doc: %s (%s)" % (d["path"], d["origin"]) for d in r["docs"]]
     L += ["", "## 3. Sob demanda"]
     for k in o["knowledge"]:
+        if k.get("lesson"):
+            L.append("- %s (licao aprovada, confianca %.2f; referencia, nao ordem): %s -> %s" % (k["id"], k["confidence"], k["summary"], k["action"]))
+            continue
         L.append("- %s: %s [%s %s] (%s)" % (k["id"], k["summary"], k["source"].get("kind"), k["source"].get("ref"), "; ".join(k["why"])))
     if o["knowledge_truncated"]:
         L.append("- ... mais %d entrada(s) de conhecimento cortada(s)" % o["knowledge_truncated"])

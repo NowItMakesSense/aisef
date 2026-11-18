@@ -500,6 +500,18 @@
       drawMermaid(slot, f.mermaid);
     });
 
+    box.appendChild(h("h3", { text: "Lições aprendidas (aprovadas por você)" }));
+    box.appendChild(table([
+      { t: "Lição", f: function (r) { return r.id + " · quando " + r.trigger; } },
+      { t: "Ação", f: function (r) { return r.action; } },
+      { t: "Confiança", f: function (r) { return Math.round(r.confidence * 100) + "%"; } },
+      { t: "Uso", f: function (r) { return r.applied + " tarefa(s): " + r.succeeded + " ok, " + r.failed + " reprovada(s)"; } },
+      { t: "Estado", f: function (r) { return r.status === "retired" ? "Aposentada" : "Ativa"; } }
+    ], L.learning || [], "Nenhuma lição ainda: elas vêm de reprovações e bloqueios, e só valem depois da sua aprovação."));
+    var runs = L.model_runs || {}, keys = Object.keys(runs);
+    if (keys.length) box.appendChild(h("p", { "class": "muted", text: "Agentes despachados por modelo: " +
+      keys.map(function (k) { return k + " " + runs[k]; }).join(" · ") }));
+
     box.appendChild(h("h3", { text: "Ondas no tempo (paralelismo real)" }));
     if (!L.gantt) box.appendChild(h("p", { "class": "muted", text: "Ainda não há tarefas despachadas." }));
     else { var gs = h("div", { "class": "block" }); box.appendChild(gs); drawMermaid(gs, L.gantt); }

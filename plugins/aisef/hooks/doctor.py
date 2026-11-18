@@ -61,6 +61,31 @@ def problems(project):
     return found
 
 
+MAX_STATE = 1500
+
+
+def session_state(project):
+    """Resumo curto do estado (fase, em andamento, decisoes pendentes) para reinjetar depois de /compact ou /resume.
+    None quando nao ha nada em andamento (zero tokens)."""
+    import aisef_next as nx
+    res = nx.compute_next(project)
+    g = res["guide"]
+    if g["phase"] == "done" and not res["stop_reason"]:
+        return None
+    running = sorted(t for t, s in res["states"].items() if s == "in_progress")
+    pending = [a.get("request_id") or a.get("source") for a in res["actions"] if a["kind"] == "await_decision"]
+    lines = ["AISEF (estado reconstruido do disco depois de compact/resume; o log e os contratos sao a fonte de verdade):",
+             "- fase: %s; proximo passo: %s" % (g["phase"], g["steps"][0] if g["steps"] else "-")]
+    if running:
+        lines.append("- em andamento (agentes podem ainda notificar): %s" % ", ".join(running))
+    if pending:
+        lines.append("- decisoes do usuario pendentes: %s" % ", ".join(str(p) for p in pending))
+    if res["stop_reason"]:
+        lines.append("- parado: %s" % res["stop_reason"])
+    lines.append("- retome com: python -I <CORE>/aisef_project.py next --project .")
+    return "\n".join(lines)[:MAX_STATE]
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -70,9 +95,19 @@ def main():
     if not os.path.exists(os.path.join(project, ".aisef", "config.json")):
         return
     found = problems(project)
+    parts = []
     if found:
-        print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext":
-                          "AISEF doctor encontrou problemas; avise o usuario:\n- " + "\n- ".join(found)}}, ensure_ascii=False))
+        parts.append("AISEF doctor encontrou problemas; avise o usuario:\n- " + "\n- ".join(found))
+    if data.get("source") in ("resume", "compact"):
+        try:
+            st = session_state(project)
+        except Exception:
+            st = None
+        if st:
+            parts.append(st)
+    if parts:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "\n\n".join(parts)}},
+                         ensure_ascii=False))
 
 
 if __name__ == "__main__":

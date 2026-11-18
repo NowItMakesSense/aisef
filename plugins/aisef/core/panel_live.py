@@ -177,7 +177,20 @@ def derive_live(aisef_dir, loaded, log, now=None):
         stage = feature_stage(f, tasks)
         flow.append({"feature_id": f["feature_id"], "title": f.get("title"), "stage": stage,
                      "stage_label": dict(STAGES)[stage], "mermaid": flow_mermaid(stage)})
-    return {"generated_at": now.isoformat(timespec="seconds"),
+    try:
+        import aisef_learn
+        learning = [{"id": e["id"], "trigger": e["lesson"]["trigger"], "action": e["lesson"]["action"],
+                     "confidence": e["lesson"]["confidence"], "status": e["status"], "applied": e["lesson"].get("applied", 0),
+                     "succeeded": e["lesson"].get("succeeded", 0), "failed": e["lesson"].get("failed", 0)}
+                    for e in aisef_learn.lessons(project)]
+    except Exception:
+        learning = []
+    model_runs = {}
+    for e in log:
+        if e["event_type"] == "delegation" and (e.get("data") or {}).get("model"):
+            m = e["data"]["model"]
+            model_runs[m] = model_runs.get(m, 0) + 1
+    return {"generated_at": now.isoformat(timespec="seconds"), "learning": learning, "model_runs": model_runs,
             "agents_in_flight": agents_in_flight(aisef_dir, log, tasks, now),
             "next": nxt, "flow": flow, "gantt": gantt_mermaid(log, tasks, now)}
 

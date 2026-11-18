@@ -263,6 +263,8 @@ def classify_bash(cmd, patterns, env):
         found.append(("unclassified", "execute", env, False, "modo live do Impeccable (pode abrir o claude sem permissoes)"))
     if SHELL_PROTECTED_WRITE_RE.search(norm(cmd)):
         found.append(("aisef_decision", "write", env, False, "escrita por shell em arquivo de decisao do AISEF"))
+    if re.search(r"aisef_learn\.py\s+accept\b", cmd):
+        found.append(("aisef_decision", "write", env, False, "aprovacao de licao aprendida (decisao do usuario)"))
     if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b|agents\b[^;&|]*--activate\b|settings\b[^;&|]*--apply\b|rotate-key\b)", cmd):
         found.append(("aisef_decision", "write", env, False, "registro de decisao do usuario"))
     return found

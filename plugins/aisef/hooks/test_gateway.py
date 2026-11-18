@@ -297,6 +297,9 @@ case("claude --dangerously-skip-permissions -> deny", "Bash", "deny", command="c
 case("claude --permission-mode bypassPermissions -> deny", "PowerShell", "deny", command="claude --permission-mode bypassPermissions -p x")
 case("claude -p normal segue livre", "Bash", "allow", command="claude plugin list --json")
 case("impeccable live -> ask", "Bash", "ask", command="npx impeccable live")
+case("aprovar licao aprendida -> ask (decisao do usuario)", "Bash", "ask", command="python aisef_learn.py accept --project . --proposal P-1 --trigger x --action y")
+case("subagente aprovando licao -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_learn.py accept --proposal P-1")
+case("propor licoes segue livre", "Bash", "allow", command="python aisef_learn.py propose --project .")
 case("impeccable detect segue livre", "Bash", "allow", command="npx impeccable detect web/")
 
 print("--- politica local e falha fechada")
