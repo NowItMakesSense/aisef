@@ -1,5 +1,5 @@
 {
-  "description": "AISEF: Execution Gateway (PreToolUse; para Grep|Glob inclui, no mesmo processo, o lembrete consultivo do grafo), Audit & Evidence (PostToolUse) e doctor (SessionStart). Bash e PowerShell sao tratados como shell. So atuam em projetos com .aisef/config.json. A auditoria de Edit/Write/MCP roda em segundo plano (async); a de Bash/PowerShell e sincrona, porque consome a aprovacao reforcada de uso unico.",
+  "description": "AISEF: Execution Gateway (PreToolUse; para Grep|Glob inclui, no mesmo processo, o lembrete consultivo do grafo), Audit & Evidence (PostToolUse) e doctor (SessionStart). Bash e PowerShell sao tratados como shell. So atuam em projetos com .aisef/config.json. A auditoria de Edit/Write/MCP roda em segundo plano (async); a de Bash/PowerShell e sincrona, porque consome a aprovacao reforcada de uso unico. SubagentStart/SubagentStop alimentam a visao 'Agora' do painel (.aisef/runtime/, fora do Git).",
   "hooks": {
     "SessionStart": [
       {
@@ -43,6 +43,30 @@
             "type": "command",
             "command": "AISEF_HOOKS=\"${CLAUDE_PLUGIN_ROOT}/hooks\" AISEF_SCRIPT=audit_hook.py AISEF_PHASE=post . \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\"",
             "timeout": 20,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AISEF_HOOKS=\"${CLAUDE_PLUGIN_ROOT}/hooks\" AISEF_SCRIPT=agent_events.py AISEF_PHASE=post . \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\"",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AISEF_HOOKS=\"${CLAUDE_PLUGIN_ROOT}/hooks\" AISEF_SCRIPT=agent_events.py AISEF_PHASE=post . \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\"",
+            "timeout": 10,
             "async": true
           }
         ]

@@ -451,7 +451,62 @@
     return box;
   };
 
-  var TABS = [["overview","Visão geral"],["features","Features"],["tasks","Tarefas"],["rtm","Rastreabilidade"],
+  var PHASE = { discovery: "Descoberta", specify: "Especificar (Grill → Spec → Fatias)", approve_plan: "Aprovar o plano",
+                execute: "Execução", review: "Revisão e aceite", decide: "Decisões pendentes", done: "Nada pendente" };
+  var ACTION = { dispatch: "Disparar onda", validate: "Validar", complete: "Concluir", wait: "Aguardando agentes",
+                 await_decision: "Decisão sua", feature_acceptance: "Aceite da feature", create_branch: "Criar branch",
+                 delete_merged_branch: "Apagar branch", idle: "Nada a fazer" };
+  function dur(sec) {
+    if (sec === null || sec === undefined) return "—";
+    var m = Math.floor(sec / 60), s_ = sec % 60;
+    return m >= 60 ? Math.floor(m / 60) + "h" + (m % 60) + "min" : m + "min" + (s_ < 10 ? "0" : "") + s_ + "s";
+  }
+
+  views.live = function () {
+    var L = D.live, box = h("div");
+    if (!L) { box.appendChild(h("p", { "class": "muted", text: "Gere o painel com a versão 0.8+ do build_panel.py para ver esta aba." })); return box; }
+    var n = L.next || {};
+    var head = h("div", { "class": "block" });
+    head.appendChild(h("h3", { text: "Onde estamos: " + (PHASE[n.phase] || n.phase || "—") }));
+    if (n.stop_reason) head.appendChild(h("p", {}, h("span", { "class": "badge warn", text: "Parado: " + n.stop_reason }), " " + (n.stop_detail || "")));
+    var ol = h("ol");
+    (n.steps || []).forEach(function (st) { ol.appendChild(h("li", { text: st })); });
+    head.appendChild(h("p", { "class": "muted", text: "Próximo passo:" }));
+    head.appendChild(ol);
+    if ((n.actions || []).length) {
+      var ul = h("ul");
+      n.actions.forEach(function (a) { ul.appendChild(h("li", { text: (ACTION[a.kind] || a.kind) + (a.detail ? ": " + a.detail : "") })); });
+      head.appendChild(h("p", { "class": "muted", text: "Ações do orquestrador agora:" }));
+      head.appendChild(ul);
+    }
+    box.appendChild(head);
+
+    box.appendChild(h("h3", { text: "Agentes trabalhando agora (" + L.agents_in_flight.length + ")" }));
+    box.appendChild(table([
+      { t: "Agente", f: function (r) { return r.agent_type || "—"; } },
+      { t: "Tarefa", f: function (r) { return r.task_id ? r.task_id + " · " + (r.task_title || "") : "—"; } },
+      { t: "Há", f: function (r) { return dur(r.elapsed_s); } },
+      { t: "Última ação", f: function (r) { return r.last_action ? r.last_action + " (" + when(r.last_action_at) + ")" : "—"; } }
+    ], L.agents_in_flight, "Nenhum subagente em execução."));
+
+    box.appendChild(h("h3", { text: "Fluxo de cada feature" }));
+    if (!L.flow.length) box.appendChild(h("p", { "class": "muted", text: "Nenhuma feature ainda." }));
+    L.flow.forEach(function (f) {
+      var b = h("div", { "class": "block" });
+      b.appendChild(h("strong", { text: f.feature_id + " · " + (f.title || "") + " — etapa atual: " + f.stage_label }));
+      var slot = h("div");
+      b.appendChild(slot);
+      box.appendChild(b);
+      drawMermaid(slot, f.mermaid);
+    });
+
+    box.appendChild(h("h3", { text: "Ondas no tempo (paralelismo real)" }));
+    if (!L.gantt) box.appendChild(h("p", { "class": "muted", text: "Ainda não há tarefas despachadas." }));
+    else { var gs = h("div", { "class": "block" }); box.appendChild(gs); drawMermaid(gs, L.gantt); }
+    return box;
+  };
+
+  var TABS = [["live","Agora"],["overview","Visão geral"],["features","Features"],["tasks","Tarefas"],["rtm","Rastreabilidade"],
               ["approvals","Aprovações"],["decisions","Decisões"],["agents","Agentes"],["risks","Riscos"],
               ["timeline","Linha do tempo"],["deps","Dependências"],["engineering","Engenharia"]];
   var nav = document.getElementById("tabs");
@@ -485,7 +540,22 @@
       b.addEventListener("click", function () { show(t[0]); });
       nav.appendChild(b);
     });
-    show(location.hash.replace("#", "") || "overview");
+    show(location.hash.replace("#", "") || (D.live ? "live" : "overview"));
+    // Servido pelo build_panel.py --serve: atualiza sozinho. Aberto como arquivo: estatico.
+    if (/^https?:$/.test(location.protocol)) {
+      var lastGen = m.generated_at;
+      setInterval(function () {
+        fetch("panel-data.json", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (nd) {
+          if (!nd || !nd.manifest || nd.manifest.generated_at === lastGen) return;
+          lastGen = nd.manifest.generated_at;
+          D = nd;
+          var cur = location.hash.replace("#", "") || "live";
+          if (window.getSelection && String(window.getSelection())) return; // nao atrapalha quem esta copiando texto
+          show(cur);
+          document.getElementById("foot").textContent = "Ao vivo · atualizado em " + when(nd.manifest.generated_at);
+        }).catch(function () {});
+      }, 3000);
+    }
   }
   boot();
 })();
