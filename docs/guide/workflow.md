@@ -29,6 +29,11 @@ Nada é gravado sem o seu OK.
 ## 2. Descobrir
 A `aisef-discovery` investiga antes de perguntar: docs, código, schema (sem conectar ao banco), testes, histórico e, se preciso, internet. Cada informação é classificada como `confirmado`, `encontrado` (com fonte), `inferido` (vira pergunta) ou `desconhecido`. O resultado fica em `.aisef/discovery.md`. Em seguida, a `aisef-tooling` sugere skills, plugins e MCPs ligados ao que foi descoberto, e só instala o que você escolher.
 
+## Design (projeto com interface)
+Antes da primeira feature de UI, a `aisef-design` define **uma autoridade de design** em `.aisef/design/`: tipografia, paleta, espaçamento, movimento, componentes e regras. Ela usa como fontes a UI/UX Pro Max (dados), a Taste (direção de arte, só em sites) e o Impeccable (execução e detector). Você aprova como decisão arquitetural. Depois disso:
+- toda fatia de UI recebe os tokens no pacote de contexto e o critério "nada fora dos tokens" (`design_check.py scan`);
+- o `frontend` entrega capturas em 375, 768 e 1440 px.
+
 ## 3. Especificar (Grill → Spec → Fatias)
 Peça a feature, ou diga "quero fazer uma spec disso". A `aisef-feature` conduz três fases e sempre diz em qual você está:
 1. **Grill:** perguntas uma de cada vez até fechar cada ramo da ideia (skill `grilling` do plugin `mattpocock-skills`, quando instalado).

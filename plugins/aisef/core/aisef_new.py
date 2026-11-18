@@ -90,10 +90,13 @@ def task_doc(t, feature_id, feature_version, env, now):
     role = t.get("role") or ("implementer" if kind == "slice" else "backend")
     if role not in AGENT_ROLES:
         raise SystemExit("papel desconhecido em %s: %s" % (t["id"], role))
-    criteria = [{"id": cid, "description": text, "required": True,
-                 "verification": {"method": "automated_test", "evidence_expected": "saida do comando de teste",
-                                  **({"command": t["test_cmd"]} if t.get("test_cmd") else {})},
-                 "requirement_ids": t["reqs"]} for cid, text in t["criteria"].items()]
+    criteria = []
+    for cid, spec_ in t["criteria"].items():
+        text, cmd = (spec_["text"], spec_.get("command")) if isinstance(spec_, dict) else (spec_, t.get("test_cmd"))
+        criteria.append({"id": cid, "description": text, "required": True,
+                         "verification": {"method": "automated_test", "evidence_expected": "saida do comando de teste",
+                                          **({"command": cmd} if cmd else {})},
+                         "requirement_ids": t["reqs"]})
     tdd = t.get("tdd", kind == "slice")
     tests = {}
     if tdd:
@@ -158,6 +161,12 @@ def feature_docs(brief, project, now):
     for t in brief["tasks"]:
         if t.get("kind") == "slice" and not t.get("criteria"):
             raise SystemExit("%s: fatia sem criterio de aceite verificavel" % t["id"])
+    if os.path.isfile(os.path.join(ap.aisef_dir(project), "design", "tokens.json")):
+        for t in brief["tasks"]:
+            if "ui" in (t.get("touches") or []) or t.get("role") == "frontend":
+                t["criteria"].setdefault("AC-%s-DESIGN" % t["id"], {
+                    "text": "UI sem cores nem fontes fora da autoridade de design (.aisef/design/tokens.json)",
+                    "command": "python -I <CORE>/design_check.py scan --project . --task %s" % t["id"]})
     tasks = [task_doc(t, fid, 1, cfg.get("environment", "dev"), now) for t in brief["tasks"]]
     for t in brief["tasks"]:
         unknown = set(t["reqs"]) - known
@@ -173,7 +182,8 @@ def feature_docs(brief, project, now):
         rtm.append({"requirement_id": r["id"], "requirement_version": 1, "task_ids": task_ids, "criterion_ids": crit_ids})
     for t in brief["tasks"]:
         for cid, text in t["criteria"].items():
-            criteria.append({"id": cid, "description": text, "requirement_ids": t["reqs"], "verification": "automated_test"})
+            criteria.append({"id": cid, "description": text["text"] if isinstance(text, dict) else text,
+                             "requirement_ids": t["reqs"], "verification": "automated_test"})
     feature = {
         "schema_version": "0.1.0", "feature_id": fid, "contract_version": 1, "cycle": {"number": 1},
         "title": brief["title"], "objective": brief["objective"], "problem": brief["problem"],

@@ -17,7 +17,7 @@
   "role_defaults": {
     "domain": 0,
     "devops": 1,
-    "frontend": 2,
+    "frontend": 3,
     "implementer": 3,
     "qa": 2,
     "backend": 3,

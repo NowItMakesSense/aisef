@@ -27,9 +27,15 @@ def check(name, cond):
     fails += not cond
 
 
+DESIGN_SEEN = []
+
+
 def clean(project):
+    """Achados do check, sem o aviso DESIGN-MISSING (o exemplo tem fatia de UI e o projeto de teste nao define design;
+    o aviso e coberto em test_design.py e conferido abaixo)."""
     r = cp.check(os.path.join(project, ".aisef"), HERE, POL, DEF)
-    return [f for f in r.findings]
+    DESIGN_SEEN.extend(f for f in r.findings if f["rule"] == "DESIGN-MISSING")
+    return [f for f in r.findings if f["rule"] != "DESIGN-MISSING"]
 
 
 def load(project, rel):
@@ -116,6 +122,9 @@ check("quick: tarefa concluida direto (sem task_started, task_executed nem relat
       not [f for f in clean(proj) if f["rule"].startswith("STATE-")])
 check("tudo limpo no check_project e log integro", clean(proj) == [] and not ap.verify(proj)[0])
 
+
+check("fatia de UI sem autoridade de design gera o aviso DESIGN-MISSING (so aviso)",
+      DESIGN_SEEN and all(f["severity"] == "warning" for f in DESIGN_SEEN))
 
 # ------------------------------------------------------------------ spec e fatias verticais (0.6.0)
 t10 = load(proj, "contracts/tasks/T-010.json")

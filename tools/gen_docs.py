@@ -30,6 +30,7 @@ GROUPS = [
     ("SPEC", "Spec", "fatias verticais pedem spec com seams de teste aprovados"),
     ("SLICE", "Fatias verticais", "toda fatia tem ao menos um criterio verificado por teste automatizado"),
     ("TDD", "TDD", "evidencia de teste vermelho antes do verde, no relatorio do executor"),
+    ("DESIGN", "Autoridade de design", "tokens de design validos, aprovados como decisao arquitetural, e UI coberta por eles"),
     ("VAL", "Validação", "validação independente, nunca do próprio executor"),
     ("ROUTE", "Roteamento", "validador não roda abaixo do nível do executor"),
     ("STATE", "Estado x evidência", "cada estado tem o evento e o relatório que o sustentam"),

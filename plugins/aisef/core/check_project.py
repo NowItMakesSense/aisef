@@ -715,6 +715,39 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                 if unknown:
                     rep.err("SPEC-SEAM-UNKNOWN", where, "seams fora da spec da feature: %s" % ", ".join(sorted(unknown)))
 
+    # ------------------------------------------------------------------ autoridade de design (0.6.1)
+    tokens_file = os.path.join(project, "design", "tokens.json")
+    tokens = None
+    if os.path.exists(tokens_file):
+        try:
+            with open(tokens_file, encoding="utf-8") as fh:
+                tokens = json.load(fh)
+            try:
+                import jsonschema as _js
+            except ImportError:
+                _js = None
+            schema_p = os.path.join(schemas_dir, "design-tokens.schema.v0.1.json")
+            with open(schema_p if os.path.exists(schema_p) else os.path.join(HERE, "design-tokens.schema.v0.1.json"),
+                      encoding="utf-8") as fh:
+                errs = _js.Draft202012Validator(json.load(fh)).iter_errors(tokens) if _js else []
+                for e in errs:
+                    rep.err("DESIGN-SCHEMA", "design/tokens.json", "%s: %s" % ("/".join(map(str, e.path)) or "(raiz)", e.message))
+        except ValueError as exc:
+            rep.err("DESIGN-SCHEMA", "design/tokens.json", "JSON invalido: %s" % exc)
+            tokens = None
+    if tokens and tokens.get("status") == "approved":
+        rid = (tokens.get("approval") or {}).get("request_id")
+        a = approvals.get(rid)
+        if not rid or a is None or a.get("status") != "approved" or a.get("request_type") != "architecture_decision":
+            rep.err("DESIGN-UNAPPROVED", "design/tokens.json",
+                    "status 'approved' sem pedido architecture_decision aprovado (%s)" % (rid or "sem request_id"))
+    ui_open = [tid for tid, t in tasks.items() if t["state"]["status"] not in ("completed", "cancelled")
+               and ("ui" in (t.get("touches") or []) or t["assigned_agent"].get("role") == "frontend")]
+    if ui_open and not (tokens and tokens.get("status") == "approved"):
+        rep.warn("DESIGN-MISSING", "design/tokens.json",
+                 "tarefas de UI abertas (%s) sem autoridade de design aprovada: tipografia, cores e componentes podem "
+                 "variar de fatia para fatia (skill aisef-design)" % ", ".join(sorted(ui_open)))
+
     # ------------------------------------------------------------------ roteamento de modelo (execution_profile)
     # O validador nunca pode ter nivel menor que o do executor (Model Policy). Compara o relatorio de avaliacao
     # com o do executor da mesma tarefa na tentativa mais recente (ou o ultimo na ordem dos arquivos).

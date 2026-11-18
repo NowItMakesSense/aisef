@@ -63,7 +63,7 @@ Para explorar sem gastar tokens, siga o [passo a passo com o projeto de demonstr
 
 | Componente | Papel |
 |---|---|
-| Skills | `aisef` (orquestrador), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
+| Skills | `aisef` (orquestrador), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design` (uma autoridade de design por projeto), `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
 | Agentes | `implementer` (fatias verticais com TDD), `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, cada um limitado pelo seu Agent Contract e gerado de uma fonte única |
 | Hooks | gateway (`PreToolUse`), auditoria (`PostToolUse`), doctor (`SessionStart`) |
 | Núcleo | 9 JSON Schemas, políticas de permissão e de modelo, verificador de consistência, cadeia de auditoria assinada, geradores por brief, planejador de ondas, pacotes de contexto e painel |

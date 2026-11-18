@@ -368,6 +368,10 @@ def build_pack(project, task_id, limit=DEFAULT_LIMIT):
     servers = detect_graph_servers(project)
     queries, gnotes = graph_queries(project, servers, shown, task)
 
+    design = _design_for(project, task)
+    if design and design["status"] != "approved":
+        warnings.append("autoridade de design em %s ainda nao aprovada: siga-a como proposta e avise o orquestrador"
+                        % design["path"])
     return {
         "task_id": task_id, "feature_id": fid, "title": task.get("title"), "objective": task.get("objective"),
         "mandatory": {
@@ -375,7 +379,8 @@ def build_pack(project, task_id, limit=DEFAULT_LIMIT):
             "feature_contract": _rel(project, fpath) if feature else None,
             "blueprint": ({"path": _rel(project, bp_path), "id": bp.get("blueprint_id"), "version": bp.get("contract_version"),
                            "elements": elements} if bp else None),
-            "requirements": reqs, "business_rules": rules, "acceptance_criteria": criteria, "decisions": decisions},
+            "requirements": reqs, "business_rules": rules, "acceptance_criteria": criteria, "decisions": decisions,
+            "design": design},
         "referenced": {"limit": limit, "files": shown, "matched_total": len(files), "truncated": max(0, len(files) - len(shown)),
                        "patterns_without_match": unmatched, "docs": docs},
         "on_demand": {"knowledge": know, "knowledge_truncated": know_cut,
@@ -383,6 +388,24 @@ def build_pack(project, task_id, limit=DEFAULT_LIMIT):
                       "graph": {"configured": [{"server": s["server"], "profile": s["profile"], "label": s["label"]} for s in servers],
                                 "queries": queries, "notes": gnotes}},
         "warnings": warnings}
+
+
+def _design_for(project, task):
+    """Autoridade de design (.aisef/design/tokens.json) para tarefas que tocam UI: o agente trabalha dentro dela."""
+    if "ui" not in (task.get("touches") or []) and task.get("assigned_agent", {}).get("role") != "frontend":
+        return None
+    path = os.path.join(project, ".aisef", "design", "tokens.json")
+    tok = _load_json(path) if os.path.isfile(path) else None
+    if not isinstance(tok, dict):
+        return None
+    md = os.path.join(project, ".aisef", "design", "DESIGN.md")
+    typo = tok.get("typography", {})
+    return {"path": _rel(project, path), "doc": _rel(project, md) if os.path.isfile(md) else None,
+            "status": tok.get("status"), "kind": tok.get("kind"), "families": typo.get("families", {}),
+            "scale": sorted(typo.get("scale", {})), "colors": sorted(tok.get("colors", {})),
+            "spacing": sorted(tok.get("spacing", {})), "motion": tok.get("motion", {}),
+            "components": tok.get("components", []), "rules": tok.get("rules", []),
+            "check": "python -I <CORE>/design_check.py scan --project . --task %s" % task.get("task_id")}
 
 
 def render_pack(p):
@@ -406,6 +429,16 @@ def render_pack(p):
     L.append("- Decisoes aprovadas:")
     L += ["    - %s v%s%s: %s (%s; %s)" % (d["id"], d["version"], " -> " + d["chosen"] if d.get("chosen") else "", d["title"], d["approval"], "; ".join(d["why"]))
           for d in m["decisions"]] or ["    (nenhuma)"]
+    if m.get("design"):
+        d = m["design"]
+        L.append("- Autoridade de design (%s, %s): %s%s" % (d["status"], d["kind"], d["path"], "; " + d["doc"] if d["doc"] else ""))
+        L.append("    - fontes: " + ", ".join("%s=%s" % kv for kv in sorted(d["families"].items())))
+        L.append("    - escala: %s | cores: %s | espacos: %s" % (", ".join(d["scale"]), ", ".join(d["colors"]), ", ".join(d["spacing"])))
+        L.append("    - movimento: %s%s" % (d["motion"].get("level"), " (sem scroll-linked)" if not d["motion"].get("scroll_linked") else ""))
+        if d["components"]:
+            L.append("    - componentes existentes (reuse antes de criar): " + ", ".join(d["components"]))
+        L += ["    - regra: " + x for x in d["rules"]]
+        L.append("    - use so estes valores; confira com: " + d["check"])
     L += ["", "## 2. Referenciado (limite %d)" % r["limit"]]
     L += ["- " + f for f in r["files"]] or ["- (nenhum arquivo existente casa com os caminhos da tarefa)"]
     if r["truncated"]:
