@@ -21,6 +21,9 @@ Uso:
     python3 -I aisef_project.py agents --project REPO [--activate] [--roles backend,qa]
     python3 -I aisef_project.py waves --project REPO [--feature FEAT-x] [--json]
     python3 -I aisef_project.py next --project REPO [--feature FEAT-x] [--json]
+    python3 -I aisef_project.py dispatch --project REPO [--feature FEAT-x] [--dry-run]   (onda: prompts + delegation)
+    python3 -I aisef_project.py validate-wave --project REPO [--feature FEAT-x] [--dry-run]   (um validador por onda)
+    python3 -I aisef_project.py precheck --project REPO --task T-x [--json]   (checagem deterministica, sem modelo)
     python3 -I aisef_project.py request --project REPO --file rascunho.json
     python3 -I aisef_project.py verify --project REPO
     python3 -I aisef_project.py status --project REPO
@@ -984,7 +987,9 @@ def format_waves(res):
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["init", "append", "decide", "agents", "settings", "rotate-key", "anchor",
-                                        "verify", "status", "waves", "next", "request"])
+                                        "verify", "status", "waves", "next", "request", "dispatch", "validate-wave",
+                                        "precheck"])
+    ap.add_argument("--dry-run", action="store_true", help="dispatch/validate-wave: mostra sem registrar nada no log")
     ap.add_argument("--json", action="store_true", help="waves/next: saida em JSON")
     ap.add_argument("--file", help="request: rascunho JSON do pedido (status pending)")
     ap.add_argument("--apply", action="store_true", help="settings: grava as regras em .claude/settings.json")
@@ -1064,6 +1069,19 @@ def main(argv):
         import aisef_next
         res = aisef_next.compute_next(project, a.feature)
         print(json.dumps(res, ensure_ascii=False, indent=2) if a.json else aisef_next.format_next(res))
+        return 0
+    if a.command in ("dispatch", "validate-wave", "precheck"):
+        import aisef_dispatch as dsp
+        if a.command == "precheck":
+            if not a.task:
+                ap.error("--task e obrigatorio")
+            problems = dsp.precheck(project, a.task)
+            print(json.dumps({"task_id": a.task, "problems": problems}, ensure_ascii=False, indent=2) if a.json
+                  else ("%s: precheck ok" % a.task if not problems else "%s: precheck falhou\n - %s" % (a.task, "\n - ".join(problems))))
+            return 1 if problems else 0
+        fn = dsp.dispatch_wave if a.command == "dispatch" else dsp.validation_wave
+        res = fn(project, a.feature, dry_run=a.dry_run)
+        print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0
     if a.command == "rotate-key":
         print("nova chave: %s" % rotate_key(project))

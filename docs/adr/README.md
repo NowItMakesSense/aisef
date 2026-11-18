@@ -19,3 +19,4 @@ Cada decisão tem data, contexto, o que foi decidido e as consequências. Para m
 | [0013](0013-evolucao-fatias-verticais-matt-pocock-ecc.md) | Evolução 0.6–0.9: fatias verticais, método do Matt Pocock e ideias do ECC | 2026-11-18 |
 | [0014](0014-skills-do-matt-pocock-sem-dependencia-declarada.md) | Skills do Matt Pocock sem dependência declarada no plugin | 2026-11-18 |
 | [0015](0015-autoridade-de-design-por-projeto.md) | Uma autoridade de design por projeto | 2026-11-18 |
+| [0016](0016-validacao-por-onda-e-precheck.md) | Validação por onda e precheck determinístico | 2026-11-18 |

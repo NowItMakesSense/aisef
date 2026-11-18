@@ -31,6 +31,7 @@ SUITES = [
     ("roteador de modelo (politica + CLI)", [os.path.join(CORE, "test_route.py")]),
     ("ondas automaticas (waves)", [os.path.join(CORE, "test_waves.py")]),
     ("modo continuo (next) e branch por feature", [os.path.join(CORE, "test_next.py")]),
+    ("despacho e validacao em lote (dispatch, precheck)", [os.path.join(CORE, "test_dispatch.py")]),
     ("Approval Center: request e decide reforcado", [os.path.join(CORE, "test_request_decide.py")]),
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),

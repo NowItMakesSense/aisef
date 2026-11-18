@@ -14,6 +14,9 @@ Todos ficam em `plugins/aisef/core/` (chamado `CORE` nas skills) e rodam com `py
 | `settings [--apply]` | Mostra ou grava as regras nativas de segunda camada |
 | `waves [--feature F] [--json]` | Calcula as ondas de tarefas paralelizáveis |
 | `next [--feature F] [--json]` | Próximas ações do modo contínuo e critério de parada |
+| `dispatch [--feature F] [--dry-run]` | Despacha a onda numa chamada: prompt, modelo e effort de cada agente e os `delegation` registrados |
+| `validate-wave [--feature F] [--dry-run]` | `precheck` de cada tarefa executada, reprovação imediata de quem falha e um único validador para o resto |
+| `precheck --task T [--json]` | Checagem determinística, sem modelo e sem rodar comandos: relatório, critérios com evidência, TDD, escopo e tokens de design |
 | `verify` / `status` | Integridade do log (cadeia, assinaturas, head externo) / resumo |
 | `rotate-key` / `anchor` | Gira a chave de assinatura / grava uma âncora do log em `~/.aisef/anchors/` |
 
@@ -33,6 +36,7 @@ Todos ficam em `plugins/aisef/core/` (chamado `CORE` nas skills) e rodam com `py
 | `aisef_context.py pack --task T` | Pacote de contexto da tarefa (obrigatório, referenciado, sob demanda) |
 | `aisef_context.py remember --summary ... --source-kind ... --source-ref ...` | Grava memória de projeto com fonte |
 | `aisef_route.py --task T [--attempt N] [--validator --executor-level L3]` | Modelo e effort da tarefa ou do validador |
+| `design_check.py validate` / `scan` / `shots` | Autoridade de design: tokens válidos, nada fora deles no código de UI, capturas em 375/768/1440 px |
 | `check_project.py --project .` | Todas as [regras de consistência](check-rules.md) (é o que o `aisef-check` roda) |
 | `build_panel.py --project .aisef --out .aisef/panel --with-page` | Gera o painel |
 | `make_demo_project.py <pasta>` | Projeto de demonstração completo |
