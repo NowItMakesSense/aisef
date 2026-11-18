@@ -2,7 +2,14 @@ name: ci
 on: [push, pull_request]
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -10,3 +17,15 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements-dev.txt
       - run: python run_tests.py
+      - name: manifestos do plugin e do marketplace sao JSON validos e com a mesma versao
+        run: |
+          python - <<'PY'
+          import json
+          p = json.load(open("plugins/aisef/.claude-plugin/plugin.json", encoding="utf-8"))
+          m = json.load(open(".claude-plugin/marketplace.json", encoding="utf-8"))
+          versions = {e.get("version") for e in m.get("plugins", []) if e.get("name") == "aisef"} - {None}
+          assert not versions or versions == {p["version"]}, (p["version"], versions)
+          print("ok", p["version"])
+          PY
+      - name: latencia dos hooks (informativo)
+        run: python tools/bench_hooks.py --runs 5

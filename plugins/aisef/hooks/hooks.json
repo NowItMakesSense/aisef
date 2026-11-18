@@ -1,5 +1,5 @@
 {
-  "description": "AISEF: Execution Gateway (PreToolUse), lembrete consultivo do grafo (PreToolUse Grep|Glob), Audit & Evidence (PostToolUse) e doctor (SessionStart). So atuam em projetos com .aisef/config.json.",
+  "description": "AISEF: Execution Gateway (PreToolUse; para Grep|Glob inclui, no mesmo processo, o lembrete consultivo do grafo), Audit & Evidence (PostToolUse) e doctor (SessionStart). Bash e PowerShell sao tratados como shell. So atuam em projetos com .aisef/config.json.",
   "hooks": {
     "SessionStart": [
       {
@@ -15,17 +15,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Grep|Glob",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "AISEF_HOOKS=\"${CLAUDE_PLUGIN_ROOT}/hooks\" AISEF_SCRIPT=graph_nudge.py AISEF_PHASE=post . \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\"",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Bash|Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Glob|WebFetch|mcp__.*",
+        "matcher": "Bash|PowerShell|Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Glob|WebFetch|mcp__.*",
         "hooks": [
           {
             "type": "command",
@@ -37,7 +27,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__.*",
+        "matcher": "Bash|PowerShell|Edit|Write|MultiEdit|NotebookEdit|mcp__.*",
         "hooks": [
           {
             "type": "command",

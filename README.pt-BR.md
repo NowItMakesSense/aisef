@@ -63,7 +63,7 @@ A política completa está em [`plugins/aisef/core/permission-policy.v0.1.json`]
 
 - **O gateway não é uma fronteira de segurança.** Ele lê os comandos por padrões e reduz o risco. Use junto o sandbox do Claude Code (`/sandbox`) e as regras nativas que o `aisef-init` instala.
 - **A aprovação depende de você.** Ela acontece no prompt nativo de permissão, que o modelo não consegue responder sozinho. Mas, se você aprovar sem ler, nenhuma camada técnica impede. Por isso, as operações de maior risco exigem uma aprovação reforçada registrada **antes** do prompt.
-- **Latência.** Cada hook custa cerca de 0,2 a 0,3 s por chamada de ferramenta no Windows (medido). Quase todo esse tempo vem de abrir processos.
+- **Latência.** Cada hook custa cerca de 0,2 a 0,3 s por chamada de ferramenta no Windows (meça com `python tools/bench_hooks.py`). Quase todo esse tempo vem de abrir processos.
 - **Fora do Claude Code não há aplicação técnica.** O `AGENTS.md` serve apenas como orientação.
 
 ## Desenvolvimento

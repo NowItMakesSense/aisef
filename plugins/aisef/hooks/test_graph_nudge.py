@@ -132,10 +132,31 @@ else:
 
 with open(os.path.join(HERE, "hooks.json"), encoding="utf-8") as fh:
     pre = json.load(fh)["hooks"]["PreToolUse"]
-nudge = [e for e in pre if any("graph_nudge.py" in h["command"] for h in e["hooks"])]
-check("hooks.json: graph_nudge registrado so para Grep|Glob, na fase post (fail-open)",
-      len(nudge) == 1 and nudge[0]["matcher"] == "Grep|Glob" and "AISEF_PHASE=post" in nudge[0]["hooks"][0]["command"], nudge)
-check("hooks.json: o gateway continua registrado", any("gateway.py" in h["command"] for e in pre for h in e["hooks"]))
+check("hooks.json: nenhum processo separado para o graph_nudge (roda dentro do gateway desde a v0.5.2)",
+      not any("graph_nudge.py" in h["command"] for e in pre for h in e["hooks"]), pre)
+gw = [e for e in pre if any("gateway.py" in h["command"] for h in e["hooks"])]
+check("hooks.json: o gateway cobre Grep, Glob e PowerShell",
+      len(gw) == 1 and all(t in gw[0]["matcher"].split("|") for t in ("Grep", "Glob", "PowerShell")), gw)
+
+GATEWAY = os.path.join(HERE, "gateway.py")
+
+
+def fire_gateway(proj, tool="Grep", session="g"):
+    payload = json.dumps({"hook_event_name": "PreToolUse", "tool_name": tool, "tool_input": {"pattern": "verifyToken"},
+                          "session_id": session, "cwd": proj})
+    return subprocess.run([sys.executable, "-I", GATEWAY], input=payload, capture_output=True, text=True,
+                          encoding="utf-8", env=ENV)
+
+
+r = fire_gateway(project("gw-com-grafo", mcp=CBM), session="gw1")
+out = json.loads(r.stdout or "{}").get("hookSpecificOutput", {})
+check("gateway: Grep com grafo devolve o lembrete como additionalContext, sem decisao de permissao",
+      r.returncode == 0 and "search_graph" in out.get("additionalContext", "") and "permissionDecision" not in out,
+      r.stdout + r.stderr)
+r = fire_gateway(project("gw-sem-grafo"), session="gw2")
+check("gateway: Grep sem grafo segue em silencio", r.returncode == 0 and r.stdout == "", r.stdout + r.stderr)
+r = fire_gateway(project("gw-desligado", mcp=CBM, nudge_cfg={"enabled": False}), session="gw3")
+check("gateway: lembrete desligavel por config", r.returncode == 0 and r.stdout == "", r.stdout + r.stderr)
 
 shutil.rmtree(work, ignore_errors=True)
 print("\n%d testes, %d falhas" % (total, fails))
