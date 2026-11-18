@@ -413,7 +413,9 @@
         "agents_in_flight": { "type": "array", "items": { "type": "object" } },
         "next": { "type": "object" },
         "flow": { "type": "array", "items": { "type": "object" } },
-        "gantt": { "type": ["string", "null"] }
+        "gantt": { "type": ["string", "null"] },
+        "learning": { "type": "array", "items": { "type": "object" } },
+        "model_runs": { "type": "object" }
       }
     },
     "source_errors": {

@@ -95,7 +95,8 @@ def dispatch_wave(project, feature=None, dry_run=False, now=None):
                                     task["task_id"], task["assigned_agent"]["agent_id"], route["model"], route["effort"],
                                     item["attempt"]),
                                 "data": {"model": route["model"], "effort": route["effort"], "level": route["level"],
-                                         "attempt": item["attempt"]}})
+                                         "attempt": item["attempt"],
+                                         "lessons": [k["id"] for k in pack["on_demand"]["knowledge"] if k.get("lesson")]}})
         out["agents"].append({"task_id": task["task_id"], "subagent_type": "aisef:" + task["assigned_agent"]["agent_id"],
                               "model": route["model"], "effort": route["effort"], "level": route["level"],
                               "attempt": item["attempt"], "warnings": route.get("warnings", []) + pack["warnings"],

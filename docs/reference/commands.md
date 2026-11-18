@@ -35,6 +35,7 @@ Todos ficam em `plugins/aisef/core/` (chamado `CORE` nas skills) e rodam com `py
 |---|---|
 | `aisef_context.py pack --task T` | Pacote de contexto da tarefa (obrigatório, referenciado, sob demanda) |
 | `aisef_context.py remember --summary ... --source-kind ... --source-ref ...` | Grava memória de projeto com fonte |
+| `aisef_learn.py propose` / `accept` / `update` / `list` | Lições a partir de erros rotulados: propõe grupos, vira lição só com a sua aprovação e recalcula a confiança |
 | `aisef_route.py --task T [--attempt N] [--validator --executor-level L3]` | Modelo e effort da tarefa ou do validador |
 | `design_check.py validate` / `scan` / `shots` | Autoridade de design: tokens válidos, nada fora deles no código de UI, capturas em 375/768/1440 px |
 | `check_project.py --project .` | Todas as [regras de consistência](check-rules.md) (é o que o `aisef-check` roda) |

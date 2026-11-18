@@ -4,7 +4,7 @@ Declarados em [`plugins/aisef/hooks/hooks.json`](../../plugins/aisef/hooks/hooks
 
 | Evento | Matcher | Script | O que faz | Falha |
 |---|---|---|---|---|
-| `SessionStart` | `startup\|resume` | `doctor.py` | Avisa se falta Python, `jsonschema`, `cryptography`, chave ou se há agente em draft. Em silêncio quando está tudo certo | aberta (só avisa) |
+| `SessionStart` | `startup\|resume\|compact` | `doctor.py` | Avisa se falta Python, `jsonschema`, `cryptography`, chave ou se há agente em draft. Depois de `/compact` ou `/resume`, reinjeta um resumo curto do estado (fase, em andamento, decisões pendentes). Em silêncio quando não há nada a dizer | aberta (só avisa) |
 | `PreToolUse` | `Bash\|PowerShell\|Read\|Edit\|Write\|MultiEdit\|NotebookEdit\|Grep\|Glob\|WebFetch\|mcp__.*` | `gateway.py` | Aplica a [política](policy.md) e o teto do Agent Contract. Para Grep e Glob, também devolve o lembrete consultivo do grafo de código, no mesmo processo | **fechada** (erro vira `deny`) |
 | `PostToolUse` | `Bash\|PowerShell` | `audit_hook.py` | Anexa `tool_used` ao log assinado (comando sem segredo) e marca a aprovação reforçada consumida. Síncrono, para o uso único valer já na chamada seguinte | aberta (avisa em stderr) |
 | `PostToolUse` | `Edit\|Write\|MultiEdit\|NotebookEdit\|mcp__.*` | `audit_hook.py` | O mesmo registro, **em segundo plano** (`async`): não segura a sessão. MCP só com os nomes dos campos | aberta |
