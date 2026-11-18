@@ -21,3 +21,4 @@ Cada decisão tem data, contexto, o que foi decidido e as consequências. Para m
 | [0015](0015-autoridade-de-design-por-projeto.md) | Uma autoridade de design por projeto | 2026-11-18 |
 | [0016](0016-validacao-por-onda-e-precheck.md) | Validação por onda e precheck determinístico | 2026-11-18 |
 | [0017](0017-aprendizado-continuo-revisado.md) | Aprendizado contínuo revisado (melhor que o do ECC) | 2026-11-18 |
+| [0018](0018-modo-ask-e-revisao-de-ferramentas.md) | Modo Ask e revisão periódica de ferramentas | 2026-11-18 |

@@ -53,11 +53,13 @@ OBFUSCATED_RE = re.compile(
 WEBFETCH_SECRET_RE = re.compile(
     r"[?&](?:token|access_token|api_?key|apikey|key|secret|password|passwd|auth|session|sig|signature)=[^&\s]{12,}|"
     r"\bgh[pousr]_[A-Za-z0-9]{30,}|\bAKIA[0-9A-Z]{16}\b|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.", re.I)
-# Instalar skill, plugin ou servidor MCP muda o que o agente consegue fazer: o usuario decide cada um.
+# Instalar, atualizar, desativar ou remover skill, plugin ou servidor MCP muda o que o agente consegue fazer:
+# o usuario decide cada um.
 # Buscar (npx skills find, claude plugin list) segue livre.
 TOOLING_INSTALL_RE = re.compile(
-    r"\b(?:npx|bunx|pnpm\s+dlx|yarn\s+dlx)\s+(?:(?:-y|--yes)\s+)?skills(?:@\S+)?\s+(?:add|install|update)\b|"
-    r"\bclaude\s+(?:plugins?\s+(?:install|i|enable|update|marketplace\s+add)|mcp\s+add(?:-json|-from-claude-desktop)?)\b",
+    r"\b(?:npx|bunx|pnpm\s+dlx|yarn\s+dlx)\s+(?:(?:-y|--yes)\s+)?skills(?:@\S+)?\s+(?:add|install|update|remove|rm)\b|"
+    r"\bclaude\s+(?:plugins?\s+(?:install|i|enable|disable|update|uninstall|remove|marketplace\s+(?:add|remove|rm))|"
+    r"mcp\s+(?:add(?:-json|-from-claude-desktop)?|remove))\b",
     re.I)
 # Um agente abrir outra sessao do Claude Code sem permissoes (ex.: o modo live/Apply do Impeccable faz isso)
 # escaparia do prompt nativo: negado. Ferramentas que fazem esse tipo de coisa por baixo pedem aprovacao.
@@ -67,12 +69,12 @@ CONFIG_PATH_RE = re.compile(
     r"(?:^|/)(?:\.github/workflows/|\.gitlab-ci\.yml$|Jenkinsfile$|azure-pipelines\.yml$|\.circleci/|"
     r"Dockerfile[^/]*$|docker-compose[^/]*\.ya?ml$|compose\.ya?ml$|[^/]+\.tf$|[^/]+\.tfvars$|helm/|charts/|k8s/|"
     r"kubernetes/|\.claude/settings[^/]*\.json$|\.claude/(?:skills|agents|commands)/|\.mcp\.json$)", re.I)
-AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:approvals|authorizations|contracts/agents)/|(?:^|[/\s\"'=>])\.aisef/(?:config|policy\.local)\.json\b")
+AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:approvals|authorizations|contracts/agents|session)/|(?:^|[/\s\"'=>])\.aisef/(?:config|policy\.local)\.json\b")
 # Escrita por shell (redirecionamento ou comando que grava, move ou apaga) cujo alvo e um arquivo de decisao do AISEF.
 SHELL_PROTECTED_WRITE_RE = re.compile(
     r"(?:>>?|\b(?:tee|Set-Content|Add-Content|Out-File|New-Item|ni|sc|ac|Copy-Item|cpi|copy|Move-Item|mi|move|"
     r"Rename-Item|rni|ren|Remove-Item|ri|cp|mv|rm|del|erase|truncate|touch|sed\s+-i|perl\s+-[a-z]*i)\b)"
-    r"[^;&|]*?(?:^|[/\s\"'=>])\.aisef/(?:(?:approvals|authorizations|contracts/agents)/|(?:config|policy\.local)\.json\b)",
+    r"[^;&|]*?(?:^|[/\s\"'=>])\.aisef/(?:(?:approvals|authorizations|contracts/agents|session)/|(?:config|policy\.local)\.json\b)",
     re.I)
 AISEF_AUDIT_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:audit|keys)/")
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
@@ -263,6 +265,8 @@ def classify_bash(cmd, patterns, env):
         found.append(("unclassified", "execute", env, False, "modo live do Impeccable (pode abrir o claude sem permissoes)"))
     if SHELL_PROTECTED_WRITE_RE.search(norm(cmd)):
         found.append(("aisef_decision", "write", env, False, "escrita por shell em arquivo de decisao do AISEF"))
+    if re.search(r"aisef_project\.py\s+mode\b[^;&|]*--set\b", cmd):
+        found.append(("aisef_decision", "write", env, False, "troca do modo da sessao (Ask/Exec, decisao do usuario)"))
     if re.search(r"aisef_learn\.py\s+accept\b", cmd):
         found.append(("aisef_decision", "write", env, False, "aprovacao de licao aprendida (decisao do usuario)"))
     if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b|agents\b[^;&|]*--activate\b|settings\b[^;&|]*--apply\b|rotate-key\b)", cmd):
@@ -388,9 +392,72 @@ def enforce_ceiling(contract, tool, items, env):
             raise Decision("deny", "agente %s nao tem %s no teto de permissao (%s)" % (aid, resource, label))
 
 
+READONLY_CMDS = {"ls", "dir", "cat", "type", "head", "tail", "wc", "grep", "rg", "find", "pwd", "echo", "tree", "less",
+                 "more", "stat", "file", "which", "where", "get-content", "gc", "get-childitem", "gci", "select-string", "sls",
+                 "get-location", "gl", "measure-object", "where-object", "select-object", "sort-object", "format-table",
+                 "format-list", "get-item", "gi", "test-path", "sort", "uniq", "cut", "jq"}
+READONLY_GIT = {"status", "log", "diff", "show", "blame", "ls-files", "rev-parse", "describe", "shortlog", "grep", "remote"}
+READONLY_AISEF_RE = re.compile(r"(?:aisef_project\.py\s+(?:next|status|verify|waves|precheck|mode)\b(?![^;&|]*--set)|"
+                               r"check_project\.py|design_check\.py\s+(?:scan|validate)|aisef_context\.py\s+(?:pack|graph)|"
+                               r"aisef_learn\.py\s+list|aisef_route\.py)")
+
+
+def session_mode(project):
+    try:
+        with open(os.path.join(project, ".aisef", "session", "mode.json"), encoding="utf-8") as fh:
+            return json.load(fh).get("mode", "exec")
+    except (OSError, ValueError):
+        return "exec"
+
+
+def read_only_command(cmd):
+    """Todo segmento do comando so le? (modo Ask). Redirecionamento para arquivo nunca e leitura."""
+    if re.search(r"(?<![0-9&])>>?(?!\s*(?:/dev/null|\$null|nul)\b)", cmd):
+        return False
+    for seg in re.split(r"&&|\|\||[;&|\n]", cmd):
+        toks = [t for t in seg.strip().split() if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", t)]
+        if not toks:
+            continue
+        head = os.path.basename(toks[0].strip("\"'")).lower()
+        if head.endswith(".exe"):
+            head = head[:-4]
+        if head == "git":
+            sub = next((t for i, t in enumerate(toks[1:], 1) if not t.startswith("-") and toks[i - 1] != "-C"), "")
+            if sub not in READONLY_GIT and not (sub == "branch" and not re.search(r"\s-(?:d|D|m|M|-delete|-move)\b", seg)):
+                return False
+        elif head in ("python", "python3", "py"):
+            if not READONLY_AISEF_RE.search(seg):
+                return False
+        elif head == "find":
+            if re.search(r"\s-(?:delete|exec|execdir|ok)\b", seg):
+                return False
+        elif head not in READONLY_CMDS:
+            return False
+    return True
+
+
+def ask_mode_block(tool, inp, config):
+    """Motivo do bloqueio no modo Ask, ou None se a chamada so le."""
+    if tool in EDIT_TOOLS:
+        return "modo Ask: nada e editado; responda a pergunta (para executar, o usuario troca com /aisef:modo exec)"
+    if tool in SHELL_TOOLS:
+        cmd = inp.get("command", "") or ""
+        if re.search(r"aisef_project\.py\s+mode\b", cmd):
+            return None  # sair do modo: segue para o prompt nativo
+        if not read_only_command(cmd):
+            return "modo Ask: so comandos de leitura (git status/log/diff, ls, cat, grep...); nada e executado"
+    if tool.startswith("mcp__") and not any(fnmatch.fnmatchcase(tool, pat) for pat in config.get("mcp_allow", [])):
+        return "modo Ask: ferramenta MCP fora de mcp_allow"
+    return None
+
+
 def decide(data, project, policy, patterns, config, now):
     tool = data.get("tool_name", "")
     inp = data.get("tool_input") or {}
+    if session_mode(project) == "ask":
+        why = ask_mode_block(tool, inp, config)
+        if why:
+            raise Decision("deny", why)
     env = config.get("environment", "dev")
     if env not in ("dev", "staging", "prod"):
         env = "prod"  # defaults.unknown_environment

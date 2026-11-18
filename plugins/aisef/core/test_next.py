@@ -294,5 +294,14 @@ r = nx.compute_next(g2)
 check("guia: tarefa pronta leva a fase execute", r["guide"]["phase"] == "execute", r["guide"])
 check("guia: o texto do next mostra a fase", "Fase: execute" in nx.format_next(r))
 
+# ------------------------------------------------------------------ revisao de ferramentas (0.8.2)
+g3 = new_project("guia3", [feature(tids=["T-1"])], [task("T-1", status="completed")])
+check("revisao de ferramentas: sem feature aceita, nao e devida", nx.compute_next(g3)["guide"]["tooling_review_due"] is False)
+approval(g3, "APR-009", "feature_acceptance", status="approved", decision={"choice": "approve", "decided_by": "user",
+                                                                          "decided_at": "2026-11-18T10:00:00-03:00"})
+check("revisao de ferramentas: devida depois de uma feature aceita", nx.compute_next(g3)["guide"]["tooling_review_due"] is True)
+ev(g3, "evidence_recorded", feature_id=None, summary="Revisao de ferramentas", data={"kind": "tooling_review"})
+check("revisao de ferramentas: registrada a revisao, deixa de ser devida", nx.compute_next(g3)["guide"]["tooling_review_due"] is False)
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

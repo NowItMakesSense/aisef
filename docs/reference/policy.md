@@ -45,5 +45,13 @@ Para um subagente com Agent Contract, o gateway aplica primeiro o teto:
 
 Depois disso, vale a política normal.
 
+## Modo Ask
+Com `.aisef/session/mode.json` em `ask` (trocado por `/aisef:modo`, que abre o prompt nativo):
+- Edit, Write, MultiEdit e NotebookEdit são negados;
+- no Bash e no PowerShell, só comandos de leitura: `git status/log/diff/show/blame`, `ls`, `cat`, `grep`/`rg`, `Get-Content`, `Select-String`, o `next` e o `check`; redirecionar para arquivo é negado;
+- ferramentas MCP fora de `mcp_allow` são negadas.
+
+Sair do modo continua possível (`aisef_project.py mode --set exec`, com o prompt nativo).
+
 ## Segunda camada
 `aisef_project.py settings --apply` grava em `.claude/settings.json` as regras nativas `ask`/`deny` equivalentes, mais `disableBypassPermissionsMode` e `DO_NOT_TRACK=1`. Se o hook falhar ou for desligado, essas regras continuam valendo.

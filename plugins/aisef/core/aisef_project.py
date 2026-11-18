@@ -988,7 +988,8 @@ def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["init", "append", "decide", "agents", "settings", "rotate-key", "anchor",
                                         "verify", "status", "waves", "next", "request", "dispatch", "validate-wave",
-                                        "precheck"])
+                                        "precheck", "mode"])
+    ap.add_argument("--set", choices=["ask", "exec"], help="mode: troca o modo da sessao (decisao do usuario)")
     ap.add_argument("--dry-run", action="store_true", help="dispatch/validate-wave: mostra sem registrar nada no log")
     ap.add_argument("--json", action="store_true", help="waves/next: saida em JSON")
     ap.add_argument("--file", help="request: rascunho JSON do pedido (status pending)")
@@ -1069,6 +1070,19 @@ def main(argv):
         import aisef_next
         res = aisef_next.compute_next(project, a.feature)
         print(json.dumps(res, ensure_ascii=False, indent=2) if a.json else aisef_next.format_next(res))
+        return 0
+    if a.command == "mode":
+        path = os.path.join(aisef_dir(project), "session", "mode.json")
+        if a.set:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            write_json(path, {"mode": a.set, "set_at": now_iso(), "set_by": "user"})
+            append(project, {"event_type": "evidence_recorded", "actor": {"type": "user", "id": "user"},
+                             "summary": "Modo da sessao: %s" % a.set, "data": {"kind": "session_mode", "mode": a.set}})
+        cur = "exec"
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                cur = json.load(fh).get("mode", "exec")
+        print("modo: %s%s" % (cur, " (so leitura: nada e editado nem executado; saia com /aisef:modo exec)" if cur == "ask" else ""))
         return 0
     if a.command in ("dispatch", "validate-wave", "precheck"):
         import aisef_dispatch as dsp

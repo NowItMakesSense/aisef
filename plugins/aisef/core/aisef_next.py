@@ -126,6 +126,26 @@ STEPS = {
 }
 
 
+def tooling_review_due(cfg, approvals, log):
+    """Revisao periodica das skills/plugins/MCPs (aisef-tooling secao 8): devida depois de N features aceitas
+    (config tooling.review_every, padrao 1) desde a ultima revisao registrada (evidence_recorded com
+    data.kind = tooling_review). 0 desliga."""
+    every = (cfg.get("tooling") or {}).get("review_every", 1)
+    if not isinstance(every, int) or isinstance(every, bool) or every <= 0:
+        return False
+    reviews = [_parse(e["timestamp"]) for e in log if e["event_type"] == "evidence_recorded"
+               and (e.get("data") or {}).get("kind") == "tooling_review"]
+    last = max((r for r in reviews if r), default=None)
+    accepted = 0
+    for a in approvals:
+        if a.get("request_type") != "feature_acceptance" or a.get("status") != "approved" or a.get("feature_id") == "FEAT-MAINT":
+            continue
+        when = _parse((a.get("decision") or {}).get("decided_at") or a.get("created_at"))
+        if last is None or (when and when > last):
+            accepted += 1
+    return accepted >= every
+
+
 def project_phase(project, feats, tasks, approvals, actions):
     """Em que fase o projeto esta e qual o proximo passo, com a skill certa (inclusive antes da execucao)."""
     kinds = {a["kind"] for a in actions}
@@ -407,6 +427,7 @@ def compute_next(project, feature=None, now=None, git_state=None):
     if not actions:
         actions = [{"kind": "idle"}]
     guide = project_phase(project, feats, tasks, approvals, actions)
+    guide["tooling_review_due"] = tooling_review_due(cfg, approvals, log)
     return {"feature": feature, "actions": actions, "stop_reason": stop, "stop_detail": detail, "guide": guide,
             "deferred": deferred, "wave_error": wave_error, "warnings": warnings,
             "states": {tid: state[tid] for tid in sorted(state) if in_scope(tasks[tid].get("feature_id"))}}
@@ -456,4 +477,8 @@ def format_next(res):
     if res.get("guide"):
         lines.append("Fase: %s. Proximo passo:" % res["guide"]["phase"])
         lines += ["  %d. %s" % (i, s_) for i, s_ in enumerate(res["guide"]["steps"], 1)]
+        if res["guide"].get("tooling_review_due"):
+            lines.append("Revisao das ferramentas devida (aisef-tooling, secao 8): /skill-doctor, custo e uso das skills")
+        if res["guide"].get("compact_hint"):
+            lines.append(res["guide"]["compact_hint"])
     return "\n".join(lines)

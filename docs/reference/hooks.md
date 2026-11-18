@@ -11,6 +11,8 @@ Declarados em [`plugins/aisef/hooks/hooks.json`](../../plugins/aisef/hooks/hooks
 
 | `SubagentStart` / `SubagentStop` | (todos) | `agent_events.py` | Registram início e fim de cada subagente em `.aisef/runtime/agents.jsonl` (efêmero, fora do Git) para a aba **Agora** do painel. Em segundo plano | aberta (silêncio) |
 
+| `UserPromptSubmit` | (todos) | `prompt_mode.py` | No modo Ask, lembra o modelo de responder sem editar nem executar. Em silêncio no modo normal | aberta |
+
 ## Python
 O `run.sh` usa `AISEF_PYTHON`, se definido (o mais rápido); senão, o primeiro `python3`/`python`/`py` do PATH, pulando o atalho da Microsoft Store. Sem Python, o gateway nega (falha fechada) e a auditoria avisa.
 

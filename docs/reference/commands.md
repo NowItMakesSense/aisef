@@ -17,6 +17,7 @@ Todos ficam em `plugins/aisef/core/` (chamado `CORE` nas skills) e rodam com `py
 | `dispatch [--feature F] [--dry-run]` | Despacha a onda numa chamada: prompt, modelo e effort de cada agente e os `delegation` registrados |
 | `validate-wave [--feature F] [--dry-run]` | `precheck` de cada tarefa executada, reprovação imediata de quem falha e um único validador para o resto |
 | `precheck --task T [--json]` | Checagem determinística, sem modelo e sem rodar comandos: relatório, critérios com evidência, TDD, escopo e tokens de design |
+| `mode [--set ask\|exec]` | Mostra ou troca o modo da sessão (trocar abre o prompt nativo) |
 | `verify` / `status` | Integridade do log (cadeia, assinaturas, head externo) / resumo |
 | `rotate-key` / `anchor` | Gira a chave de assinatura / grava uma âncora do log em `~/.aisef/anchors/` |
 

@@ -55,7 +55,8 @@ If the Python with `cryptography` is not the first on your PATH, set `AISEF_PYTH
 1. In a project folder, say **"start AISEF in this project"**. On an existing codebase, AISEF investigates before proposing anything.
 2. Approve the agents and the native second-layer rules when asked.
 3. Ask for a feature in plain language. You approve the plan; execution runs inside the approved scope; the feature closes only with your acceptance.
-4. Watch it in the panel (`aisef-panel`).
+4. Watch it live in the panel (`aisef-panel`): what each agent is doing now, the next step, the flow of each feature and the parallel waves.
+5. Just a question? `/aisef:ask <question>` answers in a cheap read-only Haiku subagent; `/aisef:modo ask` keeps the whole session read-only (enforced by the gateway) until `/aisef:modo exec`.
 
 To explore without spending tokens, follow the [walkthrough with the demo project](docs/guide/walkthrough.md) (Portuguese).
 
@@ -63,7 +64,7 @@ To explore without spending tokens, follow the [walkthrough with the demo projec
 
 | Component | Role |
 |---|---|
-| Skills | `aisef` (orchestrator), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design` (one design authority per project), `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
+| Skills | `aisef` (orchestrator), `ask` and `modo` (Ask mode), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design` (one design authority per project), `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
 | Agents | `implementer` (vertical slices with TDD), `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, each capped by an Agent Contract and generated from one source |
 | Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`) |
 | Core | 9 JSON Schemas, permission and model policies, consistency checker, signed audit chain, brief generators, wave planner, context packs, panel |

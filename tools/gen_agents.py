@@ -81,6 +81,21 @@ def static_profile(name):
     return e["model"], e["effort"]
 
 
+# Agentes que nao executam tarefa (sem Agent Contract nem bloco COMMON): ferramentas fixas aqui.
+SPECIAL = {
+    "ask": ("Responde perguntas sobre um projeto AISEF lendo codigo, docs e contratos, sem editar nem executar nada (modo Ask, barato). Use para /aisef:ask ou quando o usuario so quer uma resposta.",
+            "Read, Grep, Glob", "haiku", "low",
+            "Voce responde perguntas e so le. Procure a resposta em `.aisef/` (discovery, contratos, design, knowledge), nos docs e no codigo (Grep/Glob antes de abrir arquivos inteiros). Responda direto, citando `arquivo:linha` ou o id do contrato. Separe o encontrado do inferido; o que nao estiver documentado, diga que nao esta, sem inventar regra de negocio. Se a resposta exigir uma mudanca, descreva-a e diga que, para executar, o usuario pede a mudanca ou troca o modo com /aisef:modo exec."),
+}
+
+
+def render_special(name):
+    desc, tools, model, effort, body = SPECIAL[name]
+    return ("---\nname: %s\ndescription: '%s'\ntools: %s\nmodel: %s\neffort: %s\n---\n\n"
+            "<!-- Gerado por tools/gen_agents.py - edite la, nao aqui. -->\n\n# %s\n\n%s\n"
+            % (name, desc.replace("'", "''"), tools, model, effort, name, body))
+
+
 # Skills pre-carregadas no subagente (campo `skills:` do Claude Code). Sem o plugin instalado, o Claude Code pula
 # o nome (aviso no log de debug) e o agente segue as regras de TDD do bloco COMMON.
 PRELOAD = {"implementer": ["mattpocock-skills:tdd"]}
@@ -104,21 +119,21 @@ def render(name):
 def main(argv):
     check = "--check" in argv
     stale = []
-    for name in AGENTS:
+    for name in list(AGENTS) + list(SPECIAL):
         path = os.path.join(OUT, name + ".md")
-        text = render(name)
+        text = render(name) if name in AGENTS else render_special(name)
         current = open(path, encoding="utf-8").read() if os.path.exists(path) else None
         if current != text:
             stale.append(name)
             if not check:
                 with open(path, "w", encoding="utf-8", newline="\n") as fh:
                     fh.write(text)
-    extra = sorted(f[:-3] for f in os.listdir(OUT) if f.endswith(".md") and f[:-3] not in AGENTS)
+    extra = sorted(f[:-3] for f in os.listdir(OUT) if f.endswith(".md") and f[:-3] not in AGENTS and f[:-3] not in SPECIAL)
     if check:
         if stale or extra:
             print("agentes fora de sincronia: %s%s" % (", ".join(stale) or "-", "; sem fonte: " + ", ".join(extra) if extra else ""))
             return 1
-        print("agentes em sincronia com tools/gen_agents.py (%d)" % len(AGENTS))
+        print("agentes em sincronia com tools/gen_agents.py (%d)" % (len(AGENTS) + len(SPECIAL)))
         return 0
     print("gerados: %s" % (", ".join(stale) or "nada mudou"))
     return 0
