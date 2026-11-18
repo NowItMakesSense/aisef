@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Roda todas as suites do AISEF e resume. Uso: python run_tests.py   (precisa de jsonschema e cryptography)
 
-As suites sao scripts autonomos (como foram escritas e validadas na conversa de origem), nao pytest.
+As suites sao scripts autonomos (sem pytest), cada uma com sua propria contagem de falhas.
 A do painel renderiza em Chrome headless quando o Chrome existe; sem ele, essa parte e pulada.
 """
 import os
@@ -35,6 +35,7 @@ SUITES = [
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("hook consultivo graph_nudge", [os.path.join(HOOKS, "test_graph_nudge.py")]),
     ("agentes gerados da fonte unica", [os.path.join(ROOT, "tools", "gen_agents.py"), "--check"]),
+    ("referencia de regras do check (docs)", [os.path.join(ROOT, "tools", "gen_docs.py"), "--check"]),
 ]
 
 failed = []

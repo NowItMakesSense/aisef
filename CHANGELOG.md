@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.3 - 2026-11-18
+- **Documentação reorganizada** ([docs/README.md](docs/README.md)):
+  - `guide/`: conceitos, fluxo de trabalho e passo a passo;
+  - `reference/`: política, comandos, hooks e as regras do check;
+  - `adr/`: 13 decisões de arquitetura;
+  - `roadmap.md`;
+  - `history/vision.md`: a visão original, convertida para markdown e sem as marcas da conversa em que foi escrita.
+- **README** (EN e PT) reescrito: o que é, por quê, fluxo em diagrama, instalação, início em 5 minutos e limites honestos. A política detalhada foi para `docs/reference/policy.md`.
+- **`decisions.md` virou ADRs** e **`pending.md` virou `roadmap.md`**. Dos 5 itens pendentes, 3 já estavam feitos, a âncora externa foi descartada (ADR 0005) e o Approval Center visual vira a aba "Decisões" do painel vivo.
+- **`tools/gen_docs.py`** gera `docs/reference/check-rules.md` a partir do código (137 regras; a documentação dizia "mais de 60"). O `run_tests.py` acusa quando a referência fica desatualizada.
+
 ## 0.5.2 - 2026-11-18
 - **Correção crítica: o gateway e a auditoria agora cobrem a ferramenta PowerShell.** No Windows, o Claude Code também executa comandos pela ferramenta `PowerShell`, que não estava nos matchers do `hooks.json`. Por ela, `git push`, `Remove-Item -Recurse` ou `Get-Content .env` passavam sem política e sem registro. Agora o PowerShell segue a mesma política do Bash: Git por operação, arquivos sensíveis, banco, deploy, T1 e o teto do Agent Contract nos subagentes. Os comandos também vão para o log.
 - **Padrões do shell ampliados:**
@@ -102,7 +113,7 @@
 
 ## 0.1.0 - 2026-11-05
 - Primeira versão como plugin do Claude Code, distribuída por marketplace.
-- **Artefatos da conversa de origem**, com os testes passando:
+- **Artefatos da especificação original**, com os testes passando:
   - política de permissões e padrões de orquestração;
   - 9 JSON Schemas;
   - `check_project` (mais de 60 regras) e `check_policy_consistency`;
