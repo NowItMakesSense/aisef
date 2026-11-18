@@ -4,13 +4,16 @@
 flowchart LR
   I[aisef-init] --> D[Discovery]
   D --> T[aisef-tooling<br/>sugere ferramentas]
-  D --> F[Feature Contract<br/>+ tarefas + RTM]
+  D --> G[Grill]
+  G --> S[Spec + seams]
+  S --> F[Fatias verticais<br/>+ RTM]
   F -->|você aprova o plano| B[Blueprint]
-  B --> W[Ondas paralelas<br/>de agentes]
+  B --> W[Ondas paralelas<br/>TDD por fatia]
   W --> V[Validador<br/>independente]
   V -->|reprovou| W
   V --> C[Concluída]
-  C -->|todas concluídas| A[Aceite da feature<br/>por você]
+  C -->|todas concluídas| R[Code review<br/>da feature]
+  R --> A[Aceite da feature<br/>por você]
   Q[Mudança pequena] --> M[Caminho rápido<br/>FEAT-MAINT]
 ```
 
@@ -26,21 +29,20 @@ Nada é gravado sem o seu OK.
 ## 2. Descobrir
 A `aisef-discovery` investiga antes de perguntar: docs, código, schema (sem conectar ao banco), testes, histórico e, se preciso, internet. Cada informação é classificada como `confirmado`, `encontrado` (com fonte), `inferido` (vira pergunta) ou `desconhecido`. O resultado fica em `.aisef/discovery.md`. Em seguida, a `aisef-tooling` sugere skills, plugins e MCPs ligados ao que foi descoberto, e só instala o que você escolher.
 
-## 3. Especificar
-Peça a feature. O modelo escreve um brief de ~20 linhas e `aisef_new.py feature` gera, já validados contra os schemas:
-- o Feature Contract;
-- os Task Contracts;
-- a RTM;
-- o pedido `plan_approval`.
+## 3. Especificar (Grill → Spec → Fatias)
+Peça a feature, ou diga "quero fazer uma spec disso". A `aisef-feature` conduz três fases e sempre diz em qual você está:
+1. **Grill:** perguntas uma de cada vez até fechar cada ramo da ideia (skill `grilling` do plugin `mattpocock-skills`, quando instalado).
+2. **Spec:** solução, histórias de usuário, decisões e os **seams de teste**, as interfaces públicas onde os testes vão atuar, confirmados com você.
+3. **Fatias verticais:** cada fatia atravessa as camadas necessárias, é demonstrável sozinha e tem teste automatizado; as dependências entre fatias são as blocking edges.
 
-Você aprova o plano na `aisef-approve`. Depois vem o Blueprint (`aisef_new.py blueprint`).
+O modelo escreve um brief curto e `aisef_new.py feature` gera, já validados contra os schemas, o Feature Contract com a spec, uma tarefa por fatia (TDD obrigatório), a RTM e o pedido `plan_approval`. Você aprova o plano na `aisef-approve`. Depois vem o Blueprint (`aisef_new.py blueprint`). O método está em [`spec-and-slices.md`](../../plugins/aisef/skills/aisef-feature/references/spec-and-slices.md).
 
 ## 4. Executar (modo contínuo)
 Com o plano aprovado, o orquestrador segue sozinho. A cada ciclo, `aisef_project.py next` calcula as ações, e cada uma tem uma resposta:
 
 | Ação | Resposta do orquestrador |
 |---|---|
-| `dispatch` | Dispara a onda atual em paralelo, com pacote de contexto e modelo/effort roteados |
+| `dispatch` | Dispara a onda atual em paralelo; cada fatia vai para o `implementer`, que faz TDD e registra a evidência de vermelho antes do verde |
 | `validate` | Chama um validador independente |
 | `complete` | Conclui a tarefa |
 | `feature_acceptance` | Pede o seu aceite da feature |

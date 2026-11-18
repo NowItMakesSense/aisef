@@ -171,6 +171,31 @@
     "pending": { "type": "array", "items": { "type": "string" } },
     "limitations": { "type": "array", "items": { "type": "string" } },
 
+    "tdd_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Evidencia de TDD (red-green): para cada comportamento, a execucao do teste falhando ANTES da que passa. Exigida quando o Task Contract tem tests.tdd_required (padrao das fatias).",
+      "required": ["cycles"],
+      "properties": {
+        "cycles": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["behavior", "test", "red", "green"],
+            "properties": {
+              "behavior": { "type": "string", "minLength": 5 },
+              "test": { "type": "string", "minLength": 3, "description": "Arquivo::nome do teste." },
+              "seam": { "type": "string" },
+              "red": { "$ref": "#/$defs/test_run" },
+              "green": { "$ref": "#/$defs/test_run" }
+            }
+          }
+        },
+        "refactored": { "type": "boolean" }
+      }
+    },
+
     "scope_discoveries": {
       "type": "array",
       "description": "Algo nao previsto encontrado. O agente interrompe a parte afetada e reporta ao orquestrador; nunca altera o escopo por conta propria.",
@@ -266,6 +291,17 @@
 
   "$defs": {
     "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$" },
+    "test_run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "exit_code", "at"],
+      "properties": {
+        "command": { "type": "string", "minLength": 2 },
+        "exit_code": { "type": "integer" },
+        "at": { "type": "string", "format": "date-time" },
+        "output_excerpt": { "type": "string", "maxLength": 2000, "description": "Trecho curto da saida (a falha esperada no vermelho, o resumo no verde). Sem segredos." }
+      }
+    },
     "file_entry": {
       "type": "object",
       "additionalProperties": false,

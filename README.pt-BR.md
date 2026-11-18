@@ -16,7 +16,7 @@ A maioria dos workflows com agentes oferece **processo sem aplicação** (skills
 
 | | O que você ganha |
 |---|---|
-| **Processo** | Discovery → Feature Contract → Engineering Blueprint → contratos de tarefa → execução paralela → validação independente → o seu aceite. Requisitos rastreados de ponta a ponta (RTM) e 137 regras de consistência checadas. |
+| **Processo (SDD + TDD)** | Discovery → Grill → Spec com seams de teste combinados → fatias verticais → execução paralela com TDD (vermelho antes do verde) → validação independente → code review → o seu aceite. A evidência de vermelho antes do verde é checada, não só pedida. Requisitos rastreados de ponta a ponta (RTM) e mais de 140 regras de consistência checadas. |
 | **Aplicação técnica** | Um gateway `PreToolUse` aplica a política a Bash, PowerShell, ferramentas de arquivo, WebFetch e MCP. Cada operação Git pede a própria aprovação, segredos pedem aprovação, banco e deploy são negados e cada subagente fica limitado pelo seu Agent Contract. |
 | **Evidência** | Toda operação e toda tentativa bloqueada vão para um log encadeado por hash e assinado com Ed25519, com o head assinado guardado fora do repositório. |
 | **Controle de custo** | Modelo e effort escolhidos por tarefa, conforme risco e complexidade, do mais barato para cima; cada tentativa que falha sobe um nível. |
@@ -25,9 +25,10 @@ A maioria dos workflows com agentes oferece **processo sem aplicação** (skills
 
 ```mermaid
 flowchart LR
-  D[Discovery] --> F[Feature Contract<br/>+ tarefas + RTM]
-  F -->|você aprova| B[Blueprint]
-  B --> W[Ondas paralelas<br/>de agentes]
+  D[Discovery] --> G[Grill]
+  G --> S[Spec<br/>+ seams de teste]
+  S --> F[Fatias verticais<br/>+ RTM]
+  F -->|você aprova| W[Ondas paralelas<br/>TDD por fatia]
   W --> V[Validador<br/>independente]
   V -->|reprovou| W
   V --> A[Seu aceite]
@@ -63,7 +64,7 @@ Para explorar sem gastar tokens, siga o [passo a passo com o projeto de demonstr
 | Componente | Papel |
 |---|---|
 | Skills | `aisef` (orquestrador), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
-| Agentes | `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, cada um limitado pelo seu Agent Contract e gerado de uma fonte única |
+| Agentes | `implementer` (fatias verticais com TDD), `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, cada um limitado pelo seu Agent Contract e gerado de uma fonte única |
 | Hooks | gateway (`PreToolUse`), auditoria (`PostToolUse`), doctor (`SessionStart`) |
 | Núcleo | 9 JSON Schemas, políticas de permissão e de modelo, verificador de consistência, cadeia de auditoria assinada, geradores por brief, planejador de ondas, pacotes de contexto e painel |
 

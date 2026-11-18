@@ -119,6 +119,22 @@
     },
 
     "constraints": { "type": "array", "items": { "type": "string" } },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opcional. Spec no metodo to-spec (Matt Pocock): problema e escopo ficam em problem/scope; aqui entram solucao, historias, decisoes de implementacao e de teste e os seams de teste confirmados com o usuario.",
+      "required": ["solution", "user_stories", "test_seams"],
+      "properties": {
+        "solution": { "type": "string", "minLength": 10 },
+        "user_stories": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 10 } },
+        "implementation_decisions": { "type": "array", "items": { "type": "string" } },
+        "testing_decisions": { "type": "array", "items": { "type": "string" } },
+        "test_seams": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 },
+                        "description": "Interfaces publicas onde os testes atuam, as mais altas possiveis (o ideal e uma)." },
+        "further_notes": { "type": "array", "items": { "type": "string" } },
+        "grilled": { "type": "boolean", "description": "true quando a spec veio de uma sessao de grilling (perguntas ate fechar cada ramo)." }
+      }
+    },
 
     "acceptance_criteria": {
       "type": "array",

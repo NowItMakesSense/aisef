@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0 - 2026-11-18
+- **SDD + TDD como padrão, com o método do Matt Pocock:**
+  - **Fases da `aisef-feature`:** Grill (perguntas uma de cada vez até fechar cada ramo), Spec (solução, histórias, decisões e **seams de teste** confirmados com o usuário) e **Fatias verticais** (tracer bullets com blocking edges), depois a aprovação do plano e o Blueprint.
+  - **Brief:** ganha `spec` e fatias (`kind: "slice"`, `touches`, `seams`). Uma fatia sai com `tests.tdd_required`. O `example feature` passa a mostrar fatias verticais. Brief sem `spec` continua válido (compatível com 0.5).
+- **Novo agente `implementer`:** faz a fatia inteira com TDD. Tem a ferramenta `Skill` e pré-carrega `mattpocock-skills:tdd` quando o plugin existe. Os especialistas passam a revisar as fatias que tocam a área deles. O validador confere a evidência de TDD.
+- **Evidência de TDD checada:**
+  - o Execution Report ganha `tdd_evidence.cycles`, com as execuções vermelha e verde (comando, exit code, horário);
+  - regras novas: `TDD-RED-NOT-FAILING`, `TDD-GREEN-FAILING`, `TDD-RED-BEFORE-GREEN`, `TDD-EVIDENCE-MISSING`, `SPEC-REQUIRED`, `SPEC-SEAM-UNKNOWN` e `SLICE-NO-AUTOMATED-TEST` (144 regras ao todo).
+- **Guia de fases:**
+  - o `next` devolve `guide`: a fase do projeto (discovery, specify, approve_plan, execute, review, decide, done), o próximo passo com a skill certa e o mapa dos comandos do Matt (`/to-spec` → fase Spec etc.);
+  - a skill `aisef` passa a dizer "Estamos em X. Próximo: Y" antes de começar a codar.
+- **Code review antes do aceite:** com todas as fatias concluídas, a feature passa pela skill `code-review` (padrões + aderência à spec) antes do pedido `feature_acceptance`.
+- **Plugin do Matt:** o `aisef-init` oferece instalar `mattpocock-skills` no escopo do projeto. Não é uma dependência declarada (ADR 0014).
+- **Atualização de projetos existentes:** o doctor avisa quando falta o `implementer`. `aisef_project.py agents` cria o draft, e `agents --activate --roles implementer` ativa o agente e faz o validador passar a validá-lo (nova versão do contrato, registrada no log).
+- **Evals:** `feature-choice` exige fatias verticais com teste primeiro; nova `spec-guidance` (pedir uma spec depois de uma conversa leva às fases certas).
+
 ## 0.5.3 - 2026-11-18
 - **Documentação reorganizada** ([docs/README.md](docs/README.md)):
   - `guide/`: conceitos, fluxo de trabalho e passo a passo;

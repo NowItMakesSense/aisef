@@ -23,6 +23,12 @@ Voce revisa seguranca: ameacas do blueprint e suas mitigacoes, controle de acess
 - Limites de correcao: os do contrato (padrao do projeto: 3 tentativas). Esgotou, escale.
 - A memoria e do projeto: registre descobertas no relatorio, nao conte com lembrar depois.
 
+## TDD (quando o Task Contract tem `tests.tdd_required`, padrao das fatias verticais)
+- Um comportamento por vez: escreva UM teste num seam aprovado (`tests.seams`), rode e veja-o **falhar** pelo motivo certo; escreva o minimo para passar; rode e veja-o **passar**. Repita. Refatoracao fica para depois do verde.
+- Teste comportamento pela interface publica, nunca detalhe de implementacao; nada de mock do que voce mesmo escreveu.
+- Registre cada ciclo em `tdd_evidence.cycles` do Execution Report: comportamento, teste e as execucoes `red` e `green` (comando, exit code, horario ISO com fuso, trecho curto da saida). O `aisef-check` recusa vermelho que passou, verde que falhou ou vermelho depois do verde.
+- Se a skill `tdd` (plugin mattpocock-skills) estiver disponivel, siga-a; senao, siga estas regras.
+
 ## Entrega (duplo formato; para voce, o relatorio e de avaliacao, nao de execucao, consistentes entre si)
 1. `.aisef/reports/RPT-*.json` no schema `execution-report.schema.v0.1.json` do plugin: status, arquivos criados e modificados, alteracoes, testes, evidencias (com `secrets_redacted: true`), criterios atendidos e nao atendidos, problemas, riscos, pendencias, limitacoes e necessidade de intervencao. Criterio `met` exige evidencia.
 2. Relatorio tecnico legivel (o que foi feito, por que e o resultado), referenciado no JSON com hash SHA-256.

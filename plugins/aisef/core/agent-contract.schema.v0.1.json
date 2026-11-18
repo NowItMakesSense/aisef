@@ -18,7 +18,7 @@
     "supersedes": { "type": ["string", "null"] },
 
     "role": {
-      "enum": ["orchestrator", "backend", "frontend", "database", "qa", "security", "devops", "domain", "validator", "arena_challenger", "arena_reviewer"]
+      "enum": ["orchestrator", "implementer", "backend", "frontend", "database", "qa", "security", "devops", "domain", "validator", "arena_challenger", "arena_reviewer"]
     },
     "name": { "type": "string", "minLength": 3, "maxLength": 80 },
     "description": { "type": "string", "minLength": 10 },
@@ -138,7 +138,7 @@
       "properties": {
         "can_self_attest_delivery": { "const": false },
         "can_validate_own_work": { "const": false },
-        "validates": { "type": "array", "items": { "enum": ["backend", "frontend", "database", "devops", "security", "qa", "domain"] }, "description": "Papeis que este agente pode validar. Apenas para roles de validacao." }
+        "validates": { "type": "array", "items": { "enum": ["implementer", "backend", "frontend", "database", "devops", "security", "qa", "domain"] }, "description": "Papeis que este agente pode validar. Apenas para roles de validacao." }
       }
     },
 

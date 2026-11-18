@@ -295,5 +295,34 @@ print(("OK    " if "error" in sev else "FALHA ") + "relatorio bloqueado sem vali
 fails += "error" not in sev
 
 
+
+# ------------------------------------------------------------------ SDD + TDD (0.6.0)
+def tdd_cycle(red_exit=1, green_exit=0, red_at="2026-11-05T14:00:00-03:00", green_at="2026-11-05T14:05:00-03:00"):
+    run_ = lambda code, at: {"command": "pytest -q tests/auth", "exit_code": code, "at": at}
+    return {"cycles": [{"behavior": "token expirado e recusado", "test": "tests/auth/test_jwt.py::test_expirado",
+                        "red": run_(red_exit, red_at), "green": run_(green_exit, green_at)}]}
+
+expect("TDD: teste vermelho que passou", edit("reports/RPT-001.json", lambda d: d.update(tdd_evidence=tdd_cycle(red_exit=0))), "TDD-RED-NOT-FAILING")
+expect("TDD: teste verde que falhou", edit("reports/RPT-001.json", lambda d: d.update(tdd_evidence=tdd_cycle(green_exit=1))), "TDD-GREEN-FAILING")
+expect("TDD: vermelho depois do verde", edit("reports/RPT-001.json", lambda d: d.update(
+    tdd_evidence=tdd_cycle(red_at="2026-11-05T14:10:00-03:00"))), "TDD-RED-BEFORE-GREEN")
+expect("TDD: tarefa com TDD obrigatorio sem evidencia no relatorio", edit(T1, lambda d: d.setdefault("tests", {}).update(tdd_required=True)),
+       "TDD-EVIDENCE-MISSING")
+total += 1
+ok = "TDD-EVIDENCE-MISSING" not in run(both(edit(T1, lambda d: d.setdefault("tests", {}).update(tdd_required=True)),
+                                           edit("reports/RPT-001.json", lambda d: d.update(tdd_evidence=tdd_cycle())))).codes()
+print(("OK    " if ok else "FALHA ") + "TDD: evidencia vermelho -> verde satisfaz a tarefa")
+fails += not ok
+expect("fatia vertical numa feature sem spec", edit(T1, lambda d: d.update(kind="slice")), "SPEC-REQUIRED")
+SPEC = {"solution": "Validar JWT no middleware de autenticacao", "user_stories": ["Como cliente da API, quero ser recusado com token expirado"],
+        "test_seams": ["middleware de autenticacao"]}
+expect("fatia com seam fora da spec", both(edit(F, lambda d: d.update(spec=SPEC)),
+                                           edit(T1, lambda d: (d.update(kind="slice"), d.setdefault("tests", {}).update(seams=["GET /outro"])))),
+       "SPEC-SEAM-UNKNOWN")
+expect("fatia sem criterio de teste automatizado", both(edit(F, lambda d: d.update(spec=SPEC)), edit(T1, lambda d: (
+    d.update(kind="slice"), [c["verification"].update(method="manual_review") for c in d["acceptance_criteria"]]))),
+       "SLICE-NO-AUTOMATED-TEST")
+expect("spec sem seams de teste e invalida", edit(F, lambda d: d.update(spec=dict(SPEC, test_seams=[]))), "SCHEMA")
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

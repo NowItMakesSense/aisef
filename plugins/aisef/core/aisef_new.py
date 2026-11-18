@@ -16,7 +16,8 @@ Brief de feature (so os campos marcados com * sao obrigatorios):
     {"id"*: "FEAT-002", "title"*: "...", "objective"*: "...", "problem"*: "...", "priority": "medium",
      "requirements"*: {"REQ-010": "texto", "REQ-011": {"text": "...", "origin": "investigated", "kind": "non_functional"}},
      "scope_in"*: ["..."], "scope_out": ["..."], "risks": [["descricao", "medium", "mitigacao"]],
-     "tasks"*: [{"id": "T-010", "title": "...", "role": "backend", "reqs": ["REQ-010"],
+     "spec": {"solution": "...", "user_stories": ["..."], "test_seams": ["POST /x"], "implementation_decisions": [], "testing_decisions": []},
+     "tasks"*: [{"id": "T-010", "kind": "slice", "title": "...", "role": "implementer", "reqs": ["REQ-010"], "touches": ["api", "data"], "seams": ["POST /x"],
                  "criteria": {"AC-10": "descricao verificavel"}, "paths": ["src/x/*"], "depends_on": [],
                  "test_cmd": "pytest -q", "risk": "low", "resources": ["repo_code"],
                  "complexity": "normal"}]}
@@ -31,7 +32,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import aisef_project as ap  # noqa: E402
 
-AGENT_ROLES = {"orchestrator", "backend", "frontend", "database", "qa", "security", "devops", "domain", "validator"}
+AGENT_ROLES = {"orchestrator", "implementer", "backend", "frontend", "database", "qa", "security", "devops", "domain", "validator"}
 MAINT_FEATURE = "FEAT-MAINT"
 MAINT_REQ = "REQ-MAINT"
 
@@ -43,11 +44,22 @@ EXAMPLES = {
                          "REQ-011": "Invalidar o link apos o uso"},
         "scope_in": ["fluxo de redefinicao por e-mail"], "scope_out": ["redefinicao por SMS"],
         "risks": [["Enumeracao de usuarios pela resposta da API", "medium", "Resposta identica para e-mail existente ou nao"]],
-        "tasks": [{"id": "T-010", "title": "Emitir token de redefinicao", "role": "backend", "reqs": ["REQ-010"],
-                   "criteria": {"AC-10": "Token expira em 30 minutos (teste automatizado)"}, "paths": ["src/auth/*", "tests/auth/*"]},
-                  {"id": "T-011", "title": "Consumir e invalidar o token", "role": "backend", "reqs": ["REQ-011"],
-                   "criteria": {"AC-11": "Segundo uso do mesmo token e recusado (teste automatizado)"},
-                   "paths": ["src/auth/*", "tests/auth/*"], "depends_on": ["T-010"]}]},
+        "spec": {
+            "solution": "Pedido de redefinicao gera um token de uso unico enviado por e-mail; a tela de nova senha consome o token",
+            "user_stories": ["Como usuario bloqueado, quero receber um link por e-mail para redefinir minha senha sem falar com o suporte",
+                             "Como usuario, quero que um link antigo ou ja usado seja recusado, para que ninguem reuse meu link"],
+            "implementation_decisions": ["Guardar so o hash do token", "Mesma resposta para e-mail existente ou nao"],
+            "testing_decisions": ["Testes de integracao pela API HTTP, sem mockar o banco de teste"],
+            "test_seams": ["POST /auth/reset", "POST /auth/reset/confirm"]},
+        "tasks": [{"id": "T-010", "kind": "slice", "title": "Pedir redefinicao e receber o link (API + e-mail + tabela)",
+                   "reqs": ["REQ-010"], "touches": ["api", "domain", "data", "integration"], "seams": ["POST /auth/reset"],
+                   "criteria": {"AC-10": "POST /auth/reset envia e-mail com link que expira em 30 minutos (teste de integracao)"},
+                   "paths": ["src/auth/*", "migrations/*", "tests/auth/*"], "test_cmd": "pytest -q tests/auth"},
+                  {"id": "T-011", "kind": "slice", "title": "Redefinir a senha com o link e invalida-lo",
+                   "reqs": ["REQ-011"], "touches": ["ui", "api", "domain"], "seams": ["POST /auth/reset/confirm"],
+                   "criteria": {"AC-11": "Segundo uso do mesmo link e recusado (teste de integracao)"},
+                   "paths": ["src/auth/*", "web/reset/*", "tests/auth/*"], "depends_on": ["T-010"],
+                   "test_cmd": "pytest -q tests/auth"}]},
     "blueprint": {
         "id": "BP-002", "feature": "FEAT-002", "title": "Desenho da recuperacao de senha",
         "summary": "Endpoint que emite token de uso unico e outro que o consome",
@@ -74,15 +86,26 @@ def need(brief, *keys):
 
 
 def task_doc(t, feature_id, feature_version, env, now):
-    role = t.get("role", "backend")
+    kind = t.get("kind", "task")
+    role = t.get("role") or ("implementer" if kind == "slice" else "backend")
     if role not in AGENT_ROLES:
         raise SystemExit("papel desconhecido em %s: %s" % (t["id"], role))
     criteria = [{"id": cid, "description": text, "required": True,
                  "verification": {"method": "automated_test", "evidence_expected": "saida do comando de teste",
                                   **({"command": t["test_cmd"]} if t.get("test_cmd") else {})},
                  "requirement_ids": t["reqs"]} for cid, text in t["criteria"].items()]
+    tdd = t.get("tdd", kind == "slice")
+    tests = {}
+    if tdd:
+        tests["tdd_required"] = True
+    if t.get("seams"):
+        tests["seams"] = t["seams"]
+    if t.get("test_cmd"):
+        tests["commands"] = [t["test_cmd"]]
     doc = {
-        "schema_version": "0.1.0", "task_id": t["id"], "contract_version": 1, "kind": "task",
+        "schema_version": "0.1.0", "task_id": t["id"], "contract_version": 1, "kind": kind,
+        **({"touches": t["touches"]} if t.get("touches") else {}),
+        **({"tests": tests} if tests else {}),
         "feature_id": feature_id, "feature_contract_version": feature_version, "title": t["title"],
         "objective": t.get("objective") or t["title"],
         "assigned_agent": {"agent_id": role, "agent_contract_version": 1, "role": role},
@@ -120,11 +143,27 @@ def feature_docs(brief, project, now):
                      "history": [{"version": 1, "statement": spec["text"], "author": "user",
                                   "justification": "criacao", "changed_at": now}]})
     known = {r["id"] for r in reqs}
+    spec = brief.get("spec")
+    if spec is not None:
+        if not spec.get("test_seams") or not spec.get("user_stories") or not spec.get("solution"):
+            raise SystemExit("spec incompleta: solution, user_stories e test_seams sao obrigatorios (seams confirmados com o usuario)")
+        for t in brief["tasks"]:
+            t.setdefault("kind", "slice")
+            if t["kind"] == "slice":
+                t.setdefault("seams", list(spec["test_seams"]))
+                unknown = set(t["seams"]) - set(spec["test_seams"])
+                if unknown:
+                    raise SystemExit("%s usa seam fora da spec: %s (confirme o seam com o usuario e inclua na spec)"
+                                     % (t["id"], ", ".join(sorted(unknown))))
+    for t in brief["tasks"]:
+        if t.get("kind") == "slice" and not t.get("criteria"):
+            raise SystemExit("%s: fatia sem criterio de aceite verificavel" % t["id"])
     tasks = [task_doc(t, fid, 1, cfg.get("environment", "dev"), now) for t in brief["tasks"]]
     for t in brief["tasks"]:
         unknown = set(t["reqs"]) - known
         if unknown:
             raise SystemExit("%s cita requisito inexistente: %s" % (t["id"], ", ".join(sorted(unknown))))
+    role_of = {d["task_id"]: d["assigned_agent"]["role"] for d in tasks}
     criteria, rtm = [], []
     for r in reqs:
         task_ids = [t["id"] for t in brief["tasks"] if r["id"] in t["reqs"]]
@@ -142,10 +181,11 @@ def feature_docs(brief, project, now):
         "requirements": reqs, "business_rules": [],
         "scope": {"included": brief["scope_in"], "excluded": brief.get("scope_out", [])},
         "architectural_decisions": [], "dependencies": {}, "constraints": [],
+        **({"spec": {k: v for k, v in spec.items() if v not in (None, [], "")}} if spec else {}),
         "risks": [{"id": "RISK-%s-%d" % (fid, i + 1), "description": r[0], "severity": r[1],
                    **({"mitigation": r[2]} if len(r) > 2 else {})} for i, r in enumerate(brief.get("risks", []))],
         "acceptance_criteria": criteria,
-        "task_plan": [{"task_id": t["id"], "contract_version": 1, "role": t.get("role", "backend"),
+        "task_plan": [{"task_id": t["id"], "contract_version": 1, "role": role_of[t["id"]],
                        **({"depends_on": t["depends_on"]} if t.get("depends_on") else {})} for t in brief["tasks"]],
         "tests": {"integration_required": True, "regression_required": True},
         "rtm": rtm,

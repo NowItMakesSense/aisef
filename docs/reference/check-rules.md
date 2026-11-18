@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**137 regras** em 22 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**144 regras** em 25 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -87,6 +87,24 @@ Todo elemento aponta para requisitos aprovados.
 Relatório do agente coerente com a tarefa e com evidências.
 
 `REPORT-AGENT`, `REPORT-ATTEMPTS`, `REPORT-CONSULTATIONS`, `REPORT-CRITERIA-MISSING`, `REPORT-CRITERIA-REQUIRED`, `REPORT-CRITERIA-UNKNOWN`, `REPORT-EVIDENCE-UNKNOWN`, `REPORT-FILE-OUT-OF-SCOPE`, `REPORT-TASK`, `REPORT-VERSION`
+
+## Spec (`SPEC-*`)
+
+Fatias verticais pedem spec com seams de teste aprovados.
+
+`SPEC-REQUIRED`, `SPEC-SEAM-UNKNOWN`
+
+## Fatias verticais (`SLICE-*`)
+
+Toda fatia tem ao menos um criterio verificado por teste automatizado.
+
+`SLICE-NO-AUTOMATED-TEST`
+
+## TDD (`TDD-*`)
+
+Evidencia de teste vermelho antes do verde, no relatorio do executor.
+
+`TDD-EVIDENCE-MISSING`, `TDD-GREEN-FAILING`, `TDD-RED-BEFORE-GREEN`, `TDD-RED-NOT-FAILING`
 
 ## Validação (`VAL-*`)
 

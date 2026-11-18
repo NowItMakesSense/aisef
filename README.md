@@ -16,7 +16,7 @@ Most agent workflows give you either **process without enforcement** (skills tha
 
 | | What you get |
 |---|---|
-| **Process** | Discovery → Feature Contract → Engineering Blueprint → task contracts → parallel execution → independent validation → your acceptance. Requirements are traced end to end (RTM); 137 consistency rules are checked. |
+| **Process (SDD + TDD)** | Discovery → Grill → Spec with agreed test seams → vertical slices → parallel execution with red-then-green TDD → independent validation → code review → your acceptance. The red-before-green evidence is checked, not just requested. Requirements are traced end to end (RTM); more than 140 consistency rules are checked. |
 | **Enforcement** | A `PreToolUse` gateway applies the permission policy to Bash, PowerShell, file tools, WebFetch and MCP. Each Git operation needs its own approval, secrets ask, databases and deploys are denied, and each subagent is capped by its Agent Contract. |
 | **Evidence** | Every operation and every blocked attempt goes to a hash-chained log signed with Ed25519, with the signed head kept outside the repository. |
 | **Cost control** | Model and effort are routed per task by risk and complexity, cheapest first; each failed attempt moves one level up. |
@@ -25,9 +25,10 @@ Most agent workflows give you either **process without enforcement** (skills tha
 
 ```mermaid
 flowchart LR
-  D[Discovery] --> F[Feature Contract<br/>+ tasks + RTM]
-  F -->|you approve| B[Blueprint]
-  B --> W[Parallel waves<br/>of agents]
+  D[Discovery] --> G[Grill]
+  G --> S[Spec<br/>+ test seams]
+  S --> F[Vertical slices<br/>+ RTM]
+  F -->|you approve| W[Parallel waves<br/>TDD per slice]
   W --> V[Independent<br/>validator]
   V -->|rejected| W
   V --> A[Your acceptance]
@@ -63,7 +64,7 @@ To explore without spending tokens, follow the [walkthrough with the demo projec
 | Component | Role |
 |---|---|
 | Skills | `aisef` (orchestrator), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
-| Agents | `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, each capped by an Agent Contract and generated from one source |
+| Agents | `implementer` (vertical slices with TDD), `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, each capped by an Agent Contract and generated from one source |
 | Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`) |
 | Core | 9 JSON Schemas, permission and model policies, consistency checker, signed audit chain, brief generators, wave planner, context packs, panel |
 

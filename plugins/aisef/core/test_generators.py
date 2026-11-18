@@ -116,6 +116,55 @@ check("quick: tarefa concluida direto (sem task_started, task_executed nem relat
       not [f for f in clean(proj) if f["rule"].startswith("STATE-")])
 check("tudo limpo no check_project e log integro", clean(proj) == [] and not ap.verify(proj)[0])
 
+
+# ------------------------------------------------------------------ spec e fatias verticais (0.6.0)
+t10 = load(proj, "contracts/tasks/T-010.json")
+check("fatia: exemplo gera fatias verticais do implementer, com TDD obrigatorio e seams da spec",
+      t10["kind"] == "slice" and t10["assigned_agent"]["role"] == "implementer" and t10["tests"]["tdd_required"] is True
+      and t10["tests"]["seams"] == ["POST /auth/reset"] and "data" in t10["touches"])
+check("spec: solucao, historias e seams entram no Feature Contract",
+      f.get("spec", {}).get("test_seams") == ["POST /auth/reset", "POST /auth/reset/confirm"] and len(f["spec"]["user_stories"]) == 2)
+check("spec: plano registra o papel real das fatias", {x["role"] for x in f["task_plan"]} == {"implementer"})
+p2 = os.path.join(work, "p2")
+os.makedirs(p2)
+ap.init(p2, "PRJ-G2", "gerador 2", "dev")
+bad = json.loads(json.dumps(aisef_new.EXAMPLES["feature"]))
+bad["spec"]["test_seams"] = []
+check("spec sem seams e recusada sem gravar nada", expect_exit(lambda: aisef_new.cmd_feature(p2, bad))
+      and not os.path.exists(os.path.join(p2, ".aisef", "contracts", "features", "FEAT-002.json")))
+bad = json.loads(json.dumps(aisef_new.EXAMPLES["feature"]))
+bad["tasks"][0]["seams"] = ["GET /nao-confirmado"]
+check("fatia com seam fora da spec e recusada", expect_exit(lambda: aisef_new.cmd_feature(p2, bad)))
+old = json.loads(json.dumps(aisef_new.EXAMPLES["feature"]))
+del old["spec"]
+for t in old["tasks"]:
+    t.pop("kind")
+    t.pop("seams")
+    t["role"] = "backend"
+aisef_new.cmd_feature(p2, old)
+t10b = load(p2, "contracts/tasks/T-010.json")
+check("brief sem spec continua valido (tarefas por papel, compatibilidade 0.5)",
+      t10b["kind"] == "task" and "tdd_required" not in t10b.get("tests", {}))
+
+
+# ------------------------------------------------------------------ atualizacao de projeto anterior a 0.6.0
+p3 = os.path.join(work, "p3")
+os.makedirs(p3)
+ap.init(p3, "PRJ-G3", "antigo", "dev")
+ap.activate_agents(p3)
+agents_dir = os.path.join(p3, ".aisef", "contracts", "agents")
+os.remove(os.path.join(agents_dir, "implementer.json"))
+val = load(p3, "contracts/agents/validator.json")
+val["validation_role"]["validates"].remove("implementer")
+ap.write_json(os.path.join(agents_dir, "validator.json"), val)
+check("projeto antigo: ativar todos sem o implementer nao quebra", ap.activate_agents(p3) == [])
+check("projeto antigo: `agents` cria so o draft que falta", ap.write_agent_drafts(p3) == ["implementer"])
+done = ap.activate_agents(p3, ["implementer"])
+val2 = load(p3, "contracts/agents/validator.json")
+check("projeto antigo: ativar o implementer atualiza o validador (nova versao, decisao registrada)",
+      done == ["implementer"] and "implementer" in val2["validation_role"]["validates"]
+      and val2["contract_version"] == val["contract_version"] + 1 and not ap.verify(p3)[0])
+
 shutil.rmtree(work, ignore_errors=True)
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)
