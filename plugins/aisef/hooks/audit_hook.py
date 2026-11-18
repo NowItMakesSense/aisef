@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """AISEF Audit & Evidence: hook PostToolUse do Claude Code (v0.1).
 
-Anexa um evento 'tool_used' a .aisef/audit/log.jsonl para cada operacao que altera algo (Bash, Edit,
+Anexa um evento 'tool_used' a .aisef/audit/log.jsonl para cada operacao que altera algo (Bash, PowerShell, Edit,
 Write, MultiEdit, NotebookEdit). Registra o que foi feito, nunca o raciocinio do modelo (sempre
 contains_model_reasoning=false). Se o comando parecer conter segredo, ele e substituido por um aviso
 antes de gravar (regra T3). So atua em projetos com .aisef/config.json e nunca bloqueia a sessao:
@@ -31,11 +31,11 @@ def main():
     tool = data.get("tool_name", "")
     inp = data.get("tool_input") or {}
     detail = {"tool": tool}
-    if tool == "Bash":
+    if tool in ("Bash", "PowerShell"):
         cmd = (inp.get("command") or "")[:MAX_COMMAND]
         probe = {"data": {"command": cmd}}
         detail["command"] = "[omitido: possivel segredo]" if audit_chain.find_secrets(probe) else cmd
-        summary = "Bash: " + detail["command"].splitlines()[0][:120] if detail["command"] else "Bash"
+        summary = tool + ": " + detail["command"].splitlines()[0][:120] if detail["command"] else tool
     elif tool.startswith("mcp__"):
         # so o nome dos campos: os valores podem carregar segredos ou dados pessoais
         detail["input_keys"] = sorted(inp)[:20]
@@ -62,7 +62,7 @@ def main():
     except Exception as exc:
         sys.stderr.write("AISEF: evento de auditoria NAO registrado (%s)\n" % exc)
         sys.exit(1)  # nao bloqueia, mas o aviso aparece para o usuario
-    if tool == "Bash":
+    if tool in ("Bash", "PowerShell"):
         try:
             consume_reinforced(project, inp.get("command") or "", data.get("cwd"), event)
         except Exception as exc:

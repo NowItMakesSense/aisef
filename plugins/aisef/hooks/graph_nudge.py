@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""AISEF graph nudge: hook PreToolUse (Grep|Glob), CONSULTIVO. Lembra o agente de consultar o grafo de codigo
+"""AISEF graph nudge: lembrete CONSULTIVO para Grep|Glob. Desde a v0.5.2 roda dentro do processo do gateway
+(gateway.py chama nudge_context), sem um segundo processo Python por chamada; o main continua para uso avulso. Lembra o agente de consultar o grafo de codigo
 antes de varrer o repositorio com grep/glob. Nunca bloqueia, nunca decide permissao: so devolve contexto adicional.
 
 So atua se o projeto tem .aisef/config.json E um graph MCP configurado no .mcp.json (codebase-memory ou graphify).
@@ -48,27 +49,37 @@ def under_cap(session, cap):
         return False
 
 
+def nudge_context(data, project):
+    """Texto do lembrete para esta chamada, ou None. Usado pelo gateway (mesmo processo, sem custo extra) e pelo
+    main abaixo. Nunca levanta excecao para o chamador: qualquer erro = None (consultivo, fail-open)."""
+    try:
+        if data.get("tool_name") not in ("Grep", "Glob"):
+            return None
+        cfg_path = os.path.join(project, ".aisef", "config.json")
+        if not os.path.isfile(cfg_path):
+            return None
+        with open(cfg_path, encoding="utf-8") as fh:
+            opts = json.load(fh).get("graph_nudge", {})
+        if opts.get("enabled", True) is False:
+            return None
+        from aisef_context import detect_graph_servers
+        servers = detect_graph_servers(project)
+        if not servers:
+            return None
+        cap = opts.get("max_per_session", DEFAULT_CAP)
+        if not isinstance(cap, int) or isinstance(cap, bool) or not under_cap(data.get("session_id", ""), cap):
+            return None
+        return message(servers, data["tool_name"], data.get("tool_input") or {})
+    except Exception:
+        return None
+
+
 def main():
     data = json.load(sys.stdin)
-    if data.get("tool_name") not in ("Grep", "Glob"):
-        return
     project = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
-    cfg_path = os.path.join(project, ".aisef", "config.json")
-    if not os.path.isfile(cfg_path):
-        return
-    with open(cfg_path, encoding="utf-8") as fh:
-        opts = json.load(fh).get("graph_nudge", {})
-    if opts.get("enabled", True) is False:
-        return
-    from aisef_context import detect_graph_servers
-    servers = detect_graph_servers(project)
-    if not servers:
-        return
-    cap = opts.get("max_per_session", DEFAULT_CAP)
-    if not isinstance(cap, int) or isinstance(cap, bool) or not under_cap(data.get("session_id", ""), cap):
-        return
-    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
-                                              "additionalContext": message(servers, data["tool_name"], data.get("tool_input") or {})}}))
+    text = nudge_context(data, project)
+    if text:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": text}}))
 
 
 if __name__ == "__main__":

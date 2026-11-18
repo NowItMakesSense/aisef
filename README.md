@@ -66,7 +66,7 @@ A step-by-step walkthrough with the demo project is in [docs/walkthrough.md](doc
 
 - **The gateway is not a security boundary.** It classifies commands by patterns and reduces risk. Pair it with the Claude Code sandbox (`/sandbox`) and the native permission rules it installs.
 - **Approval relies on you.** It uses Claude Code's native permission prompt, which the model cannot answer, but nothing stops you from approving without reading. That is why the riskiest operations require a recorded reinforced approval *before* the prompt appears.
-- **Hook latency.** Each tool call costs about 0.2–0.3 s on Windows, measured, mostly process startup.
+- **Hook latency.** Each hook costs about 0.2–0.3 s on Windows (`python tools/bench_hooks.py`), mostly process startup.
 - **Outside Claude Code there is no enforcement.** `AGENTS.md` is guidance only.
 
 ## Development

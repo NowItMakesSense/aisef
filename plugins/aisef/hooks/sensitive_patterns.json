@@ -36,7 +36,7 @@
       "id": "env-dump",
       "category": "secret",
       "label": "despejo das variaveis de ambiente",
-      "regex": "(?:^|[;&|(]\\s*)(?:printenv|env|set|export\\s+-p|declare\\s+-x)\\s*(?:$|[;&|)])|\\b(?:Get-ChildItem|gci|dir|ls)\\s+env:"
+      "regex": "(?:^|[;&|(]\\s*)(?:printenv|env|set|export\\s+-p|declare\\s+-x)\\s*(?:$|[;&|)])|\\b(?:Get-ChildItem|gci|dir|ls)\\s+env:|\\[(?:System\\.)?Environment\\]::GetEnvironmentVariables\\b"
     }
   ],
   "paths": {

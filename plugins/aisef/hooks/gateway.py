@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AISEF Execution Gateway: hook PreToolUse do Claude Code (v0.1).
+"""AISEF Execution Gateway: hook PreToolUse do Claude Code (v0.1). Trata Bash e PowerShell como shell.
 
 Classifica cada chamada de ferramenta em (recurso, acao, ambiente), resolve o nivel pela politica
 (permission-policy.v0.1.json + .aisef/policy.local.json, so mais restritivo) e traduz:
@@ -34,7 +34,11 @@ DEPLOY_RE = re.compile(
     r"netlify\s+deploy\s+.*--prod|gcloud\s+\S+\s+deploy|aws\s+cloudformation\s+deploy|cdk\s+deploy)\b", re.I)
 DEPLOY_DESTRUCTIVE_RE = re.compile(
     r"\b(?:terraform\s+destroy|tofu\s+destroy|pulumi\s+destroy|kubectl\s+delete|helm\s+uninstall)\b", re.I)
-RM_RECURSIVE_RE = re.compile(r"\brm\s+(?:-[a-z]*r[a-z]*|--recursive)\b|\bRemove-Item\b[^;&|]*-Recurse\b|\brmdir\s+/s\b", re.I)
+# Remocao recursiva no sh, no PowerShell (Remove-Item e os aliases ri/rm/del/rd aceitam -r, -Rec, -Recurse) e no cmd.
+RM_RECURSIVE_RE = re.compile(
+    r"\brm\s+(?:-[a-z]*r[a-z]*|--recursive)\b|"
+    r"\b(?:Remove-Item|ri|rm|del|erase|rmdir|rd)\b[^;&|]*\s-r(?:e(?:c(?:u(?:r(?:s(?:e)?)?)?)?)?)?\b|"
+    r"\b(?:rmdir|rd|del|erase)\s+(?:[^;&|]*\s)?/s\b", re.I)
 CONTAINER_DESTRUCTIVE_RE = re.compile(
     r"\b(?:docker|podman)\s+(?:volume\s+(?:rm|prune)|system\s+prune|compose\s+down\s+[^;&|]*(?:-v\b|--volumes))", re.I)
 # T1 (decisao do usuario, 2026-11-05): DROP, TRUNCATE, DELETE sem WHERE, ALTER ... DROP e rollback de migration
@@ -60,9 +64,17 @@ CONFIG_PATH_RE = re.compile(
     r"Dockerfile[^/]*$|docker-compose[^/]*\.ya?ml$|compose\.ya?ml$|[^/]+\.tf$|[^/]+\.tfvars$|helm/|charts/|k8s/|"
     r"kubernetes/|\.claude/settings[^/]*\.json$|\.claude/(?:skills|agents|commands)/|\.mcp\.json$)", re.I)
 AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:approvals|authorizations|contracts/agents)/|(?:^|[/\s\"'=>])\.aisef/(?:config|policy\.local)\.json\b")
+# Escrita por shell (redirecionamento ou comando que grava, move ou apaga) cujo alvo e um arquivo de decisao do AISEF.
+SHELL_PROTECTED_WRITE_RE = re.compile(
+    r"(?:>>?|\b(?:tee|Set-Content|Add-Content|Out-File|New-Item|ni|sc|ac|Copy-Item|cpi|copy|Move-Item|mi|move|"
+    r"Rename-Item|rni|ren|Remove-Item|ri|cp|mv|rm|del|erase|truncate|touch|sed\s+-i|perl\s+-[a-z]*i)\b)"
+    r"[^;&|]*?(?:^|[/\s\"'=>])\.aisef/(?:(?:approvals|authorizations|contracts/agents)/|(?:config|policy\.local)\.json\b)",
+    re.I)
 AISEF_AUDIT_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:audit|keys)/")
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 READ_TOOLS = {"Read", "Grep", "Glob"}
+# Ferramentas que executam comandos: o Bash (Git Bash no Windows) e a ferramenta PowerShell do Claude Code no Windows.
+SHELL_TOOLS = {"Bash", "PowerShell"}
 
 
 class Decision(Exception):
@@ -241,6 +253,8 @@ def classify_bash(cmd, patterns, env):
         found.append(("unclassified", "execute", env, False, "instalacao de skill, plugin ou servidor MCP"))
     if AISEF_AUDIT_RE.search(norm(cmd)) and not re.search(r"audit_chain\.py\s+verify|aisef_project\.py\s+(?:verify|status)", cmd):
         raise Decision("deny", "o log de auditoria e as chaves do AISEF so podem ser alterados pelo hook de auditoria")
+    if SHELL_PROTECTED_WRITE_RE.search(norm(cmd)):
+        found.append(("aisef_decision", "write", env, False, "escrita por shell em arquivo de decisao do AISEF"))
     if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b|agents\b[^;&|]*--activate\b|settings\b[^;&|]*--apply\b|rotate-key\b)", cmd):
         found.append(("aisef_decision", "write", env, False, "registro de decisao do usuario"))
     return found
@@ -373,7 +387,7 @@ def decide(data, project, policy, patterns, config, now):
 
     items = []
     operation = ""
-    if tool == "Bash":
+    if tool in SHELL_TOOLS:
         operation = inp.get("command", "") or ""
         items = classify_bash(operation, patterns, env)
     else:
@@ -465,7 +479,23 @@ def main():
     if decision:
         record_attempt(project, data, decision, reason)
         emit(decision, reason)
+    if data.get("tool_name") in ("Grep", "Glob"):
+        nudge(data, project)
     sys.exit(0)
+
+
+def nudge(data, project):
+    """Lembrete consultivo do grafo (graph_nudge) no mesmo processo: antes era um segundo Python por Grep/Glob."""
+    try:
+        sys.path.insert(0, CORE)
+        sys.path.insert(1, HERE)
+        import graph_nudge
+        text = graph_nudge.nudge_context(data, project)
+    except Exception:
+        return
+    if text:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": text}},
+                         ensure_ascii=False))
 
 
 if __name__ == "__main__":

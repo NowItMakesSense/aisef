@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.2 - 2026-11-18
+- **Correção crítica: o gateway e a auditoria agora cobrem a ferramenta PowerShell.** No Windows, o Claude Code também executa comandos pela ferramenta `PowerShell`, que não estava nos matchers do `hooks.json`. Por ela, `git push`, `Remove-Item -Recurse` ou `Get-Content .env` passavam sem política e sem registro. Agora o PowerShell segue a mesma política do Bash: Git por operação, arquivos sensíveis, banco, deploy, T1 e o teto do Agent Contract nos subagentes. Os comandos também vão para o log.
+- **Padrões do shell ampliados:**
+  - remoção recursiva com os aliases do PowerShell (`rm -r`, `ri -Rec`, `del /s`, `rd /s`);
+  - despejo de ambiente por `[Environment]::GetEnvironmentVariables()`;
+  - **escrita por shell em arquivos de decisão do AISEF** (`> .aisef/config.json`, `Set-Content .aisef/approvals/...`, `cp`/`sed -i` em autorizações e Agent Contracts) passa a pedir aprovação, e subagentes têm essa escrita negada. Antes, só a escrita pelas ferramentas Edit e Write era protegida.
+- **Um processo a menos por Grep e Glob:** o lembrete do grafo (`graph_nudge`) roda dentro do processo do gateway, em vez de abrir um segundo Python a cada busca.
+- **`tools/bench_hooks.py`:** mede a latência dos hooks como o Claude Code os chama. No Windows deste desenvolvimento, a mediana fica entre ~170 e ~270 ms por hook, quase toda gasta abrindo o processo.
+- **CI em Linux e Windows**, com a checagem de que `plugin.json` e `marketplace.json` estão com a mesma versão e a latência dos hooks (informativa).
+
 ## 0.5.1 - 2026-11-06
 - **`check_project` aceita a raiz do repositório:** `--project .` (como os demais comandos) passa a checar `.aisef/` quando existe `.aisef/config.json`. Antes, a raiz não tinha documento nenhum e o validador respondia "0 erro(s)" sem checar nada; no uso real isso escondeu 22 erros.
 - **Nova regra `PROJECT-EMPTY`:** pasta sem documento AISEF e sem log de auditoria é erro, e não passa mais como projeto limpo.
