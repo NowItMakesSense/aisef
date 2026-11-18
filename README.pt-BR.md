@@ -4,83 +4,93 @@
 
 [English](README.md) · **Português**
 
-Engenharia de software assistida por IA, com **autonomia na execução, rigor na validação e controle humano nas decisões importantes**. O AISEF é um plugin do Claude Code que você instala uma vez e usa em qualquer projeto, novo ou já iniciado. Ele junta um processo orientado por especificação com uma governança que é **aplicada, e não apenas pedida**:
+**Engenharia de software assistida por IA, com autonomia na execução, rigor na validação e controle humano nas decisões importantes.**
 
-- um gateway de permissões em toda chamada de ferramenta;
-- um log de auditoria assinado, à prova de adulteração;
-- aprovações que só você pode dar.
+O AISEF é um plugin do Claude Code que você instala uma vez e usa em qualquer projeto, novo ou já iniciado. Ele transforma pedidos em linguagem natural em trabalho especificado, executado por agentes e validado de forma independente. Tudo isso sob uma política de permissões **aplicada em cada chamada de ferramenta, e não apenas pedida ao modelo**, e com um log de auditoria assinado que denuncia adulteração.
 
 ![Painel](docs/img/panel-overview.png)
+
+## Por quê
+
+A maioria dos workflows com agentes oferece **processo sem aplicação** (skills que pedem ao modelo que se comporte) ou **barreiras sem processo** (um hook que bloqueia alguns comandos). O AISEF faz as duas coisas e guarda a evidência:
+
+| | O que você ganha |
+|---|---|
+| **Processo** | Discovery → Feature Contract → Engineering Blueprint → contratos de tarefa → execução paralela → validação independente → o seu aceite. Requisitos rastreados de ponta a ponta (RTM) e 137 regras de consistência checadas. |
+| **Aplicação técnica** | Um gateway `PreToolUse` aplica a política a Bash, PowerShell, ferramentas de arquivo, WebFetch e MCP. Cada operação Git pede a própria aprovação, segredos pedem aprovação, banco e deploy são negados e cada subagente fica limitado pelo seu Agent Contract. |
+| **Evidência** | Toda operação e toda tentativa bloqueada vão para um log encadeado por hash e assinado com Ed25519, com o head assinado guardado fora do repositório. |
+| **Controle de custo** | Modelo e effort escolhidos por tarefa, conforme risco e complexidade, do mais barato para cima; cada tentativa que falha sobe um nível. |
+
+## Como flui
+
+```mermaid
+flowchart LR
+  D[Discovery] --> F[Feature Contract<br/>+ tarefas + RTM]
+  F -->|você aprova| B[Blueprint]
+  B --> W[Ondas paralelas<br/>de agentes]
+  W --> V[Validador<br/>independente]
+  V -->|reprovou| W
+  V --> A[Seu aceite]
+```
+
+Mudanças pequenas (typo, ajuste trivial, patch de dependência sem quebra) vão por um caminho rápido de manutenção, sem blueprint. Com o plano aprovado, o **modo contínuo** segue sozinho e só para quando precisa de você.
 
 ## Instalação
 
 Pré-requisitos:
-
-- Claude Code.
-- Python 3.10 ou mais novo, com `pip install jsonschema cryptography`.
-- No Windows, o Git Bash, que o Claude Code já usa para rodar os hooks.
-
-No Claude Code, rode:
+- Claude Code;
+- Python 3.10 ou mais novo, com `pip install jsonschema cryptography`;
+- no Windows, o Git Bash (o Claude Code já o usa para rodar os hooks).
 
 ```
 /plugin marketplace add NowItMakesSense/aisef
 /plugin install aisef@aisef
 ```
 
-Se o Python que tem o `cryptography` não for o primeiro do PATH, defina `AISEF_PYTHON` com o caminho dele. Isso também deixa os hooks mais rápidos.
+Se o Python que tem o `cryptography` não for o primeiro do PATH, defina `AISEF_PYTHON` com o caminho dele. Isso também deixa os hooks mais rápidos. No início de cada sessão, um doctor avisa se falta alguma coisa; quando está tudo certo, ele não diz nada.
 
-No início de cada sessão, um doctor avisa se falta alguma coisa. Quando está tudo certo, ele não diz nada.
+## Comece em 5 minutos
 
-## Uso
+1. Na pasta do projeto, peça **"iniciar o AISEF neste projeto"**. Num projeto existente, o AISEF investiga antes de propor qualquer coisa.
+2. Quando ele pedir, aprove os agentes e as regras nativas de segunda camada.
+3. Peça uma feature em linguagem natural. Você aprova o plano, a execução acontece dentro do escopo aprovado e a feature só fecha com o seu aceite.
+4. Acompanhe no painel (`aisef-panel`).
 
-1. Na pasta do projeto, peça "iniciar o AISEF neste projeto". Num projeto existente, o AISEF investiga o que já existe antes de propor qualquer coisa.
-2. Quando ele pedir, aprove os agentes e as regras nativas de segunda camada. Depois da descoberta, o AISEF sugere skills, plugins e servidores MCP para o projeto (`aisef-tooling`) e só instala os que você escolher.
-3. Peça o trabalho em linguagem natural:
-   - **Feature:** o modelo escreve um brief de umas 20 linhas, e o `aisef_new.py` gera a partir dele os contratos, as tarefas, a RTM e o pedido de aprovação, tudo já validado. Você aprova o plano, a execução acontece dentro do escopo aprovado e a feature só fecha com o seu aceite.
-   - **Mudança pequena** (typo, ajuste trivial, patch de dependência que não quebra nada): vai pelo caminho rápido de manutenção, sem blueprint e sem aprovações extras.
-4. **Modo contínuo:** com o plano aprovado, o AISEF segue sozinho, tarefa após tarefa e feature após feature. O `aisef_project.py next` calcula as próximas ações: disparar a onda atual em paralelo, validar de forma independente, concluir, pedir o aceite da feature. Ele só para quando precisa de você: aprovação pendente, risco crítico, limite de tentativas atingido ou nada mais pronto. Funciona com o `/loop` do Claude Code no modo autoritmado. As aprovações continuam sendo suas. Opcionalmente, uma branch Git por feature, apagada depois do merge do PR (cada exclusão é uma aprovação reforçada).
-5. Acompanhe tudo no painel (`aisef-panel`). O Mermaid é baixado uma vez, com versão fixa e conferência por SHA-256, para `~/.aisef/vendor/`; depois disso o painel funciona sem internet.
+Para explorar sem gastar tokens, siga o [passo a passo com o projeto de demonstração](docs/guide/walkthrough.md).
 
-O passo a passo completo, usando o projeto de demonstração, está em [docs/walkthrough.md](docs/walkthrough.md).
+## O que vem dentro
 
-## Como o gateway decide
-
-- **Git:** status, log e diff são livres. Commit, push, pull request, merge e release pedem, cada um, a sua própria aprovação. Force push, reescrita de histórico e apagar branch exigem aprovação reforçada.
-- **Arquivos sensíveis:** `.env`, chaves e credenciais pedem aprovação.
-- **Banco de dados e deploy:** o ambiente de destino é desconhecido, então ficam bloqueados como se fossem produção.
-- **Código ofuscado ou baixado** (`curl | sh`, `base64 -d | bash`, `eval`): pede aprovação.
-- **Operações destrutivas:** sobem um nível de aprovação (regra T1).
-- **Ferramentas MCP:** pedem aprovação, a não ser que estejam liberadas em `mcp_allow`.
-- **WebFetch:** uma URL que carrega token é negada.
-- **Modo `bypassPermissions`:** tudo o que pediria aprovação passa a ser negado.
-- **Subagentes:** cada um fica limitado pelo seu Agent Contract. O validador, por exemplo, só lê o Git. Um agente em rascunho fica bloqueado.
-- **O próprio AISEF:** o log de auditoria e as chaves não podem ser editados à mão.
-- **Registro:** toda tentativa negada ou levada à aprovação também vai para o log.
-
-A política completa está em [`plugins/aisef/core/permission-policy.v0.1.json`](plugins/aisef/core/permission-policy.v0.1.json). As exceções do projeto ficam em `.aisef/policy.local.json` e só podem deixar a política mais restritiva.
+| Componente | Papel |
+|---|---|
+| Skills | `aisef` (orquestrador), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
+| Agentes | `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, cada um limitado pelo seu Agent Contract e gerado de uma fonte única |
+| Hooks | gateway (`PreToolUse`), auditoria (`PostToolUse`), doctor (`SessionStart`) |
+| Núcleo | 9 JSON Schemas, políticas de permissão e de modelo, verificador de consistência, cadeia de auditoria assinada, geradores por brief, planejador de ondas, pacotes de contexto e painel |
 
 ## Limites conhecidos
 
 - **O gateway não é uma fronteira de segurança.** Ele lê os comandos por padrões e reduz o risco. Use junto o sandbox do Claude Code (`/sandbox`) e as regras nativas que o `aisef-init` instala.
-- **A aprovação depende de você.** Ela acontece no prompt nativo de permissão, que o modelo não consegue responder sozinho. Mas, se você aprovar sem ler, nenhuma camada técnica impede. Por isso, as operações de maior risco exigem uma aprovação reforçada registrada **antes** do prompt.
-- **Latência.** Cada hook custa cerca de 0,2 a 0,3 s por chamada de ferramenta no Windows (meça com `python tools/bench_hooks.py`). Quase todo esse tempo vem de abrir processos.
-- **Fora do Claude Code não há aplicação técnica.** O `AGENTS.md` serve apenas como orientação.
+- **A aprovação depende de você.** O modelo não consegue responder ao prompt nativo de permissão, mas, se você aprovar sem ler, nenhuma camada técnica impede. Por isso, as operações de maior risco exigem uma aprovação reforçada registrada **antes** do prompt.
+- **Latência.** Cerca de 0,2 a 0,3 s por hook no Windows, quase todo gasto abrindo processos (`python tools/bench_hooks.py`).
+- **Só no Claude Code.** Em outras ferramentas, o `AGENTS.md` serve apenas como orientação.
+
+## Documentação
+
+Comece por [docs/README.md](docs/README.md). Lá estão:
+- os conceitos e o fluxo de trabalho;
+- a referência da política, dos comandos e dos hooks;
+- a lista gerada das regras do check;
+- as [decisões de arquitetura](docs/adr/README.md);
+- o [roadmap](docs/roadmap.md).
 
 ## Desenvolvimento
 
 ```
-python -m venv .venv && .venv/Scripts/pip install jsonschema cryptography   # Windows
+python -m venv .venv && .venv/Scripts/pip install -r requirements-dev.txt   # Windows
 python run_tests.py
 claude plugin validate plugins/aisef
-claude plugin eval plugins/aisef --tag trigger --scaffold --no-publish
+claude plugin eval plugins/aisef --tag trigger --no-publish
 ```
-
-Para entender o projeto:
-
-- [docs/aisef-context.md](docs/aisef-context.md): a visão original.
-- [docs/decisions.md](docs/decisions.md): as decisões tomadas.
-- [docs/pending.md](docs/pending.md): o que falta.
-- [plugins/aisef/evals/README.md](plugins/aisef/evals/README.md): as avaliações das skills.
 
 ## Licença
 

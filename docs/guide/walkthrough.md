@@ -22,7 +22,7 @@ Depois abra `/tmp/demo/panel/index.html` no navegador. O demo traz uma feature (
 
 | Aprovações | Engenharia |
 |---|---|
-| ![Aprovações](img/panel-approvals.png) | ![Engenharia](img/panel-engineering.png) |
+| ![Aprovações](../img/panel-approvals.png) | ![Engenharia](../img/panel-engineering.png) |
 
 Para ver um exemplo de brief, que é o que o modelo escreve em vez de JSON completo:
 

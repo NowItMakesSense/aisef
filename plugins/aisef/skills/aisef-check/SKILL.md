@@ -1,6 +1,6 @@
 ---
 name: aisef-check
-description: 'Valida um projeto AISEF - cada documento contra seu JSON Schema, consistencia cruzada (mais de 60 regras de rastreabilidade, dependencias, agentes, permissoes, estado x evidencia, relatorios, aprovacoes, blueprint) e integridade do log de auditoria (cadeia de hash, assinaturas Ed25519, head externo). Use antes de qualquer transicao de estado, antes de pedir aprovacao, ao retomar trabalho, ou quando o usuario pedir "validar", "checar consistencia", "verificar auditoria".'
+description: 'Valida um projeto AISEF - cada documento contra seu JSON Schema, consistencia cruzada (mais de 130 regras de rastreabilidade, dependencias, agentes, permissoes, estado x evidencia, relatorios, aprovacoes, blueprint) e integridade do log de auditoria (cadeia de hash, assinaturas Ed25519, head externo). Use antes de qualquer transicao de estado, antes de pedir aprovacao, ao retomar trabalho, ou quando o usuario pedir "validar", "checar consistencia", "verificar auditoria".'
 ---
 
 # aisef-check

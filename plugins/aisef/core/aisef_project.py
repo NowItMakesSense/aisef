@@ -4,7 +4,7 @@
 O plugin guarda codigo, schemas e politica; o projeto guarda so dados. Este modulo cria a estrutura,
 anexa eventos ao log de auditoria e verifica a integridade.
 
-Chaves e head ficam FORA do projeto (decisao do chat: o head nao pode ficar no mesmo armazenamento
+Chaves e head ficam FORA do projeto (ADR 0005: o head nao pode ficar no mesmo armazenamento
 do log, e agentes nunca tocam a chave privada):
     ~/.aisef/keys/<project_id>/audit-key-1.pem   chave PRIVADA do Audit Signer
     ~/.aisef/heads/<project_id>.json             head assinado de referencia

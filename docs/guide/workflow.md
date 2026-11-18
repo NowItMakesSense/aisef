@@ -1,0 +1,67 @@
+# Fluxo de trabalho
+
+```mermaid
+flowchart LR
+  I[aisef-init] --> D[Discovery]
+  D --> T[aisef-tooling<br/>sugere ferramentas]
+  D --> F[Feature Contract<br/>+ tarefas + RTM]
+  F -->|você aprova o plano| B[Blueprint]
+  B --> W[Ondas paralelas<br/>de agentes]
+  W --> V[Validador<br/>independente]
+  V -->|reprovou| W
+  V --> C[Concluída]
+  C -->|todas concluídas| A[Aceite da feature<br/>por você]
+  Q[Mudança pequena] --> M[Caminho rápido<br/>FEAT-MAINT]
+```
+
+## 1. Começar
+Diga "iniciar o AISEF neste projeto". A `aisef-init` detecta se o projeto é novo ou existente, pergunta só o identificador, o nome e o ambiente e cria `.aisef/` com o log assinado. Depois:
+- mostra o teto de cada agente e pede sua aprovação para ativá-los;
+- propõe as regras nativas de segunda camada em `.claude/settings.json`;
+- propõe a seção AISEF no `AGENTS.md`;
+- oferece a `find-skills` e o grafo de código.
+
+Nada é gravado sem o seu OK.
+
+## 2. Descobrir
+A `aisef-discovery` investiga antes de perguntar: docs, código, schema (sem conectar ao banco), testes, histórico e, se preciso, internet. Cada informação é classificada como `confirmado`, `encontrado` (com fonte), `inferido` (vira pergunta) ou `desconhecido`. O resultado fica em `.aisef/discovery.md`. Em seguida, a `aisef-tooling` sugere skills, plugins e MCPs ligados ao que foi descoberto, e só instala o que você escolher.
+
+## 3. Especificar
+Peça a feature. O modelo escreve um brief de ~20 linhas e `aisef_new.py feature` gera, já validados contra os schemas:
+- o Feature Contract;
+- os Task Contracts;
+- a RTM;
+- o pedido `plan_approval`.
+
+Você aprova o plano na `aisef-approve`. Depois vem o Blueprint (`aisef_new.py blueprint`).
+
+## 4. Executar (modo contínuo)
+Com o plano aprovado, o orquestrador segue sozinho. A cada ciclo, `aisef_project.py next` calcula as ações, e cada uma tem uma resposta:
+
+| Ação | Resposta do orquestrador |
+|---|---|
+| `dispatch` | Dispara a onda atual em paralelo, com pacote de contexto e modelo/effort roteados |
+| `validate` | Chama um validador independente |
+| `complete` | Conclui a tarefa |
+| `feature_acceptance` | Pede o seu aceite da feature |
+| `await_decision` | Leva a decisão até você |
+
+Ele para só quando precisa de você:
+- `critical_risk`;
+- `attempts_exhausted`;
+- `user_decision_pending`;
+- `nothing_ready`.
+
+Funciona com o `/loop` do Claude Code no modo autoritmado.
+
+## 5. Aceitar
+A feature só fecha com o seu aceite, depois de requisitos rastreados, critérios verificados, testes de integração e regressão e um relatório final planejado × executado. **O aceite não autoriza Git.** Commit, push, PR e merge pedem aprovação própria.
+
+## Mudanças pequenas
+Typo, texto, renomeação local, patch de dependência sem quebra, ajuste de lint: `aisef_new.py quick` cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez, você aprova o plano dela; depois, essas mudanças seguem sem blueprint nem validador. Na dúvida, não é rápido.
+
+## Reabrir uma feature aceita
+É sempre um novo ciclo (`defect`, `requirement_change` ou `evolution`), com Impact Analysis e novo aceite. O ciclo anterior fica congelado ([ADR 0001](../adr/0001-reabertura-de-feature-e-um-novo-ciclo.md)).
+
+## Branch por feature (opcional)
+Com `"git": {"branch_per_feature": true, ...}` no `config.json`, o `next` sugere criar `feat/<id>` antes da primeira onda e, depois do merge do PR, apagar a branch remota e a local. Cada exclusão é uma aprovação reforçada.

@@ -4,85 +4,88 @@
 
 **English** · [Português](README.pt-BR.md)
 
-AI-assisted software engineering with **autonomy in execution, rigor in validation and human control over the decisions that matter.** AISEF is a Claude Code plugin you install once and use in any project, new or existing. It combines a spec-driven workflow with governance that is **enforced, not just requested**: a permission gateway on every tool call, a tamper-evident signed audit log, and approvals that only you can give.
+**AI-assisted software engineering with autonomy in execution, rigor in validation and human control over the decisions that matter.**
+
+AISEF is a Claude Code plugin you install once and use in any project, new or existing. It turns plain-language requests into specified, agent-executed, independently validated work, under a permission policy that is **enforced on every tool call, not just requested** and a tamper-evident signed audit log.
 
 ![Panel](docs/img/panel-overview.png)
 
-## Why AISEF
+## Why
 
-Most agent workflows either give you **process without enforcement** (skills that ask the model to behave) or **guardrails without process** (a hook that blocks a few commands). AISEF does both:
+Most agent workflows give you either **process without enforcement** (skills that ask the model to behave) or **guardrails without process** (a hook that blocks a few commands). AISEF does both, and keeps the evidence:
 
-- **Process:** discovery, then Feature Contract, then Engineering Blueprint, then task contracts, then execution. Every task is validated by a different agent, and the feature closes with your acceptance. Requirements are traceable end to end (RTM), and more than 60 cross-document consistency rules are checked.
-- **Enforcement:** a `PreToolUse` gateway applies the permission policy:
-  - Each git operation needs its own approval (commit ≠ push ≠ pull request ≠ merge).
-  - Secret files ask for approval; databases and deploys are denied.
-  - Each subagent is capped by its Agent Contract (the validator, for example, can only read git).
-  - Destructive operations go up one approval level.
-  - MCP tools ask for approval unless allow-listed (`mcp_allow`), `WebFetch` URLs carrying tokens are denied, and in `bypassPermissions` mode anything that would need approval is denied.
-- **Evidence:** every operation and every blocked attempt goes to an append-only, hash-chained log signed with Ed25519. The signed head and periodic anchors are kept outside the repository, so rewriting or truncating the log is detected.
+| | What you get |
+|---|---|
+| **Process** | Discovery → Feature Contract → Engineering Blueprint → task contracts → parallel execution → independent validation → your acceptance. Requirements are traced end to end (RTM); 137 consistency rules are checked. |
+| **Enforcement** | A `PreToolUse` gateway applies the permission policy to Bash, PowerShell, file tools, WebFetch and MCP. Each Git operation needs its own approval, secrets ask, databases and deploys are denied, and each subagent is capped by its Agent Contract. |
+| **Evidence** | Every operation and every blocked attempt goes to a hash-chained log signed with Ed25519, with the signed head kept outside the repository. |
+| **Cost control** | Model and effort are routed per task by risk and complexity, cheapest first; each failed attempt moves one level up. |
+
+## How it flows
+
+```mermaid
+flowchart LR
+  D[Discovery] --> F[Feature Contract<br/>+ tasks + RTM]
+  F -->|you approve| B[Blueprint]
+  B --> W[Parallel waves<br/>of agents]
+  W --> V[Independent<br/>validator]
+  V -->|rejected| W
+  V --> A[Your acceptance]
+```
+
+Small changes (typo, trivial fix, non-breaking dependency patch) take a quick maintenance path with no blueprint. Once a plan is approved, **continuous mode** keeps going on its own and stops only when it needs you.
 
 ## Install
 
 Requirements:
-
-- Claude Code.
-- Python 3.10+ with `pip install jsonschema cryptography`.
-- On Windows, Git Bash (Claude Code already uses it for hooks).
-
-In Claude Code:
+- Claude Code;
+- Python 3.10+ with `pip install jsonschema cryptography`;
+- on Windows, Git Bash (Claude Code already uses it for hooks).
 
 ```
 /plugin marketplace add NowItMakesSense/aisef
 /plugin install aisef@aisef
 ```
 
-If the Python that has `cryptography` is not the first one on your PATH, set `AISEF_PYTHON` to it. Doing so also makes the hooks faster.
+If the Python with `cryptography` is not the first on your PATH, set `AISEF_PYTHON` to it (this also makes the hooks faster). A `SessionStart` doctor tells you if something is missing and stays silent otherwise.
 
-A `SessionStart` doctor tells you if something is missing, and stays silent otherwise.
+## Start in 5 minutes
 
-## Use
+1. In a project folder, say **"start AISEF in this project"**. On an existing codebase, AISEF investigates before proposing anything.
+2. Approve the agents and the native second-layer rules when asked.
+3. Ask for a feature in plain language. You approve the plan; execution runs inside the approved scope; the feature closes only with your acceptance.
+4. Watch it in the panel (`aisef-panel`).
 
-1. In a project folder, say "start AISEF in this project". On an existing codebase, AISEF investigates before proposing anything.
-2. Approve the agents and the native second-layer permission rules when asked.
-3. Ask for work in plain language:
-   - **Feature:** the model writes a ~20-line brief, and `aisef_new.py` expands it into valid contracts, tasks, RTM and a plan-approval request. You approve the plan, execution runs inside the approved scope, and the feature closes only with your acceptance.
-   - **Small change** (typo, trivial fix, non-breaking dependency patch): goes through a quick maintenance path, with no blueprint and no extra approvals.
-4. **Continuous mode:** once a plan is approved, AISEF keeps going on its own, task after task and feature after feature (`aisef_project.py next` computes the next actions: dispatch the current wave in parallel, independent validation, completion, feature acceptance). It stops only when it needs you: a pending approval, a critical risk, exhausted fix attempts, or nothing left to do. Works with Claude Code's `/loop` in self-paced mode. Approvals stay yours. Optionally, one Git branch per feature, deleted after the PR is merged (each deletion is a reinforced approval).
-5. See everything in the panel (`aisef-panel`): features, tasks, traceability, approvals, decisions, risks, timeline, dependencies, and an engineering page with architecture and ER diagrams. Mermaid is fetched once (pinned version, SHA-256 checked) into `~/.aisef/vendor/`, so the panel works offline from then on.
-
-A step-by-step walkthrough with the demo project is in [docs/walkthrough.md](docs/walkthrough.md) (Portuguese).
+To explore without spending tokens, follow the [walkthrough with the demo project](docs/guide/walkthrough.md) (Portuguese).
 
 ## What's inside
 
 | Component | Role |
 |---|---|
 | Skills | `aisef` (orchestrator), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
-| Agents | `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, each capped by an Agent Contract; generated from one source (`tools/gen_agents.py`) so prompts and contracts never drift |
+| Agents | `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, each capped by an Agent Contract and generated from one source |
 | Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`) |
-| Core | 9 JSON Schemas, permission policy, `check_project.py`, signed audit chain, generators, panel |
-| `AGENTS.md` template | the same rules as guidance for Codex, Cursor, Gemini and other tools |
+| Core | 9 JSON Schemas, permission and model policies, consistency checker, signed audit chain, brief generators, wave planner, context packs, panel |
 
 ## Honest limits
 
-- **The gateway is not a security boundary.** It classifies commands by patterns and reduces risk. Pair it with the Claude Code sandbox (`/sandbox`) and the native permission rules it installs.
-- **Approval relies on you.** It uses Claude Code's native permission prompt, which the model cannot answer, but nothing stops you from approving without reading. That is why the riskiest operations require a recorded reinforced approval *before* the prompt appears.
-- **Hook latency.** Each hook costs about 0.2–0.3 s on Windows (`python tools/bench_hooks.py`), mostly process startup.
-- **Outside Claude Code there is no enforcement.** `AGENTS.md` is guidance only.
+- **The gateway is not a security boundary.** It classifies commands by patterns and reduces risk. Pair it with the Claude Code sandbox (`/sandbox`) and the native rules it installs.
+- **Approval relies on you.** The model cannot answer the native permission prompt, but nothing stops you from approving without reading. That is why the riskiest operations need a recorded reinforced approval *before* the prompt appears.
+- **Hook latency.** About 0.2–0.3 s per hook on Windows, mostly process startup (`python tools/bench_hooks.py`).
+- **Claude Code only.** Elsewhere, `AGENTS.md` is guidance, not enforcement.
+
+## Documentation
+
+Start at [docs/README.md](docs/README.md) for concepts, the workflow, the policy reference, commands, hooks, the generated list of check rules, the [architecture decisions](docs/adr/README.md) and the [roadmap](docs/roadmap.md).
 
 ## Development
 
 ```
-python -m venv .venv && .venv/Scripts/pip install jsonschema cryptography   # Windows
-python run_tests.py                                  # 10 suites
+python -m venv .venv && .venv/Scripts/pip install -r requirements-dev.txt   # Windows
+python run_tests.py
 claude plugin validate plugins/aisef
-claude plugin eval plugins/aisef --tag trigger --scaffold --no-publish   # skill evals
+claude plugin eval plugins/aisef --tag trigger --no-publish
 ```
-
-Further reading:
-
-- [docs/decisions.md](docs/decisions.md): every decision.
-- [docs/pending.md](docs/pending.md): what is still open.
-- [docs/aisef-context.md](docs/aisef-context.md): the original vision.
 
 ## License
 
