@@ -18,6 +18,7 @@
     "domain": 0,
     "devops": 1,
     "frontend": 2,
+    "implementer": 3,
     "qa": 2,
     "backend": 3,
     "database": 3,

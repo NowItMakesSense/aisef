@@ -676,6 +676,45 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         if sp is not None and r["attempts"]["specialist_consultations_used"] > sp:
             rep.err("REPORT-CONSULTATIONS", where, "consultas a especialista acima do limite (%d)" % sp)
 
+    # ------------------------------------------------------------------ SDD + TDD (fatias, spec e red-green)
+    for r in reports:
+        cycles = (r.get("tdd_evidence") or {}).get("cycles", [])
+        where = "relatorio " + r["report_id"]
+        for i, c in enumerate(cycles, 1):
+            label = "ciclo %d (%s)" % (i, c.get("test", "?"))
+            if c["red"]["exit_code"] == 0:
+                rep.err("TDD-RED-NOT-FAILING", where, "%s: o teste 'vermelho' passou (exit 0); TDD exige ve-lo falhar antes" % label)
+            if c["green"]["exit_code"] != 0:
+                rep.err("TDD-GREEN-FAILING", where, "%s: o teste 'verde' falhou (exit %d)" % (label, c["green"]["exit_code"]))
+            try:
+                out_of_order = parse_time(c["red"]["at"]) >= parse_time(c["green"]["at"])
+            except (ValueError, TypeError):
+                out_of_order = True  # horario ilegivel ou sem fuso: nao da para provar a ordem
+            if out_of_order:
+                rep.err("TDD-RED-BEFORE-GREEN", where, "%s: o vermelho (%s) nao veio antes do verde (%s)"
+                        % (label, c["red"]["at"], c["green"]["at"]))
+    for tid, t in tasks.items():
+        where = "tarefa " + tid
+        st = t["state"]["status"]
+        tdd = (t.get("tests") or {}).get("tdd_required")
+        if tdd and st in ("executed", "validated", "completed"):
+            mine = [r for r in reports if r["task_id"] == tid and r["agent"]["agent_id"] == t["assigned_agent"]["agent_id"]
+                    and r["status"] == "executed"]
+            if mine and not any((r.get("tdd_evidence") or {}).get("cycles") for r in mine):
+                (rep.warn if st == "completed" else rep.err)(
+                    "TDD-EVIDENCE-MISSING", where, "TDD obrigatorio, mas nenhum Execution Report do executor traz tdd_evidence")
+        if t.get("kind") == "slice":
+            if not any((c.get("verification") or {}).get("method") == "automated_test" for c in t["acceptance_criteria"]):
+                rep.err("SLICE-NO-AUTOMATED-TEST", where, "fatia vertical sem nenhum criterio verificado por teste automatizado")
+            f = feats.get(t["feature_id"])
+            spec = (f or {}).get("spec")
+            if f is not None and not spec:
+                rep.err("SPEC-REQUIRED", where, "fatia vertical numa feature sem spec (solucao, historias e seams de teste)")
+            elif spec:
+                unknown = set((t.get("tests") or {}).get("seams", [])) - set(spec.get("test_seams", []))
+                if unknown:
+                    rep.err("SPEC-SEAM-UNKNOWN", where, "seams fora da spec da feature: %s" % ", ".join(sorted(unknown)))
+
     # ------------------------------------------------------------------ roteamento de modelo (execution_profile)
     # O validador nunca pode ter nivel menor que o do executor (Model Policy). Compara o relatorio de avaliacao
     # com o do executor da mesma tarefa na tentativa mais recente (ou o ultimo na ordem dos arquivos).

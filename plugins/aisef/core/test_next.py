@@ -271,5 +271,28 @@ check("CLI --json devolve acoes e stop_reason", pr.returncode == 0 and j.get("st
 pr = subprocess.run([sys.executable, "-I", cli, "next", "--project", p, "--feature", "FEAT-LOGIN"], capture_output=True, text=True, env=dict(os.environ))
 check("CLI humano lista as acoes", pr.returncode == 0 and "dispatch" in pr.stdout and "T-2" in pr.stdout, pr.stdout + pr.stderr)
 
+
+# ------------------------------------------------------------------ guia de fases (0.6.0)
+g0 = new_project("guia0", [], [])
+r = nx.compute_next(g0)
+check("guia: sem discovery.md a fase e discovery", r["guide"]["phase"] == "discovery" and "aisef-discovery" in r["guide"]["steps"][0], r["guide"])
+open(os.path.join(g0, ".aisef", "discovery.md"), "w", encoding="utf-8").write("# Discovery\n")
+r = nx.compute_next(g0)
+check("guia: com discovery e sem feature, propoe Grill -> Spec -> Fatias -> aprovar",
+      r["guide"]["phase"] == "specify" and [s.split(":")[0] for s in r["guide"]["steps"]] == ["Grill", "Spec", "Fatias", "Aprovar o plano"],
+      r["guide"])
+check("guia: comandos do Matt Pocock mapeados para o equivalente no AISEF",
+      "aisef-feature" in r["guide"]["matt_equivalents"]["/to-spec"] and "implementer" in r["guide"]["matt_equivalents"]["/implement-spec"])
+g1 = new_project("guia1", [feature(tids=["T-1"], plan="pending", status="awaiting_plan_approval")], [task("T-1", status="draft")])
+open(os.path.join(g1, ".aisef", "discovery.md"), "w", encoding="utf-8").write("# Discovery\n")
+approval(g1, "APR-001", "plan_approval", blocked=["T-1"])
+r = nx.compute_next(g1)
+check("guia: plano pendente leva a fase approve_plan", r["guide"]["phase"] == "approve_plan", r["guide"])
+g2 = new_project("guia2", [feature(tids=["T-1"])], [task("T-1")])
+open(os.path.join(g2, ".aisef", "discovery.md"), "w", encoding="utf-8").write("# Discovery\n")
+r = nx.compute_next(g2)
+check("guia: tarefa pronta leva a fase execute", r["guide"]["phase"] == "execute", r["guide"])
+check("guia: o texto do next mostra a fase", "Fase: execute" in nx.format_next(r))
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

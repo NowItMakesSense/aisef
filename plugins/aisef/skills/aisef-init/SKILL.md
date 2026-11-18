@@ -31,7 +31,7 @@ Isso cria `.aisef/{contracts/{features,tasks,agents},blueprints,approvals,author
 Pergunte tambem se o usuario quer **uma branch por feature** (e apagar a branch depois do merge do PR). Se sim, com o OK, acrescente em `config.json` (a edicao pede aprovacao): `"git": {"branch_per_feature": true, "delete_branch_after_merge": true, "branch_prefix": "feat/"}`. Detalhes na skill **aisef**, secao "Branch por feature".
 
 ## 4. Ative os agentes (decisao do usuario)
-O init criou os Agent Contracts do orquestrador e dos 8 agentes do plugin em `.aisef/contracts/agents/*.json`, com `status: "draft"`. Agente em draft e bloqueado pelo gateway. Mostre ao usuario, numa tabela, o teto de cada um (recursos, Git, ambiente maximo; o `validator` so tem Git de leitura) e pergunte se aprova (AskUserQuestion: todos, alguns, nenhum agora). Com o OK:
+O init criou os Agent Contracts do orquestrador e dos 9 agentes do plugin (inclusive o `implementer`, que faz as fatias verticais) em `.aisef/contracts/agents/*.json`, com `status: "draft"`. Agente em draft e bloqueado pelo gateway. Mostre ao usuario, numa tabela, o teto de cada um (recursos, Git, ambiente maximo; o `validator` so tem Git de leitura) e pergunte se aprova (AskUserQuestion: todos, alguns, nenhum agora). Com o OK:
 ```
 python -I CORE/aisef_project.py agents --project . --activate [--roles backend,qa]
 ```
@@ -55,6 +55,13 @@ projeto (AskUserQuestion). Com o OK:
 DISABLE_TELEMETRY=1 npx --yes skills add vercel-labs/skills@find-skills -a claude-code -y
 ```
 O gateway abre o prompt nativo. Sem ela, a aisef-tooling usa `npx skills find` direto; nada deixa de funcionar.
+
+### Skills de engenharia do Matt Pocock (recomendacao padrao, pergunte antes)
+O fluxo SDD + TDD do AISEF usa as skills que o modelo pode chamar do plugin `mattpocock-skills` (MIT): `grilling`, `domain-modeling`, `tdd`, `codebase-design`, `code-review` e `diagnosing-bugs`. O agente `implementer` ja pre-carrega a `tdd`. Sem o plugin, o AISEF segue regras proprias equivalentes, entao nada deixa de funcionar. Veja se ele ja esta instalado (`claude plugin list --json`). Se nao estiver, ofereca (AskUserQuestion). Com o OK:
+```
+claude plugin install mattpocock-skills@claude-plugins-official --scope project
+```
+O gateway abre o prompt nativo. Nao rode o `/setup-matt-pocock-skills` (tracker e labels): no AISEF, spec e fatias ficam em `.aisef/`, nao no issue tracker.
 
 ### Grafo de codigo (recomendacao padrao, pergunte antes)
 O AISEF recomenda dois grafos que se complementam: **codebase-memory-mcp** (codigo: chamadas, rotas, raio de impacto) e

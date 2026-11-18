@@ -12,6 +12,15 @@ politica ficam no plugin (`<skill-dir>/../../core`, chamado aqui de CORE).
 
 Se o projeto nao tem `.aisef/config.json`, pare e use a skill **aisef-init**.
 
+## Guia de fases (sempre diga onde o usuario esta e o proximo passo)
+Todo projeto AISEF e SDD + TDD: **Discovery -> Grill -> Spec -> Fatias verticais -> aprovar -> implementar com TDD -> validar -> code-review -> aceite.** O `next` diz a fase e o proximo passo com a skill certa, inclusive antes da execucao (campo `guide`):
+```
+python -I CORE/aisef_project.py next --project .
+```
+- Quando a conversa virar uma ideia de mudanca (o usuario descreve algo novo, pergunta "como fariamos X", ou pede uma spec), **nao comece a codar**: diga em uma linha "Estamos em <fase>. Proximo: <passo> (skill <nome>)" e siga para a **aisef-feature** (Grill, depois Spec, depois Fatias).
+- Se o usuario citar comandos do Matt Pocock (`/grill-me`, `/to-spec`, `/to-tickets`, `/implement-spec`, `/tdd`, `/code-review`), use o mapa `guide.matt_equivalents` do `next`. Explique que, no AISEF, o mesmo papel e feito pela fase correspondente, gravada em `.aisef/` com rastreabilidade.
+- Mudanca pequena de verdade (typo, texto, patch sem quebra) vai pelo caminho rapido, sem essas fases.
+
 ## Regras que nunca mudam
 1. **Nao invente requisitos nem regras de negocio.** A origem de um requisito so pode ser `user_stated`, `investigated` ou `decision`.
 2. **Investigue antes de perguntar** (docs, codigo, configs, migrations, decisoes anteriores, historico, internet). Depois pergunte, dizendo o que falta e o que ja encontrou.
@@ -48,7 +57,7 @@ O `next` deriva o estado do log (`delegation`/`task_started` -> em andamento, `t
 1. `await_decision`: leve ao usuario (**aisef-approve**); so a tarefa bloqueada espera, o resto continua.
 2. `complete`: **aisef-check**, estado do contrato para `completed`, `append` de `task_completed` (comando pronto na acao).
 3. `validate`: validador independente com a rota `--validator` da acao, em background.
-4. `feature_acceptance`: relatorio final e pedido `feature_acceptance` com `aisef_project.py request`.
+4. `feature_acceptance`: antes, revise a feature inteira com a skill `code-review` (plugin `mattpocock-skills`; padroes + aderencia a spec; sem o plugin, um subagente revisor). Achados viram novas tentativas das fatias afetadas. Depois, relatorio final e pedido `feature_acceptance` com `aisef_project.py request`.
 5. `create_branch`: rode o comando antes da primeira onda da feature (ver "Branch por feature").
 6. `dispatch`: para cada tarefa da onda, `pack` + rota da acao, `append` de `delegation` e uma chamada de Agent com `run_in_background: true`; todas na mesma mensagem.
 7. `wait`: espere a notificacao dos agentes. Ao receber, volte ao `next`.
@@ -81,7 +90,8 @@ python -I CORE/aisef_new.py quick --project . --title "<o que>" --why "<por que>
 Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedido de plano dessa feature: leve ao usuario uma unica vez (**aisef-approve**). Depois, as tarefas ja nascem `ready`: faca a mudanca, rode os testes, registre o resultado e conclua, sem blueprint nem validador independente. Commit, push e afins continuam pedindo aprovacao.
 
 ## Delegacao
-- Use os agentes do plugin (`aisef:backend`, `aisef:frontend`, `aisef:database`, `aisef:qa`, `aisef:security`, `aisef:devops`, `aisef:domain`, `aisef:validator`) sob demanda. No Task Contract, `assigned_agent.agent_id` e o nome curto (`backend`), que e o Agent Contract em `.aisef/contracts/agents/`.
+- Use os agentes do plugin (`aisef:implementer`, `aisef:backend`, `aisef:frontend`, `aisef:database`, `aisef:qa`, `aisef:security`, `aisef:devops`, `aisef:domain`, `aisef:validator`) sob demanda. No Task Contract, `assigned_agent.agent_id` e o nome curto (`implementer`), que e o Agent Contract em `.aisef/contracts/agents/`.
+- **Fatia vertical (`kind: slice`) vai para o `implementer`**, que faz a fatia inteira com TDD (a skill `tdd` vem pre-carregada quando o plugin `mattpocock-skills` existe). No prompt da delegacao, exija `tdd_evidence` no Execution Report. Os especialistas viram **revisores** quando a fatia toca a area deles (`touches`: `data` -> `database`, `ui` -> `frontend`; risco alto ou ameaca no blueprint -> `security`); eles nao reimplementam, devolvem achados com evidencia.
 - O gateway aplica o **teto** do Agent Contract a cada subagente: agente em `draft` e bloqueado, recursos e operacoes Git fora do teto sao negados (o `validator` so le o Git). Agentes sem contrato (ex.: `Explore`) seguem so a politica.
 - **Contexto (context engineering):** antes de delegar, gere o pacote da tarefa e entregue-o ao agente, em vez de deixa-lo explorar o repositorio:
   ```

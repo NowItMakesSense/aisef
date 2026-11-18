@@ -6,7 +6,7 @@ O detalhe de cada versão entregue está no [CHANGELOG](../CHANGELOG.md); as dec
 
 | Versão | Entrega |
 |---|---|
-| 0.6.0 | **SDD + TDD:** fases Grill → Spec → Fatias → Implementação com o método do Matt Pocock; fatias verticais; evidência de teste vermelho antes do verde; guia de próximos passos |
+| ~~0.6.0~~ | Entregue: SDD + TDD com fatias verticais, `implementer`, evidência de TDD checada e guia de fases |
 | 0.6.1 | **Frontend:** autoridade de design por projeto (`DESIGN.md` + tokens) com Impeccable, Taste e UI/UX Pro Max; critérios de aceite visuais |
 | 0.7.0 | **Velocidade:** `dispatch` da onda numa chamada, validação por onda, `precheck` determinístico, worktrees opcionais |
 | 0.8.0 | **Painel vivo:** servidor local, visão "Agora", fluxo da feature, ondas em Gantt, RTM viva |

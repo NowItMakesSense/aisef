@@ -14,6 +14,9 @@ Le contratos, aprovacoes, relatorios e o log de auditoria e devolve o que fazer 
     delete_merged_branch (git.delete_branch_after_merge) feature aceita com a branch ainda local
     idle                 nada a fazer
 
+`guide` diz a fase (discovery, specify, approve_plan, execute, review, decide, done) e o proximo passo com a
+skill certa, tambem antes da execucao; mapeia os comandos do Matt Pocock para o equivalente no AISEF.
+
 `stop_reason` diz quando o loop deve parar: critical_risk (para na hora), attempts_exhausted e
 user_decision_pending (so quando nao resta trabalho automatizavel), nothing_ready (idle). None = seguir.
 
@@ -97,6 +100,51 @@ def git_state(project):
 
 def _cmd(script, *args):
     return 'python -I "%s" %s' % (os.path.join(HERE, script), " ".join(args))
+
+
+# Guia de fases (SDD + TDD). Cada passo cita a skill que o executa. Os nomes do Matt Pocock (plugin
+# mattpocock-skills) sao as skills que o modelo pode chamar; to-spec/to-tickets/implement-spec sao so do usuario
+# (disable-model-invocation) e por isso o AISEF faz o mesmo papel nas fases Spec e Fatias da aisef-feature.
+MATT_EQUIVALENTS = {"/grill-me": "fase Grill (skill grilling)", "/grill-with-docs": "fase Grill + domain-modeling",
+                    "/to-spec": "fase Spec da aisef-feature", "/to-tickets": "fase Fatias da aisef-feature",
+                    "/implement-spec": "modo continuo (next) com o agente implementer + tdd",
+                    "/implement": "modo continuo (next) com o agente implementer + tdd", "/tdd": "skill tdd no implementer",
+                    "/code-review": "revisao da feature antes do aceite"}
+STEPS = {
+    "discovery": ["aisef-discovery: investigar o projeto e gravar .aisef/discovery.md (investigar antes de perguntar)",
+                  "aisef-tooling: sugerir skills, plugins e MCPs a partir do discovery"],
+    "specify": ["Grill: entrevistar o usuario ate fechar cada ramo da ideia (skill grilling; vocabulario no GLOSSARY.md com domain-modeling)",
+                "Spec: aisef-feature fase Spec (solucao, historias, decisoes, seams de teste confirmados com o usuario)",
+                "Fatias: aisef-feature fase Fatias (fatias verticais com blocking edges; aisef_new.py feature)",
+                "Aprovar o plano: aisef-approve"],
+    "approve_plan": ["aisef-approve: apresentar o plano pendente (requisitos, fatias, seams, riscos) e registrar a decisao do usuario"],
+    "execute": ["modo continuo: dispatch da onda (implementer com tdd, vermelho antes do verde) -> validador independente -> complete"],
+    "review": ["code-review da feature inteira (skill code-review: padroes + aderencia a spec), correcoes como novas tentativas",
+               "relatorio final planejado x executado e pedido feature_acceptance (aisef_project.py request)"],
+    "decide": ["aisef-approve: levar ao usuario as decisoes pendentes listadas em await_decision"],
+    "done": ["Nada pendente. Nova ideia? Comece pelo Grill (skill grilling) e siga Spec -> Fatias."],
+}
+
+
+def project_phase(project, feats, tasks, approvals, actions):
+    """Em que fase o projeto esta e qual o proximo passo, com a skill certa (inclusive antes da execucao)."""
+    kinds = {a["kind"] for a in actions}
+    real = {fid: f for fid, f in feats.items() if fid != "FEAT-MAINT"}
+    if not os.path.exists(os.path.join(ap.aisef_dir(project), "discovery.md")):
+        phase = "discovery"
+    elif kinds & {"dispatch", "validate", "complete", "wait", "create_branch"}:
+        phase = "execute"
+    elif "feature_acceptance" in kinds:
+        phase = "review"
+    elif any(a.get("request_type") == "plan_approval" for a in actions if a["kind"] == "await_decision"):
+        phase = "approve_plan"
+    elif "await_decision" in kinds:
+        phase = "decide"
+    elif not real or all((f.get("state") or {}).get("status") in ACCEPTED_FEATURE_STATES + ("cancelled",) for f in real.values()):
+        phase = "specify" if not real else "done"
+    else:
+        phase = "done"
+    return {"phase": phase, "steps": STEPS[phase], "matt_equivalents": MATT_EQUIVALENTS}
 
 
 def compute_next(project, feature=None, now=None, git_state=None):
@@ -355,7 +403,8 @@ def compute_next(project, feature=None, now=None, git_state=None):
         stop, detail = "nothing_ready", "nada pronto para executar"
     if not actions:
         actions = [{"kind": "idle"}]
-    return {"feature": feature, "actions": actions, "stop_reason": stop, "stop_detail": detail,
+    guide = project_phase(project, feats, tasks, approvals, actions)
+    return {"feature": feature, "actions": actions, "stop_reason": stop, "stop_detail": detail, "guide": guide,
             "deferred": deferred, "wave_error": wave_error, "warnings": warnings,
             "states": {tid: state[tid] for tid in sorted(state) if in_scope(tasks[tid].get("feature_id"))}}
 
@@ -401,4 +450,7 @@ def format_next(res):
     for w in res.get("warnings", []):
         lines.append("AVISO " + w)
     lines.append("stop_reason: %s%s" % (res["stop_reason"], " (%s)" % res["stop_detail"] if res["stop_detail"] else ""))
+    if res.get("guide"):
+        lines.append("Fase: %s. Proximo passo:" % res["guide"]["phase"])
+        lines += ["  %d. %s" % (i, s_) for i, s_ in enumerate(res["guide"]["steps"], 1)]
     return "\n".join(lines)

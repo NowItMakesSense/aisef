@@ -42,6 +42,9 @@ def problems(project):
             with open(os.path.join(agents_dir, name), encoding="utf-8") as fh:
                 if json.load(fh).get("status") == "draft":
                     drafts.append(name[:-5])
+        if os.path.isdir(agents_dir) and not os.path.exists(os.path.join(agents_dir, "implementer.json")):
+            found.append("projeto anterior a 0.6.0: falta o agente implementer (fatias verticais com TDD). Proponha ao "
+                         "usuario `aisef_project.py agents --project .` e depois `agents --project . --activate --roles implementer`")
         if drafts:
             found.append("agentes ainda em draft (bloqueados pelo gateway): %s. Peca ao usuario para aprova-los "
                          "(aisef-init, passo 4)" % ", ".join(drafts))

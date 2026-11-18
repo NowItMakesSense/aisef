@@ -366,6 +366,9 @@ AGENT_PROFILES = {
     "orchestrator": ("Orquestrador AISEF", ["implementation", "review", "investigation", "documentation"], EDIT_TOOLS,
                      ["repo_code", "config_ci_iac"], ["status_log_diff", "commit", "push", "pull_request", "merge"],
                      ["Coordenar o trabalho, executar tarefas pequenas e integrar resultados (sessao principal)"]),
+    "implementer": ("Implementador de fatias", ["implementation", "refactoring", "testing"], EDIT_TOOLS + ["Skill"],
+                    ["repo_code", "db_schema"], ["status_log_diff", "commit"],
+                    ["Implementar uma fatia vertical inteira com TDD (vermelho antes do verde), dentro dos seams aprovados"]),
     "backend": ("Agente Backend", ["implementation", "refactoring", "testing"], EDIT_TOOLS, ["repo_code", "db_schema"], ["status_log_diff", "commit"],
                 ["APIs, servicos, regras de dominio e integracoes, com testes"]),
     "frontend": ("Agente Frontend", ["implementation", "refactoring", "testing"], EDIT_TOOLS, ["repo_code"], ["status_log_diff", "commit"],
@@ -410,7 +413,7 @@ def agent_contract(role, created_at):
         "audit": {"created_by": "aisef-init", "created_at": created_at},
     }
     if role == "validator":
-        doc["validation_role"]["validates"] = ["backend", "frontend", "database", "devops"]
+        doc["validation_role"]["validates"] = ["implementer", "backend", "frontend", "database", "devops"]
     return doc
 
 
@@ -430,6 +433,8 @@ def activate_agents(project, roles=None):
     when, done = now_iso(), []
     for role in roles or list(AGENT_PROFILES):
         path = os.path.join(aisef_dir(project), "contracts", "agents", role + ".json")
+        if not os.path.exists(path):
+            continue  # projeto anterior ao agente: `agents` (sem --activate) cria o draft
         with open(path, encoding="utf-8") as fh:
             doc = json.load(fh)
         if doc.get("status") != "draft":
@@ -444,7 +449,31 @@ def activate_agents(project, roles=None):
                          "summary": "Agent Contract %s aprovado e ativo" % role,
                          "subject": {"kind": "agent_contract", "id": role, "version": doc["contract_version"]}})
         done.append(role)
+    if "implementer" in done:
+        upgrade_validator(project, when)
     return done
+
+
+def upgrade_validator(project, when):
+    """Projetos anteriores a 0.6.0: o validador ativo passa a validar o implementer (nova versao do contrato,
+    registrada como decisao do usuario, porque acontece dentro do `agents --activate` que ele aprovou)."""
+    path = os.path.join(aisef_dir(project), "contracts", "agents", "validator.json")
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8") as fh:
+        doc = json.load(fh)
+    validates = doc.setdefault("validation_role", {}).setdefault("validates", [])
+    if "implementer" in validates:
+        return
+    validates.insert(0, "implementer")
+    doc["contract_version"] += 1
+    problems = validate(doc, "agent-contract.schema.v0.1.json")
+    if problems:
+        raise SystemExit("validator invalido apos a atualizacao:\n - " + "\n - ".join(problems))
+    write_json(path, doc)
+    append(project, {"event_type": "contract_changed", "actor": {"type": "user", "id": "user"},
+                     "summary": "Agent Contract validator v%d: passa a validar o implementer" % doc["contract_version"],
+                     "subject": {"kind": "agent_contract", "id": "validator", "version": doc["contract_version"]}})
 
 
 # Segunda camada: regras 'ask' nativas do Claude Code. Valem mesmo se o hook falhar ou for desligado.

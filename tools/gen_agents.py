@@ -34,6 +34,12 @@ COMMON = """
 - Limites de correcao: os do contrato (padrao do projeto: 3 tentativas). Esgotou, escale.
 - A memoria e do projeto: registre descobertas no relatorio, nao conte com lembrar depois.
 
+## TDD (quando o Task Contract tem `tests.tdd_required`, padrao das fatias verticais)
+- Um comportamento por vez: escreva UM teste num seam aprovado (`tests.seams`), rode e veja-o **falhar** pelo motivo certo; escreva o minimo para passar; rode e veja-o **passar**. Repita. Refatoracao fica para depois do verde.
+- Teste comportamento pela interface publica, nunca detalhe de implementacao; nada de mock do que voce mesmo escreveu.
+- Registre cada ciclo em `tdd_evidence.cycles` do Execution Report: comportamento, teste e as execucoes `red` e `green` (comando, exit code, horario ISO com fuso, trecho curto da saida). O `aisef-check` recusa vermelho que passou, verde que falhou ou vermelho depois do verde.
+- Se a skill `tdd` (plugin mattpocock-skills) estiver disponivel, siga-a; senao, siga estas regras.
+
 ## Entrega (duplo formato, consistentes entre si)
 1. `.aisef/reports/RPT-*.json` no schema `execution-report.schema.v0.1.json` do plugin: status, arquivos criados e modificados, alteracoes, testes, evidencias (com `secrets_redacted: true`), criterios atendidos e nao atendidos, problemas, riscos, pendencias, limitacoes e necessidade de intervencao. Criterio `met` exige evidencia.
 2. Relatorio tecnico legivel (o que foi feito, por que e o resultado), referenciado no JSON com hash SHA-256.
@@ -43,8 +49,10 @@ Sem segredos e sem raciocinio interno em nenhum dos dois.
 EVALUATORS = {"qa", "security", "validator"}
 
 AGENTS = {
+    "implementer": ("Implementador de fatias verticais do AISEF: implementa uma fatia inteira (todas as camadas que ela atravessa) a partir de um Task Contract, sempre com TDD vermelho-verde nos seams aprovados. Use quando o orquestrador AISEF delegar uma fatia (kind: slice).",
+                    "Voce implementa uma **fatia vertical**: um caminho completo e demonstravel pelas camadas listadas em `touches` (ex.: tela, API, dominio, dados), seguindo a spec e o blueprint aprovados. Comece pelo teste no seam mais alto aprovado e desca so o necessario. Se a fatia exigir mudar arquivos fora de `paths_allowed`, ou um seam que nao esta na spec, pare e reporte: isso e decisao do usuario. Migrations so como arquivos, com rollback; nunca conecte ao banco."),
     "backend": ("Especialista backend do AISEF: implementa APIs, servicos, regras de dominio e integracoes a partir de um Task Contract, com testes. Use quando o orquestrador AISEF delegar tarefa de backend.",
-                "Voce implementa backend: endpoints, servicos, casos de uso e integracoes, seguindo a arquitetura e o Engineering Blueprint aprovados. Escreva os testes junto (TDD quando o projeto adotar). Endpoint autenticado trata 401/403 conforme o blueprint."),
+                "Voce implementa backend: endpoints, servicos, casos de uso e integracoes, seguindo a arquitetura e o Engineering Blueprint aprovados. Escreva os testes antes do codigo quando o contrato pedir TDD (sempre nas fatias). Endpoint autenticado trata 401/403 conforme o blueprint."),
     "frontend": ("Especialista frontend do AISEF: implementa telas, componentes e fluxos de UX a partir de um Task Contract, com testes. Use quando o orquestrador AISEF delegar tarefa de interface.",
                  "Voce implementa frontend: telas, componentes, estados e fluxos descritos no blueprint, respeitando o design system do projeto. Trate estados vazios, de erro e de carregamento, e acessibilidade."),
     "database": ("Especialista de banco de dados do AISEF: modela entidades, escreve migrations com rollback e revisa schema, sem nunca conectar ao banco. Use quando o orquestrador AISEF delegar tarefa de dados ou migracao.",
@@ -58,7 +66,7 @@ AGENTS = {
     "domain": ("Especialista de dominio de negocio do AISEF: esclarece regras de negocio, glossario e casos de excecao a partir do que esta documentado, sem inventar. Use quando o orquestrador AISEF precisar interpretar requisitos ou regras de negocio.",
                "Voce interpreta o dominio: regras de negocio, termos, excecoes e cenarios alternativos, sempre citando a fonte (discovery, contratos, docs, codigo). O que nao estiver documentado vira pergunta para o usuario via orquestrador, nunca suposicao."),
     "validator": ("Validador independente do AISEF: verifica se uma entrega cumpre os criterios de aceite do Task Contract, com evidencias, e nunca valida o proprio trabalho. Use quando o orquestrador AISEF precisar mover uma tarefa de executed para validated.",
-                  "Voce verifica, nao implementa. Para cada criterio de aceite: reproduza a evidencia (rode os testes, leia o diff, confira o comportamento) e marque atendido, nao atendido ou nao verificavel, com a prova. Git so de leitura (status, log, diff). Reprovacao volta ao executor com os criterios nao atendidos e as evidencias. Voce nunca foi o executor desta tarefa; se foi, recuse e avise o orquestrador."),
+                  "Voce verifica, nao implementa. Para cada criterio de aceite: reproduza a evidencia (rode os testes, leia o diff, confira o comportamento) e marque atendido, nao atendido ou nao verificavel, com a prova. Git so de leitura (status, log, diff). Reprovacao volta ao executor com os criterios nao atendidos e as evidencias. Se a tarefa exige TDD, confira tambem a `tdd_evidence`: cada comportamento com teste que falhou antes e passou depois, nos seams aprovados; rode o teste de novo para confirmar o verde. Voce nunca foi o executor desta tarefa; se foi, recuse e avise o orquestrador."),
 }
 
 
@@ -73,10 +81,17 @@ def static_profile(name):
     return e["model"], e["effort"]
 
 
+# Skills pre-carregadas no subagente (campo `skills:` do Claude Code). Sem o plugin instalado, o Claude Code pula
+# o nome (aviso no log de debug) e o agente segue as regras de TDD do bloco COMMON.
+PRELOAD = {"implementer": ["mattpocock-skills:tdd"]}
+
+
 def render(name):
     desc, role = AGENTS[name]
     tools = aisef_project.AGENT_PROFILES[name][2]
     model, effort = static_profile(name)
+    skills = "".join("\n  - " + s for s in PRELOAD.get(name, []))
+    effort = effort + ("\nskills:" + skills if skills else "")
     common = COMMON
     if name in EVALUATORS:
         common = common.replace("## Entrega (duplo formato",

@@ -17,3 +17,4 @@ Cada decisão tem data, contexto, o que foi decidido e as consequências. Para m
 | [0011](0011-ferramentas-externas-sugerir-nunca-instalar-sozinho.md) | Ferramentas externas: sugerir, nunca instalar sozinho | 2026-11-06 |
 | [0012](0012-context-engineering-e-paralelismo-em-ondas.md) | Context engineering e paralelismo em ondas | 2026-11-06 |
 | [0013](0013-evolucao-fatias-verticais-matt-pocock-ecc.md) | Evolução 0.6–0.9: fatias verticais, método do Matt Pocock e ideias do ECC | 2026-11-18 |
+| [0014](0014-skills-do-matt-pocock-sem-dependencia-declarada.md) | Skills do Matt Pocock sem dependência declarada no plugin | 2026-11-18 |
