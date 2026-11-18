@@ -1,12 +1,19 @@
 ---
 name: aisef-tooling
-description: 'Sugere e instala skills, plugins e servidores MCP para um projeto AISEF. Use no fim da aisef-discovery e sempre que o usuario perguntar quais skills, plugins ou MCPs usar, pedir para "sugerir ferramentas", "procurar uma skill para X" ou perguntar se "tem MCP para Y" num projeto com .aisef/ - inclusive quando so quiser saber como as sugestoes seriam escolhidas.'
+description: 'Sugere, instala e revisa skills, plugins e servidores MCP de um projeto AISEF: busca em fontes prontas (find-skills/skills.sh, MCP Registry, marketplaces) quando surge uma necessidade (fim da discovery, feature com tecnologia nova, tarefa travada por tecnologia desconhecida) e faz a revisao periodica (uso e custo com /skill-doctor, beneficio medido com claude plugin eval, remocao do que nao serve), sempre com a escolha do usuario. Use quando o usuario perguntar quais skills, plugins ou MCPs usar, pedir para "procurar uma skill para X", "tem MCP para Y", "limpar/avaliar as skills", ou quando o next indicar tooling_review_due'
 ---
 
 # aisef-tooling
 
 Regra central: **sugira so o que atende a uma necessidade registrada e nunca instale sem o usuario escolher.**
 Uma ferramenta instalada passa a agir no projeto; o gateway pede aprovacao para cada instalacao.
+
+## Quando buscar (gatilhos)
+- **Fim da discovery** (projeto novo ou existente).
+- **Feature nova que cita tecnologia ausente de `.aisef/tooling.md`** (ex.: a spec fala em Stripe e nao ha nada de pagamento instalado). Busque so por ela.
+- **Fatia travada por tecnologia desconhecida** (relatorio com `scope_discoveries`/problema do tipo "nao sei usar X" ou duas reprovacoes pelo mesmo motivo tecnico).
+- **Pedido do usuario.**
+Fora desses momentos, nao sugira ferramentas (regra "sem sugestoes espontaneas").
 
 ## 1. Entrada
 Leia `.aisef/discovery.md`. Sem ele, rode **aisef-discovery** antes. Liste o que ja esta instalado para nao sugerir de novo:
@@ -134,3 +141,17 @@ Recomendacao padrao para projeto com UI, sempre usada dentro da autoridade de de
 
 Confirme os comandos nas fontes antes de propor (os projetos mudam rapido) e registre no `.aisef/tooling.md`.
 
+## 8. Revisao periodica (o que fica, o que sai)
+Quando o `next` trouxer `guide.tooling_review_due` (padrao: a cada feature aceita; `"tooling": {"review_every": N}` no `config.json`, 0 desliga), ou quando o usuario pedir:
+1. **Uso e custo.** O `/skill-doctor` e um comando do usuario (o modelo nao o executa): peca que ele rode e cole o resultado. O relatorio traz o custo de contexto de cada skill, os usos em 7 dias e as nunca usadas. Complete com `claude plugin details <plugin>` (custo fixo por sessao de cada plugin instalado).
+2. **Beneficio (opcional, custa modelo).** Para uma skill ou plugin com casos de avaliacao, ofereca medir com e sem ela:
+   ```
+   claude plugin eval <plugin> --ablation with-without --max-cost-usd 2 --no-publish --json resultado.json
+   ```
+   Mostre o delta (WITH x W/OUT). Casos que liberam Bash exigem sandbox (no Windows, so via WSL). Rode so com o OK do usuario, sempre com teto de custo.
+3. **Proposta.** Monte uma tabela: Nome | Custo de contexto | Usos (7 d) | Delta medido | Recomendacao (manter, remover, trocar). Nunca use usos = 0 como unica prova: uma skill nova ou sazonal pode nao ter sido usada ainda.
+4. **Decisao do usuario** (AskUserQuestion, multiSelect). Remover e desinstalar pedem aprovacao no gateway (`claude plugin uninstall ... --scope project`, `npx skills remove ...`).
+5. **Registre** em `.aisef/tooling.md` (secao "Revisoes") e no log:
+   ```
+   python -I <skill-dir>/../../core/aisef_project.py append --project . --type evidence_recorded --summary "Revisao de ferramentas: ..." --data '{"kind": "tooling_review"}'
+   ```

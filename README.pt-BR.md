@@ -55,7 +55,8 @@ Se o Python que tem o `cryptography` não for o primeiro do PATH, defina `AISEF_
 1. Na pasta do projeto, peça **"iniciar o AISEF neste projeto"**. Num projeto existente, o AISEF investiga antes de propor qualquer coisa.
 2. Quando ele pedir, aprove os agentes e as regras nativas de segunda camada.
 3. Peça uma feature em linguagem natural. Você aprova o plano, a execução acontece dentro do escopo aprovado e a feature só fecha com o seu aceite.
-4. Acompanhe no painel (`aisef-panel`).
+4. Acompanhe ao vivo no painel (`aisef-panel`): o que cada agente está fazendo agora, o próximo passo, o fluxo de cada feature e as ondas em paralelo.
+5. Só uma dúvida? `/aisef:ask <pergunta>` responde num subagente Haiku só de leitura, barato; `/aisef:modo ask` deixa a sessão inteira só de leitura (aplicado pelo gateway) até `/aisef:modo exec`.
 
 Para explorar sem gastar tokens, siga o [passo a passo com o projeto de demonstração](docs/guide/walkthrough.md).
 
@@ -63,7 +64,7 @@ Para explorar sem gastar tokens, siga o [passo a passo com o projeto de demonstr
 
 | Componente | Papel |
 |---|---|
-| Skills | `aisef` (orquestrador), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design` (uma autoridade de design por projeto), `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
+| Skills | `aisef` (orquestrador), `ask` e `modo` (modo Ask), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design` (uma autoridade de design por projeto), `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
 | Agentes | `implementer` (fatias verticais com TDD), `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, cada um limitado pelo seu Agent Contract e gerado de uma fonte única |
 | Hooks | gateway (`PreToolUse`), auditoria (`PostToolUse`), doctor (`SessionStart`) |
 | Núcleo | 9 JSON Schemas, políticas de permissão e de modelo, verificador de consistência, cadeia de auditoria assinada, geradores por brief, planejador de ondas, pacotes de contexto e painel |

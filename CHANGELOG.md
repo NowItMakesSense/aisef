@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.0 - 2026-11-18
+- **Modo Ask (ADR 0018):**
+  - `/aisef:ask <pergunta>` responde num subagente `aisef:ask` (Haiku, effort baixo, só `Read`/`Grep`/`Glob`): barato e sem como editar;
+  - `/aisef:modo ask|exec` (só o usuário digita) troca o modo da sessão; trocar abre o prompt nativo.
+  - No modo Ask, o gateway nega Edit/Write, comandos que não sejam de leitura (com uma lista de leitura para Bash e PowerShell e redirecionamento negado) e MCP fora do `mcp_allow`. O hook `UserPromptSubmit` (`prompt_mode.py`) lembra o modelo a cada pergunta; no modo normal, fica em silêncio.
+  - Novo guia `docs/guide/ask-mode.md`.
+
+## 0.8.2 - 2026-11-18
+- **`aisef-tooling`:**
+  - **gatilhos explícitos de busca** (fim da discovery, feature com tecnologia nova, fatia travada por tecnologia desconhecida, pedido do usuário);
+  - **revisão periódica** (seção 8): o `/skill-doctor` rodado pelo usuário, `claude plugin details`, `claude plugin eval --ablation with-without` com teto de custo e uma tabela manter/remover/trocar. Nada sai sem a escolha do usuário.
+- **`next`:** `guide.tooling_review_due` avisa quando a revisão está vencida (padrão: a cada feature aceita; `"tooling": {"review_every": N}`, 0 desliga).
+- **Gateway:** desinstalar ou desativar plugin, remover skill, remover marketplace e remover servidor MCP passam a pedir aprovação, como a instalação.
+
 ## 0.8.1 - 2026-11-18
 - **Aprendizado contínuo revisado (`core/aisef_learn.py`, ADR 0017):**
   - lições a partir de **erros rotulados** (reprovações, `precheck`, bloqueios do gateway, `scope_discovery`, correções, problemas de relatórios), agrupados sem modelo (`propose`);

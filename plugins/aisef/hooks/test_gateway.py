@@ -297,10 +297,43 @@ case("claude --dangerously-skip-permissions -> deny", "Bash", "deny", command="c
 case("claude --permission-mode bypassPermissions -> deny", "PowerShell", "deny", command="claude --permission-mode bypassPermissions -p x")
 case("claude -p normal segue livre", "Bash", "allow", command="claude plugin list --json")
 case("impeccable live -> ask", "Bash", "ask", command="npx impeccable live")
+case("desinstalar plugin -> ask", "Bash", "ask", command="claude plugin uninstall taste-skill@taste-skill --scope project")
+case("remover skill -> ask", "Bash", "ask", command="npx skills remove find-skills")
+case("remover servidor MCP -> ask", "PowerShell", "ask", command="claude mcp remove graphify")
+case("detalhes de plugin seguem livres", "Bash", "allow", command="claude plugin details aisef")
 case("aprovar licao aprendida -> ask (decisao do usuario)", "Bash", "ask", command="python aisef_learn.py accept --project . --proposal P-1 --trigger x --action y")
 case("subagente aprovando licao -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_learn.py accept --proposal P-1")
 case("propor licoes segue livre", "Bash", "allow", command="python aisef_learn.py propose --project .")
 case("impeccable detect segue livre", "Bash", "allow", command="npx impeccable detect web/")
+
+print("--- modo Ask (0.9.0): so leitura, aplicado pelo gateway")
+case("trocar o modo e decisao do usuario -> ask", "Bash", "ask", command="python -I core/aisef_project.py mode --project . --set ask")
+case("escrever o arquivo de modo a mao -> ask", "Write", "ask", file_path=os.path.join(proj, ".aisef", "session", "mode.json"))
+case("subagente trocando o modo -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_project.py mode --set exec")
+os.makedirs(os.path.join(proj, ".aisef", "session"), exist_ok=True)
+aisef_project.write_json(os.path.join(proj, ".aisef", "session", "mode.json"), {"mode": "ask"})
+case("Ask: Edit -> deny", "Edit", "deny", file_path=os.path.join(proj, "src", "app.py"))
+case("Ask: npm test -> deny", "Bash", "deny", command="npm test")
+case("Ask: git commit -> deny (antes do prompt)", "Bash", "deny", command="git commit -m x")
+case("Ask: redirecionar para arquivo -> deny", "PowerShell", "deny", command="echo x > notas.txt")
+case("Ask: git log | head segue livre", "Bash", "allow", command="git log --oneline | head -5")
+case("Ask: Get-Content e Select-String seguem livres", "PowerShell", "allow", command="Get-Content src/app.py | Select-String TODO")
+case("Ask: Read e Grep seguem livres", "Read", "allow", file_path=os.path.join(proj, "src", "app.py"))
+case("Ask: consultar o next segue livre", "Bash", "allow", command="python -I core/aisef_project.py next --project .")
+case("Ask: sair do modo continua possivel (prompt nativo)", "Bash", "ask", command="python -I core/aisef_project.py mode --project . --set exec")
+case("Ask: MCP fora de mcp_allow -> deny", "mcp__github__create_issue", "deny")
+r = run("prompt_mode.py", {"hook_event_name": "UserPromptSubmit", "prompt": "como funciona o login?"})
+total += 1
+ok = "modo Ask" in r.stdout and "UserPromptSubmit" in r.stdout
+print(("OK    " if ok else "FALHA ") + "Ask: cada pergunta recebe o lembrete do modo")
+fails += not ok
+os.remove(os.path.join(proj, ".aisef", "session", "mode.json"))
+case("Exec: npm test volta a seguir livre", "Bash", "allow", command="npm test")
+r = run("prompt_mode.py", {"hook_event_name": "UserPromptSubmit", "prompt": "oi"})
+total += 1
+ok = r.stdout.strip() == ""
+print(("OK    " if ok else "FALHA ") + "Exec: sem lembrete (zero tokens)")
+fails += not ok
 
 print("--- politica local e falha fechada")
 aisef_project.write_json(os.path.join(proj, ".aisef", "policy.local.json"), {"matrix": {"git": {"status_log_diff": "approve_operation"}}})
