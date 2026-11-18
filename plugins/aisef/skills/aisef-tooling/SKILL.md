@@ -122,3 +122,15 @@ de Grep/Glob quando o `.mcp.json` tem um dos dois (desligue com `"graph_nudge": 
 `.aisef/config.json`), e `python -I <skill-dir>/../../core/aisef_context.py pack --project . --task <T-ID>` inclui no
 pacote da tarefa as consultas sugeridas ao grafo, com os nomes reais das ferramentas.
 Registre no `.aisef/tooling.md` o que foi instalado e a aprovacao do usuario.
+
+## 7. Skills de design (projeto com interface)
+Recomendacao padrao para projeto com UI, sempre usada dentro da autoridade de design (**aisef-design**). Ofereca, instale so com OK, no escopo do projeto:
+
+| Skill | Instalacao (Claude Code) | Risco a mostrar |
+|---|---|---|
+| UI/UX Pro Max | `claude plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill` + `claude plugin install ui-ux-pro-max@ui-ux-pro-max-skill --scope project` | Baixo: dados + script Python so da stdlib, sem rede. Tem versao "premium" paga fora do repositorio |
+| Impeccable | `claude plugin marketplace add pbakaus/impeccable` e instalar pelo `/plugin` (escopo do projeto) | Medio: hook proprio que roda fora da aprovacao, telemetria do catalogo (o `DO_NOT_TRACK=1` das regras nativas desliga) e o modo `live`, que pode abrir o Claude sem permissoes (o gateway pede aprovacao; recuse) |
+| Taste (`design-taste-frontend`) | `claude plugin marketplace add Leonxlnx/taste-skill` + `claude plugin install taste-skill@taste-skill --scope project` | Medio: pesada em tokens e Stop hook de ate 600 s; so para `marketing_site`/`mixed` |
+
+Confirme os comandos nas fontes antes de propor (os projetos mudam rapido) e registre no `.aisef/tooling.md`.
+

@@ -58,7 +58,7 @@ check("escada L0..L6 na ordem pedida",
       [("haiku", "low"), ("haiku", "medium"), ("sonnet", "low"), ("sonnet", "medium"), ("sonnet", "high"), ("opus", "medium"), ("opus", "high")])
 
 # ---------------------------------------------------------------- padroes por papel (tarefa neutra)
-expected = {"domain": (0, "haiku", "low"), "devops": (1, "haiku", "medium"), "frontend": (2, "sonnet", "low"),
+expected = {"domain": (0, "haiku", "low"), "devops": (1, "haiku", "medium"), "frontend": (3, "sonnet", "medium"), "implementer": (3, "sonnet", "medium"),
             "qa": (2, "sonnet", "low"), "backend": (3, "sonnet", "medium"), "database": (3, "sonnet", "medium"),
             "security": (4, "sonnet", "high")}
 for role, (lv, model, effort) in expected.items():

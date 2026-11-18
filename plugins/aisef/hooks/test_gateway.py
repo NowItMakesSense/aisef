@@ -292,6 +292,13 @@ case("ler uma aprovacao segue livre", "Bash", "allow", command="cat .aisef/appro
 case("ler config com redirecionamento de erro segue livre", "PowerShell", "allow",
      command="Get-Content .aisef/config.json 2>$null")
 
+print("--- sessoes sem permissao e ferramentas de design (0.6.1)")
+case("claude --dangerously-skip-permissions -> deny", "Bash", "deny", command="claude -p 'aplica' --dangerously-skip-permissions")
+case("claude --permission-mode bypassPermissions -> deny", "PowerShell", "deny", command="claude --permission-mode bypassPermissions -p x")
+case("claude -p normal segue livre", "Bash", "allow", command="claude plugin list --json")
+case("impeccable live -> ask", "Bash", "ask", command="npx impeccable live")
+case("impeccable detect segue livre", "Bash", "allow", command="npx impeccable detect web/")
+
 print("--- politica local e falha fechada")
 aisef_project.write_json(os.path.join(proj, ".aisef", "policy.local.json"), {"matrix": {"git": {"status_log_diff": "approve_operation"}}})
 case("politica local pode endurecer (status vira ask)", "Bash", "ask", command="git status")

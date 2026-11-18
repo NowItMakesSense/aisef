@@ -35,4 +35,4 @@ Grave `.aisef/discovery.md` com secoes: Visao, Requisitos (com origem), Regras d
 python -I <skill-dir>/../../core/aisef_project.py append --project . --type evidence_recorded --summary "Discovery atualizado"
 ```
 Em projeto novo ou existente, rode em seguida a **aisef-tooling** para sugerir skills, plugins e MCPs a partir do
-discovery (na Impact Analysis, so se o usuario pedir). Depois siga com **aisef-feature** para a primeira feature.
+discovery (na Impact Analysis, so se o usuario pedir). Se o projeto tem interface e ainda nao ha `.aisef/design/tokens.json` aprovado, rode a **aisef-design** antes da primeira feature de UI. Depois siga com **aisef-feature** para a primeira feature.

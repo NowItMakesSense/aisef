@@ -59,6 +59,10 @@ TOOLING_INSTALL_RE = re.compile(
     r"\b(?:npx|bunx|pnpm\s+dlx|yarn\s+dlx)\s+(?:(?:-y|--yes)\s+)?skills(?:@\S+)?\s+(?:add|install|update)\b|"
     r"\bclaude\s+(?:plugins?\s+(?:install|i|enable|update|marketplace\s+add)|mcp\s+add(?:-json|-from-claude-desktop)?)\b",
     re.I)
+# Um agente abrir outra sessao do Claude Code sem permissoes (ex.: o modo live/Apply do Impeccable faz isso)
+# escaparia do prompt nativo: negado. Ferramentas que fazem esse tipo de coisa por baixo pedem aprovacao.
+BYPASS_SPAWN_RE = re.compile(r"\bclaude(?:\.exe)?\b[^;&|]*(?:--dangerously-skip-permissions|--permission-mode[= ]+bypassPermissions)", re.I)
+DESIGN_LIVE_RE = re.compile(r"\bimpeccable\s+live\b", re.I)
 CONFIG_PATH_RE = re.compile(
     r"(?:^|/)(?:\.github/workflows/|\.gitlab-ci\.yml$|Jenkinsfile$|azure-pipelines\.yml$|\.circleci/|"
     r"Dockerfile[^/]*$|docker-compose[^/]*\.ya?ml$|compose\.ya?ml$|[^/]+\.tf$|[^/]+\.tfvars$|helm/|charts/|k8s/|"
@@ -253,6 +257,10 @@ def classify_bash(cmd, patterns, env):
         found.append(("unclassified", "execute", env, False, "instalacao de skill, plugin ou servidor MCP"))
     if AISEF_AUDIT_RE.search(norm(cmd)) and not re.search(r"audit_chain\.py\s+verify|aisef_project\.py\s+(?:verify|status)", cmd):
         raise Decision("deny", "o log de auditoria e as chaves do AISEF so podem ser alterados pelo hook de auditoria")
+    if BYPASS_SPAWN_RE.search(cmd):
+        raise Decision("deny", "abrir outra sessao do Claude Code sem permissoes (bypass) escaparia do gateway e do prompt nativo")
+    if DESIGN_LIVE_RE.search(cmd):
+        found.append(("unclassified", "execute", env, False, "modo live do Impeccable (pode abrir o claude sem permissoes)"))
     if SHELL_PROTECTED_WRITE_RE.search(norm(cmd)):
         found.append(("aisef_decision", "write", env, False, "escrita por shell em arquivo de decisao do AISEF"))
     if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b|agents\b[^;&|]*--activate\b|settings\b[^;&|]*--apply\b|rotate-key\b)", cmd):

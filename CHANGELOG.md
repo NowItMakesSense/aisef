@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.1 - 2026-11-18
+- **Autoridade de design por projeto (nova skill `aisef-design`, ADR 0015):**
+  - `.aisef/design/tokens.json` (novo schema `design-tokens`) e `DESIGN.md` definem tipografia, paleta, espaçamento, movimento, componentes e regras, aprovados como decisão arquitetural.
+  - UI/UX Pro Max, Taste e Impeccable entram como fontes, cada uma no seu papel, sempre dentro dos tokens.
+- **`core/design_check.py`:**
+  - `validate`;
+  - `scan`: cores e fontes do código de UI fora dos tokens, com arquivo e linha, sem modelo;
+  - `shots`: capturas em 375, 768 e 1440 px em Chrome/Edge headless.
+- **Integração:**
+  - o pacote de contexto das fatias de UI traz os tokens e o comando de conferência;
+  - o `aisef_new.py feature` acrescenta a cada fatia de UI o critério "nada fora dos tokens";
+  - regras novas no check: `DESIGN-SCHEMA`, `DESIGN-UNAPPROVED` e `DESIGN-MISSING` (aviso).
+- **Agente `frontend`:** implementa e revisa dentro dos tokens, com a ferramenta `Skill` para usar as skills de design. A evidência visual passa a ser obrigatória. O padrão do papel sobe para L3 (sonnet/medium).
+- **Gateway:** nega abrir o `claude` com `--dangerously-skip-permissions` ou `--permission-mode bypassPermissions`. O `impeccable live` pede aprovação.
+- **`aisef-tooling`:** recomenda as três skills de design, com instalação e riscos. A `aisef-discovery` encaminha para a `aisef-design` em projetos com UI.
+
 ## 0.6.0 - 2026-11-18
 - **SDD + TDD como padrão, com o método do Matt Pocock:**
   - **Fases da `aisef-feature`:** Grill (perguntas uma de cada vez até fechar cada ramo), Spec (solução, histórias, decisões e **seams de teste** confirmados com o usuário) e **Fatias verticais** (tracer bullets com blocking edges), depois a aprovação do plano e o Blueprint.
