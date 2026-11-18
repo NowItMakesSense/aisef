@@ -475,11 +475,27 @@ def derive_engineering(blueprints):
 
 
 # ----------------------------------------------------------------------------- escrita
+def apply_effective_states(tasks, log):
+    """Estado da tarefa = contrato + ultimo evento de ciclo de vida no log (mesma regra do `next` e do check):
+    o painel mostra o que de fato aconteceu, nao o que o contrato ainda nao registrou."""
+    import aisef_next as nx
+    last = {}
+    for e in log:
+        if e.get("task_id") and e["event_type"] in nx.EVENT_STATE:
+            last[e["task_id"]] = nx.EVENT_STATE[e["event_type"]]
+    for t in tasks:
+        if t["task_id"] in last:
+            t["state"]["status"] = nx.effective_state(t["state"]["status"], last[t["task_id"]])
+
+
 def build(project, out, schemas_dir, now=None):
     loaded, source_errors = load_sources(project, schemas_dir)
     log, integrity = check_integrity(project)
+    apply_effective_states(loaded["tasks"], log)
     views = derive(loaded, log, integrity)
     views["engineering"] = derive_engineering(loaded["blueprints"])
+    import panel_live
+    views["live"] = panel_live.derive_live(project, loaded, log, now)
 
     project_id = log[0].get("project_id") if log else None
     manifest = {
@@ -573,7 +589,15 @@ def main(argv):
     ap.add_argument("--out", required=True)
     ap.add_argument("--schemas", default=HERE)
     ap.add_argument("--with-page", action="store_true", help="copia index.html e o Mermaid local para <out>")
+    ap.add_argument("--serve", action="store_true", help="servidor local ao vivo (127.0.0.1): regenera quando .aisef/ muda")
+    ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--open", action="store_true", help="--serve: abre o navegador")
     args = ap.parse_args(argv[1:])
+    if args.serve:
+        import panel_live
+        install_page(args.out)
+        panel_live.serve(args.project, args.out, lambda: build(args.project, args.out, args.schemas), args.port, args.open)
+        return 0
     bundle = build(args.project, args.out, args.schemas)
     if args.with_page:
         install_page(args.out)

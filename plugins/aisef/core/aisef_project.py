@@ -338,7 +338,7 @@ def init(project, project_id, name=None, environment="dev"):
         "name": name or project_id, "environment": environment, "created_at": now_iso(),
         "policy": "permission-policy.v0.1.json", "defaults": "orchestration-defaults.v0.1.json"})
     with open(os.path.join(root, ".gitignore"), "w", encoding="utf-8") as fh:
-        fh.write("# gerado pelo AISEF\n*.lock\n*.tmp\npanel/\n")
+        fh.write("# gerado pelo AISEF\n*.lock\n*.tmp\npanel/\nruntime/\n")
     signed = False
     if HAS_CRYPTO:
         priv_path = private_key_path(project_id)

@@ -62,6 +62,14 @@ def main():
     except Exception as exc:
         sys.stderr.write("AISEF: evento de auditoria NAO registrado (%s)\n" % exc)
         sys.exit(1)  # nao bloqueia, mas o aviso aparece para o usuario
+    if data.get("agent_id") or data.get("agent_type"):
+        try:
+            sys.path.insert(1, HERE)
+            import agent_events
+            agent_events.runtime_append(project, {"event": "tool", "agent_id": data.get("agent_id"),
+                                                  "agent_type": data.get("agent_type"), "summary": summary[:160]})
+        except Exception:
+            pass  # visao ao vivo e acessoria
     if tool in ("Bash", "PowerShell"):
         try:
             consume_reinforced(project, inp.get("command") or "", data.get("cwd"), event)

@@ -10,7 +10,7 @@ O detalhe de cada versão entregue está no [CHANGELOG](../CHANGELOG.md); as dec
 | ~~0.6.1~~ | Entregue: autoridade de design por projeto, `design_check` e frontend dentro dos tokens |
 | ~~0.7.0~~ | Entregue: `dispatch` da onda numa chamada, validação por onda, `precheck` determinístico, auditoria assíncrona das edições |
 | depois | **Worktrees por fatia** (fatias com arquivos em comum em paralelo). Adiado: pela política atual, cada merge local pede aprovação; antes é preciso uma autorização de escopo para merges em branches de integração (mudança de política, decisão sua) |
-| 0.8.0 | **Painel vivo:** servidor local, visão "Agora", fluxo da feature, ondas em Gantt, RTM viva |
+| ~~0.8.0~~ | Entregue: painel ao vivo (servidor local), aba Agora, fluxo da feature, ondas em Gantt, estado efetivo |
 | 0.8.1 | **Aprendizado contínuo revisado** e estado que sobrevive ao compact; perfis de hook |
 | 0.8.2 | **Ciclo de vida das ferramentas:** busca por gatilho, revisão periódica com `/skill-doctor` e `claude plugin eval` |
 | 0.9.0 | **Modo Ask:** pergunta em subagente Haiku só de leitura e modo fixo aplicado pelo gateway |

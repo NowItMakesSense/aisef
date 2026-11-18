@@ -38,7 +38,8 @@ Todos ficam em `plugins/aisef/core/` (chamado `CORE` nas skills) e rodam com `py
 | `aisef_route.py --task T [--attempt N] [--validator --executor-level L3]` | Modelo e effort da tarefa ou do validador |
 | `design_check.py validate` / `scan` / `shots` | Autoridade de design: tokens válidos, nada fora deles no código de UI, capturas em 375/768/1440 px |
 | `check_project.py --project .` | Todas as [regras de consistência](check-rules.md) (é o que o `aisef-check` roda) |
-| `build_panel.py --project .aisef --out .aisef/panel --with-page` | Gera o painel |
+| `build_panel.py --project .aisef --out .aisef/panel --with-page` | Gera o painel estático |
+| `build_panel.py --project .aisef --out .aisef/panel --serve [--port 8765] [--open]` | Painel ao vivo em 127.0.0.1, regenerado quando `.aisef/` muda |
 | `make_demo_project.py <pasta>` | Projeto de demonstração completo |
 
 ## Ferramentas do repositório (`tools/`)

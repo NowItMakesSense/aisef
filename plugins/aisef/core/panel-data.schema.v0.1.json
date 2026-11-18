@@ -405,6 +405,17 @@
         }
       }
     },
+    "live": {
+      "type": "object",
+      "description": "Opcional (0.8.0). Visao 'Agora': agentes em execucao, proximo passo do `next`, fluxo de cada feature e ondas no tempo (Mermaid).",
+      "properties": {
+        "generated_at": { "type": "string" },
+        "agents_in_flight": { "type": "array", "items": { "type": "object" } },
+        "next": { "type": "object" },
+        "flow": { "type": "array", "items": { "type": "object" } },
+        "gantt": { "type": ["string", "null"] }
+      }
+    },
     "source_errors": {
       "type": "array",
       "description": "Arquivos de origem invalidos ou ilegiveis. Ficam fora das visoes e aparecem aqui.",

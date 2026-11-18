@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 - 2026-11-18
+- **Painel ao vivo (`build_panel.py --serve`):** servidor da stdlib em `127.0.0.1` que regenera os dados quando `.aisef/` muda. A página se atualiza sozinha a cada 3 s. No Windows o navegador não lê arquivo local por `file://`, daí o servidor. O modo estático continua.
+- **Aba "Agora" (nova, a primeira):**
+  - onde o projeto está e o próximo passo (do `next`), com as ações do orquestrador e o critério de parada;
+  - **subagentes em execução**, com a fatia que receberam, há quanto tempo e a última ação;
+  - **fluxo de cada feature** (Spec → Plano → Execução → Validação → Revisão e aceite → Encerrada) com a etapa atual destacada;
+  - **ondas no tempo real** em Gantt, que mostram o que rodou em paralelo.
+- **Hooks `SubagentStart`/`SubagentStop`** (`agent_events.py`, em segundo plano): gravam início e fim de cada subagente em `.aisef/runtime/agents.jsonl`, efêmero e fora do Git. A auditoria grava ali também a última ação de cada subagente. A trilha assinada continua no log de auditoria.
+- **Estado efetivo no painel:** as tarefas aparecem com o estado real (contrato + último evento do log, a mesma regra do `next` e do check), não com o que o contrato ainda não registrou.
+- **Aprovações:** o "Approval Center visual" do antigo `pending.md` fica coberto pelas abas Agora e Aprovações (só leitura); a decisão continua no prompt nativo.
+
 ## 0.7.0 - 2026-11-18
 - **Despacho em uma chamada (`aisef_project.py dispatch`):** calcula a onda (mesma regra do `next`), monta pacote de contexto, modelo/effort e o prompt de cada agente, e registra os `delegation`. O orquestrador dispara todos na mesma mensagem. Antes eram 3 chamadas por tarefa (`pack`, `route`, `append`), cada uma pagando os hooks.
 - **`precheck` determinístico:** relatório do executor, critérios obrigatórios `met` com evidência, TDD coerente, arquivos no escopo e, em UI, nada fora dos tokens. Sem modelo e sem executar comandos do projeto.
