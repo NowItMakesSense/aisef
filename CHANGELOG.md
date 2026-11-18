@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 - 2026-11-18
+- **Despacho em uma chamada (`aisef_project.py dispatch`):** calcula a onda (mesma regra do `next`), monta pacote de contexto, modelo/effort e o prompt de cada agente, e registra os `delegation`. O orquestrador dispara todos na mesma mensagem. Antes eram 3 chamadas por tarefa (`pack`, `route`, `append`), cada uma pagando os hooks.
+- **`precheck` determinístico:** relatório do executor, critérios obrigatórios `met` com evidência, TDD coerente, arquivos no escopo e, em UI, nada fora dos tokens. Sem modelo e sem executar comandos do projeto.
+- **`validate-wave`:** quem falha no `precheck` volta ao executor (tentativa + 1, sem gastar validador). O resto da onda vai para **um** validador, com veredito por tarefa (ADR 0016).
+- **Auditoria assíncrona** de Edit/Write/MCP (`async` no `hooks.json`). Bash e PowerShell continuam síncronos, por causa da aprovação reforçada de uso único.
+- A skill `aisef` passa a usar `dispatch` e `validate-wave` no modo contínuo.
+- **Worktrees por fatia ficaram para depois:** exigem antes uma mudança de política (merges locais por escopo) que é decisão do usuário (roadmap).
+
 ## 0.6.1 - 2026-11-18
 - **Autoridade de design por projeto (nova skill `aisef-design`, ADR 0015):**
   - `.aisef/design/tokens.json` (novo schema `design-tokens`) e `DESIGN.md` definem tipografia, paleta, espaçamento, movimento, componentes e regras, aprovados como decisão arquitetural.

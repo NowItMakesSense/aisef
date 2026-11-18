@@ -56,10 +56,10 @@ python -I CORE/aisef_project.py next --project . [--feature FEAT-001] [--json]
 O `next` deriva o estado do log (`delegation`/`task_started` -> em andamento, `task_executed`, `task_validated`, `task_rejected`, `task_completed`) e devolve as acoes, sem executar nada. Trate nesta ordem:
 1. `await_decision`: leve ao usuario (**aisef-approve**); so a tarefa bloqueada espera, o resto continua.
 2. `complete`: **aisef-check**, estado do contrato para `completed`, `append` de `task_completed` (comando pronto na acao).
-3. `validate`: validador independente com a rota `--validator` da acao, em background.
+3. `validate`: rode `python -I CORE/aisef_project.py validate-wave --project .`. Ele faz o `precheck` deterministico de cada tarefa `executed` (quem falha volta ao executor como tentativa + 1, sem gastar modelo) e devolve **um** prompt de validador para o resto da onda; dispare-o em background com o `model`/`effort` devolvidos.
 4. `feature_acceptance`: antes, revise a feature inteira com a skill `code-review` (plugin `mattpocock-skills`; padroes + aderencia a spec; sem o plugin, um subagente revisor). Achados viram novas tentativas das fatias afetadas. Depois, relatorio final e pedido `feature_acceptance` com `aisef_project.py request`.
 5. `create_branch`: rode o comando antes da primeira onda da feature (ver "Branch por feature").
-6. `dispatch`: para cada tarefa da onda, `pack` + rota da acao, `append` de `delegation` e uma chamada de Agent com `run_in_background: true`; todas na mesma mensagem.
+6. `dispatch`: rode `python -I CORE/aisef_project.py dispatch --project .` (**uma** chamada: monta pacote, rota e prompt de cada tarefa da onda e ja registra os `delegation`). Para cada item de `agents`, uma chamada de Agent com `subagent_type`, `model`, `prompt` e `run_in_background: true`, todas na mesma mensagem. Nao rode `pack`/`route`/`append` tarefa a tarefa.
 7. `wait`: espere a notificacao dos agentes. Ao receber, volte ao `next`.
 
 Pare quando `stop_reason` vier preenchido e resuma ao usuario o que foi feito e o que depende dele:
