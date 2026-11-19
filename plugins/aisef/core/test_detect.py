@@ -182,6 +182,33 @@ check("ml: pytorch detectado", "pytorch" in stacks(d), stacks(d))
 check("pastas de dependencia ignoradas", not any("node_modules" in v["file"] for v in d["violations"]) and d["scan"]["files"] == 2,
       d["scan"])
 
+# ---------------------------------------------------------------- regressao da avaliacao A-03 (repositorios reais)
+real = repo("a03", {
+    "Loja.sln": "",
+    "src/Ordering.API/Ordering.API.csproj": "<Project/>",
+    "src/Ordering.API/Application/Commands/Criar.cs": "using Loja.Ordering.API.Extensions;\n",
+    "src/Ordering.API/Extensions/X.cs": "namespace X;\n",
+    "src/Basket.API/Basket.API.csproj": "<Project/>",
+    "src/Catalog.API/Catalog.API.csproj": "<Project/>",
+    "src/Ordering.Domain/AggregatesModel/Order.cs": "namespace X;\n",
+    "src/Ordering.Domain/SeedWork/IAggregateRoot.cs": "namespace X;\n",
+    "src/Ordering.Infrastructure/Domain/OrderConfig.cs": "using Microsoft.EntityFrameworkCore;\n",
+    "web/src/user/user.repository.port.ts": "export interface P {}\n",
+    "web/src/user/user.http.adapter.ts": "export class A {}\n",
+    "web/src/user/domain/user.entity.ts": "export class U {}\n",
+})
+d = det.detect(real)
+s = styles(d)
+check("A-03: pastas irmas *.API com manifest proprio sao microsservicos", s.get("microservices", 0) >= 0.5, s)
+check("A-03: arquivos *.port.ts e *.adapter.ts indicam hexagonal", "hexagonal" in s, s)
+check("A-03: IAggregateRoot conta como DDD tatico", "ddd-tactical" in s, s)
+check("A-03: Infrastructure/Domain e infraestrutura, nao dominio (EF Core permitido)",
+      not any(v["file"].endswith("OrderConfig.cs") for v in d["violations"]), d["violations"])
+check("A-03: Application dentro do projeto Ordering.API importando o proprio projeto nao e violacao",
+      not any(v["file"].endswith("Criar.cs") for v in d["violations"]), d["violations"])
+check("A-03: layer_of", det.layer_of("src/Infrastructure/Domain/Members") == "infrastructure"
+      and det.layer_of("src/Loja.Pedidos.Domain") == "domain" and det.layer_of("x/Ordering.API/Application") == "application")
+
 # ---------------------------------------------------------------- integracao: detect grava, cria drafts e passa no check
 ap.init(clean, "demo-detect")
 check("init sem architecture.json nao cria revisor de stack",

@@ -42,7 +42,8 @@ LAYER_ALIASES = {
 LAYER_RANK = {"domain": 0, "application": 1, "infrastructure": 2, "presentation": 2}
 STYLES = {
     "clean": ("Clean Architecture / Onion", [({"domain"}, 1), ({"application", "usecases", "use_cases", "usecase", "use-cases", "interactors"}, 2),
-                                             ({"infrastructure", "infra"}, 1), ({"presentation"}, 1)], 4),
+                                             ({"infrastructure", "infra", "persistence"}, 1),
+                                             ({"presentation", "delivery", "rest"}, 1), ({"repository", "repositories"}, 1)], 4),
     "hexagonal": ("Hexagonal (ports and adapters)", [({"ports", "port"}, 2), ({"adapters", "adapter"}, 2),
                                                      ({"inbound", "outbound", "driving", "driven", "primary", "secondary"}, 1)], 4),
     "ddd-tactical": ("DDD tatico", [({"aggregates", "aggregate"}, 2), ({"valueobjects", "value_objects", "value-objects", "vo"}, 2),
@@ -58,6 +59,14 @@ STYLES = {
     "vertical-slices": ("Fatias verticais / feature-sliced", [({"features", "feature", "slices"}, 2), ({"widgets", "pages", "shared", "entities"}, 1)], 3),
     "event-driven": ("Orientado a eventos", [({"consumers", "consumer", "subscribers", "listeners"}, 2), ({"producers", "publishers", "publisher"}, 2),
                                              ({"events", "messaging", "messages"}, 1)], 3),
+}
+# Sinais por nome de arquivo (cada regex conta como um grupo de sinal do estilo)
+FILE_SIGNALS = {
+    "ddd-tactical": [(re.compile(r"(?i)aggregate[-_]?root|aggregate\b"), 2),
+                     (re.compile(r"(?i)value[-_]?object"), 2),
+                     (re.compile(r"(?i)domain[-_]?events?\b"), 2)],
+    "hexagonal": [(re.compile(r"(?i)[.-]port\.[a-z]+$|Port\.[a-z]+$"), 2),
+                  (re.compile(r"(?i)[.-]adapter\.[a-z]+$|Adapter\.[a-z]+$"), 2)],
 }
 STYLE_PRACTICE = {"clean": "architecture/clean-architecture", "hexagonal": "architecture/hexagonal", "ddd-tactical": "architecture/ddd-tactical",
                   "ddd-strategic": "architecture/ddd-strategic", "cqrs": "architecture/cqrs-es", "event-sourcing": "architecture/cqrs-es",
@@ -224,12 +233,14 @@ def detect_styles(project, files, dirs, deps):
                     score += 2
                     ev.append("arquivo " + f)
                     break
-        if sid == "ddd-tactical":
+        if sid in FILE_SIGNALS:
             names = [f.rsplit("/", 1)[-1] for f in files if os.path.splitext(f)[1] in SOURCE_EXT]
-            tactical = [n for n in names if re.search(r"(Aggregate|ValueObject|DomainEvent|Specification)\b|_(aggregate|value_object|domain_event)\.", n)]
-            if tactical:
-                score += 2
-                ev.append("arquivos %s" % ", ".join(tactical[:3]))
+            for rx, weight in FILE_SIGNALS[sid]:
+                hits = [n for n in names if rx.search(n)]
+                if hits:
+                    score += weight
+                    hit_groups += 1
+                    ev.append("arquivos %s" % ", ".join(hits[:3]))
         if hit_groups < 2 and sid not in ("ddd-strategic", "event-sourcing"):
             continue  # um sinal isolado (ex.: so "models") nao basta
         if score:
@@ -266,11 +277,18 @@ def modular_monolith(dirs):
 def microservices(files, dirs):
     manifests = ("package.json", "pyproject.toml", "go.mod", "pom.xml", "build.gradle", "build.gradle.kts", "Cargo.toml", "Dockerfile",
                  "*.csproj", "*.fsproj")
-    parents = sorted((d for d in dirs if d.rsplit("/", 1)[-1].lower() in ("services", "apps", "microservices")), key=len)
+    named = ("services", "apps", "microservices")
+    deployable = re.compile(r"(?i)(?:^|[._-])(?:api|service|svc|worker|processor)$")
+    parents = sorted(set(dirs) | {""}, key=lambda d: (d.rsplit("/", 1)[-1].lower() not in named, len(d)))
     for parent in parents:
-        kids = children(dirs, parent)
+        kids = children(dirs, parent) if parent else sorted(d for d in dirs if "/" not in d)
         own = [k for k in kids if any(f.startswith(k + "/") and f.count("/") == k.count("/") + 1
                                       and any(fnmatch.fnmatch(f.rsplit("/", 1)[-1], m) for m in manifests) for f in files)]
+        if parent.rsplit("/", 1)[-1].lower() not in named:
+            # pasta qualquer: so conta servico com nome de servico implantavel (Ordering.API, billing-service, x-worker)
+            own = [k for k in own if deployable.search(k.rsplit("/", 1)[-1])]
+            if len(own) < 3:
+                continue
         if len(own) >= 2:
             ev = ["%d servicos com manifest proprio em %s/" % (len(own), parent)]
             compose = [f for f in files if fnmatch.fnmatch(f.rsplit("/", 1)[-1], "docker-compose*.y*ml") or f.rsplit("/", 1)[-1] in ("compose.yaml", "compose.yml")]
@@ -305,14 +323,22 @@ def is_framework(imp, fw):
     return imp == fw or imp.startswith(fw + ".") or imp.startswith(fw + "/")
 
 
-def layer_of(path_like):
-    """Camada pelo segmento mais interno que casa com um alias (src/orders/domain/x.py -> domain)."""
-    found = None
+def layers_in(path_like):
+    out = []
     for s in segments(path_like):
         for layer, names in LAYER_ALIASES.items():
             if s in names:
-                found = layer
-    return found
+                out.append(layer)
+    return out
+
+
+def layer_of(path_like):
+    """Camada pelo segmento mais interno que casa com um alias (src/orders/domain/x.py -> domain). Excecao: dentro de
+    uma pasta de infraestrutura, tudo e infraestrutura (Infrastructure/Domain/... e o mapeamento do dominio, nao ele)."""
+    found = layers_in(path_like)
+    if not found:
+        return None
+    return "infrastructure" if "infrastructure" in found[:-1] else found[-1]
 
 
 def import_target(rel, imp):
@@ -343,6 +369,8 @@ def dependency_violations(project, files, styles):
                                        "from_layer": src_layer, "to_layer": "framework", "severity": "high"})
                     continue
                 tgt_layer = layer_of(import_target(rel, imp))
+                if tgt_layer and tgt_layer in layers_in(os.path.dirname(rel)):
+                    continue  # mesmo projeto ou pasta-mae (ex.: Application dentro de Ordering.API): nao cruza camada
                 if tgt_layer and LAYER_RANK[tgt_layer] > LAYER_RANK[src_layer]:
                     violations.append({"rule": "inner-imports-outer", "file": rel, "line": line, "import": imp,
                                        "from_layer": src_layer, "to_layer": tgt_layer, "severity": "high"})

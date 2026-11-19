@@ -33,6 +33,16 @@
 
 ## 3. Lista de avaliação (testes e impedimentos para depois)
 
+### Resultados (2026-11-19)
+- **A-01, medido.** Descrições dos agentes no contexto de toda sessão: de ~800 para **~4.700 tokens** (31 papéis `always`: ~2.600). O Claude Code só avisa acima de 15.000 tokens. Decisão do usuário na tabela abaixo.
+- **A-03, medido e corrigido.** 10 repositórios públicos de arquitetura conhecida mais o deckloom:
+  - **Acertos (9 de 10):** jasontaylordev/CleanArchitecture, ardalis/CleanArchitecture, kgrzybek/modular-monolith-with-ddd, Sairyss/domain-driven-hexagon, ddd-by-examples/library, dotnet/eShop, bxcodec/go-clean-arch, hackathon-starter (MVC), psf/requests (sem estilo, corretamente).
+  - **Erro restante:** ContosoUniversity (fatias verticais via Razor Pages + MediatR) não é reconhecido.
+  - **Violações:** antes 6 falsas; depois das correções, 0 falsas. Sobram 1 real (ardalis: `Domain/Order.cs` importa `Infrastructure.Data`) e 2 discutíveis (Sairyss: `application` importando `libs/api` e uma porta guardada em `database/`).
+  - **Correções:** `Infrastructure/Domain` conta como infraestrutura; import do próprio projeto `.API` não é violação; arquivos `*.port.*`/`*.adapter.*` e `AggregateRoot`/`DomainEvent` contam como sinal; Clean em Go (`domain`, `repository`, `rest`); microsserviços como pastas irmãs `*.API`/`*-service` com manifest. Regressão em `test_detect.py`.
+- **A-08, confirmado na prática** (`claude -p`, Haiku): o subagente recebe as regras sem `paths:` ao iniciar e as com `paths:` quando lê um arquivo que casa. O CLAUDE.md também chega (documentação oficial).
+- **A-11, conferido.** Os 56 papéis portados têm `source`, as 33 práticas têm `source:` e o `THIRD_PARTY_NOTICES.md` traz a licença MIT íntegra.
+
 | # | O que avaliar | Como | Decide |
 |---|---|---|---|
 | A-01 | **Custo de contexto dos 66 agentes.** Toda descrição de agente do plugin entra na ferramenta Agent em toda sessão. | Medir os tokens do system prompt com e sem a 0.12. Se pesar, encurtar as descrições ou separar os papéis de stack em plugins `aisef-pack-<stack>`. | usuário |
