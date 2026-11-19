@@ -219,7 +219,10 @@
           "actor_id": { "type": "string" },
           "summary": { "type": "string" },
           "feature_id": { "type": ["string", "null"] },
-          "task_id": { "type": ["string", "null"] }
+          "task_id": { "type": ["string", "null"] },
+          "hash": { "type": ["string", "null"], "description": "Opcional (0.2.0): hash do evento, para o bloco da cadeia." },
+          "prev_hash": { "type": ["string", "null"] },
+          "signed": { "type": "boolean" }
         }
       }
     },
@@ -414,6 +417,7 @@
         "next": { "type": "object" },
         "flow": { "type": "array", "items": { "type": "object" } },
         "gantt": { "type": ["string", "null"] },
+        "timeline": { "type": "array", "description": "Opcional (0.2.0): {task_id, wave, start, end, state} para a raia de ondas.", "items": { "type": "object" } },
         "learning": { "type": "array", "items": { "type": "object" } },
         "model_runs": { "type": "object" }
       }

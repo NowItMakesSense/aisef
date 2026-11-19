@@ -254,12 +254,21 @@ if chrome:
         "features": ["FEAT-001", "Autenticacao JWT", "1/3 tarefas"],
         "tasks": ["T-001", "Gerar access token", "Execuções entregues", "RPT-001"],
         "rtm": ["REQ-001 v1", "Coberto", "Não iniciado"],
-        "approvals": ["Escopo de trabalho em dev para a T-003", "o trabalho independente continua", "APR-000"],
+        "approvals": ["Escopo de trabalho em dev para a T-003", "o trabalho independente continua", "APR-000", "Decida no chat", "aisef_project.py decide --project . --request APR-001 --choice approve"],
         "decisions": ["Algoritmo de assinatura do JWT", "seguiu a recomendação", "HS256"],
         "agents": ["Agente Backend", "Agente Validador"],
         "risks": ["Algoritmo de assinatura mal escolhido", "Regressao nas rotas protegidas"],
         "timeline": ["T-001 concluida", "Escopo para T-003 aguardando aprovacao"],
         "engineering": ["Desenho tecnico da autenticacao JWT", "POST /auth/token", "Token forjado", "dado pessoal", "MIG-1"],
+        # telas novas (hash canonico), com os mesmos conteudos
+        "agora": ["Integridade do histórico verificada", "Precisa de você", "O que depende de você", "Tarefas por estado", "Aprovações pendentes"],
+        "trabalho": ["FEAT-001", "Gerar access token", "Execuções entregues", "1/3 tarefas"],
+        "rastreabilidade": ["REQ-001 v1", "Coberto", "Cobertura"],
+        "governanca": ["Escopo de trabalho em dev para a T-003", "HS256", "Regressao nas rotas protegidas"],
+        "governanca/decisoes": ["seguiu a recomendação"],
+        "historico": ["T-001 concluida", "Origem dos dados", "hash "],
+        "agentes": ["Agente Backend", "Despachos por modelo"] if False else ["Agente Backend", "Agente Validador"],
+        "dependencias": [],
         "deps": [],  # tratado a parte: SVG do Mermaid (com internet) ou codigo de fallback (sem internet)
     }
     js_errors = []
@@ -267,7 +276,7 @@ if chrome:
         out, err = dump(base, tab)
         body = out[out.find("<body"):] if "<body" in out else out
         missing = [n for n in needles if n not in body]
-        if tab == "deps":
+        if tab in ("deps", "dependencias"):
             drawn = "<svg" in body
             fallback = "flowchart TD" in body and "n_T_001 --&gt; n_T_002" in body
             print("      (deps: %s)" % ("diagrama SVG desenhado pelo Mermaid" if drawn else "fallback com o codigo Mermaid" if fallback else "NADA"))
@@ -276,10 +285,12 @@ if chrome:
         if missing:
             print("      faltando:", missing)
         js_errors += [l for l in err.splitlines() if "Uncaught" in l or "SyntaxError" in l or "TypeError" in l]
-    check("nenhum erro de JavaScript no console durante as 10 abas", not js_errors)
+    check("nenhum erro de JavaScript no console durante todas as telas e aliases", not js_errors)
     if js_errors:
         print("     ", js_errors[:3])
 
+    out, _ = dump(base, "agora")
+    check("Chrome: pagina estatica (file://) mostra o indicador 'estatico' no cabecalho", "estático · gerado" in out)
     out, _ = dump(base, "engineering", offline=True)
     body = out[out.find("<body"):]
     check("Chrome sem rede: aba Engenharia desenha arquitetura e ER (2 SVGs)", body.count("<svg") >= 2)
