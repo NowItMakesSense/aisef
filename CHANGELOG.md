@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.1 - 2026-11-18
+- **Modo Ask mais perto do Cursor** (explicação e comparação em `docs/guide/ask-mode.md`):
+  - **`/aisef:ask`** deixou de usar `context: fork`, que entregava a pergunta a um subagente sem nenhum contexto. Agora a sessão escreve até 6 linhas do assunto em discussão e delega ao subagente `aisef:ask` (Haiku, só leitura) pela ferramenta Agent, o que é garantido para agentes de plugin. Durante essa resposta, a sessão fica sem escrita e sem shell (`disallowed-tools`).
+  - **Entrar no `/aisef:modo ask` é imediato,** porque só restringe. Sair (`exec`) continua abrindo o prompt nativo.
+- **README (EN e PT) reescrito** com o conteúdo da análise:
+  - a mesma feature com prompt solto e com o AISEF;
+  - os diagramas do gateway e do fluxo SDD + TDD;
+  - a comparação com nove alternativas;
+  - as sete lacunas que o AISEF cobre e os limites de cada uma;
+  - onde o AISEF perde e quando não usar.
+
 ## 0.9.0 - 2026-11-18
 - **Modo Ask (ADR 0018):**
   - `/aisef:ask <pergunta>` responde num subagente `aisef:ask` (Haiku, effort baixo, só `Read`/`Grep`/`Glob`): barato e sem como editar;

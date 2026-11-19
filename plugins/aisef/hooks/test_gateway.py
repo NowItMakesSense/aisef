@@ -307,7 +307,8 @@ case("propor licoes segue livre", "Bash", "allow", command="python aisef_learn.p
 case("impeccable detect segue livre", "Bash", "allow", command="npx impeccable detect web/")
 
 print("--- modo Ask (0.9.0): so leitura, aplicado pelo gateway")
-case("trocar o modo e decisao do usuario -> ask", "Bash", "ask", command="python -I core/aisef_project.py mode --project . --set ask")
+case("entrar no modo Ask e livre (so restringe)", "Bash", "allow", command="python -I core/aisef_project.py mode --project . --set ask")
+case("voltar ao modo normal e decisao do usuario -> ask", "Bash", "ask", command="python -I core/aisef_project.py mode --project . --set exec")
 case("escrever o arquivo de modo a mao -> ask", "Write", "ask", file_path=os.path.join(proj, ".aisef", "session", "mode.json"))
 case("subagente trocando o modo -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_project.py mode --set exec")
 os.makedirs(os.path.join(proj, ".aisef", "session"), exist_ok=True)

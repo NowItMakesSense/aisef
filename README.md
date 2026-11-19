@@ -4,37 +4,119 @@
 
 **English** · [Português](README.pt-BR.md)
 
-**AI-assisted software engineering with autonomy in execution, rigor in validation and human control over the decisions that matter.**
+**Fast agents are easy. Agents you can audit are not.**
 
-AISEF is a Claude Code plugin you install once and use in any project, new or existing. It turns plain-language requests into specified, agent-executed, independently validated work, under a permission policy that is **enforced on every tool call, not just requested** and a tamper-evident signed audit log.
+AISEF is a Claude Code plugin that turns a plain-language request into a specified feature: broken into vertical slices, implemented test-first by agents running in parallel, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log.
+
+| 148 | 857 | 18 | ~0.2 s |
+|---|---|---|---|
+| consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | recorded architecture decisions ([ADRs](docs/adr/README.md), Portuguese) | per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
 ![Panel](docs/img/panel-overview.png)
 
-## Why
+## One feature, two ways
 
-Most agent workflows give you either **process without enforcement** (skills that ask the model to behave) or **guardrails without process** (a hook that blocks a few commands). AISEF does both, and keeps the evidence:
+Request: *"password reset by email; the link is valid for 30 minutes and can be used only once"*.
 
-| | What you get |
+| With a bare prompt | With AISEF |
 |---|---|
-| **Process (SDD + TDD)** | Discovery → Grill → Spec with agreed test seams → vertical slices → parallel execution with red-then-green TDD → independent validation → code review → your acceptance. The red-before-green evidence is checked, not just requested. Requirements are traced end to end (RTM); more than 140 consistency rules are checked. |
-| **Enforcement** | A `PreToolUse` gateway applies the permission policy to Bash, PowerShell, file tools, WebFetch and MCP. Each Git operation needs its own approval, secrets ask, databases and deploys are denied, and each subagent is capped by its Agent Contract. |
-| **Evidence** | Every operation and every blocked attempt goes to a hash-chained log signed with Ed25519, with the signed head kept outside the repository. |
-| **Cost control** | Model and effort are routed per task by risk and complexity, cheapest first; each failed attempt moves one level up. |
+| The agent starts writing code right away. | AISEF states the phase: "We are in Specify. Next: Grill → Spec → Slices." |
+| Table, endpoint and screen all at once; no test before the code. | **Grill:** three questions, one at a time, each with a recommendation (link lifetime? response for unknown emails? reusable link?). Nothing is invented. |
+| It decides on its own that "the link lasts 24 h" and that "the response differs when the email does not exist". Neither was asked for, and the second leaks who has an account. | **Spec** with the test seams you confirmed (`POST /auth/reset`, `POST /auth/reset/confirm`). |
+| It runs a command against the local database "to check the table". Nothing stops it, nothing records it. | Three **vertical slices**; you approve the plan. One call dispatches the wave: two slices in parallel to the `implementer`. |
+| "Done, all tests pass": the tests were written after the code. | The agent tries `psql` and gets **deny** (a database from a session is treated as production). It is logged. |
+| `git push` goes along, because the agent assumed you wanted it. | The `tdd_evidence` shows the test **failing before it passed**, and the check verifies the order. A different model validates. Code review, your acceptance, and `git push` goes through the native prompt that only you can answer. |
 
-## How it flows
+On the left, the work is fast and opaque. On the right, every decision was yours, every requirement has a test and evidence, and six months from now the panel and the log show exactly what happened.
+
+## How it works
+
+Skills tell the model what to do. The **gateway** decides what it **may** do.
+
+```mermaid
+flowchart TD
+  A[Agent requests a tool<br/>Bash · PowerShell · Edit · MCP] --> G{Execution Gateway<br/>PreToolUse}
+  G -->|Ask mode and a write| D[deny]
+  G -->|outside the agent ceiling| D
+  G -->|policy: free| OK[runs]
+  G -->|policy: approval| ASK[native prompt<br/>only you answer]
+  G -->|reinforced, not recorded| D
+  ASK --> OK
+  OK --> L[(Hash-chained log<br/>signed with Ed25519)]
+  D --> L
+  ASK --> L
+```
+
+The work follows Matt Pocock's method (grill → spec → tickets → TDD), with end-to-end traceability:
 
 ```mermaid
 flowchart LR
-  D[Discovery] --> G[Grill]
-  G --> S[Spec<br/>+ test seams]
-  S --> F[Vertical slices<br/>+ RTM]
-  F -->|you approve| W[Parallel waves<br/>TDD per slice]
-  W --> V[Independent<br/>validator]
-  V -->|rejected| W
-  V --> A[Your acceptance]
+  DS[Discovery] --> GR[Grill]
+  GR --> SP[Spec<br/>+ test seams]
+  SP --> FT[Vertical slices]
+  FT -->|you approve| ON[Parallel wave<br/>TDD per slice]
+  ON --> PC{precheck<br/>no model}
+  PC -->|failed| ON
+  PC --> VA[Independent<br/>validator]
+  VA -->|rejected| ON
+  VA --> CR[Code review]
+  CR --> AC[Your acceptance]
 ```
 
-Small changes (typo, trivial fix, non-breaking dependency patch) take a quick maintenance path with no blueprint. Once a plan is approved, **continuous mode** keeps going on its own and stops only when it needs you.
+| Layer | What it does |
+|---|---|
+| **Process (SDD + TDD)** | Discovery, grill, spec, vertical slices, parallel test-first execution, independent validation, code review and your acceptance. Each requirement points to its slice, criterion, test and evidence (RTM). |
+| **Enforcement** | A `PreToolUse` gateway applies the policy to Bash, PowerShell, file tools, WebFetch and MCP. Each Git operation needs its own approval, secrets ask, databases and deploys are denied, and each subagent is capped by its Agent Contract. |
+| **Evidence** | Every operation and every blocked attempt goes to a hash-chained log signed with Ed25519. The signed head is kept outside the repository. |
+| **Cost** | Model and effort are routed per task by risk and complexity, from Haiku to Opus; each failed attempt moves one level up. |
+| **Learning** | Lessons drawn from errors already on record (rejections, blocks), which only apply after your approval and lose confidence when they stop helping. |
+
+## Where AISEF sits among the alternatives
+
+Based on each project's README and official docs as of 2026-11-18. "Instruction" means the process relies on the model obeying; "enforced" means code prevents it.
+
+| | Specs | Enforcement | TDD | Parallelism | Traceability | Audit | Cost by risk |
+|---|---|---|---|---|---|---|---|
+| **AISEF** | ● spec + slices | ● gateway, per-agent ceiling | ● red→green checked | ● waves + per-wave validation | ● requirement→evidence | ● hash + Ed25519 | ● L0–L6 |
+| Spec Kit (150k★) | ● | ◐ extension hooks | – | – | ◐ | – | – |
+| Superpowers (321k★) | ◐ | ◐ instruction + bootstrap | ● | ● | – | – | ◐ |
+| BMAD (55k★) | ● | – instruction | ◐ | ◐ | ◐ IDs with source | – | – |
+| OpenSpec (75k★) | ● | – instruction | – | – | ◐ | – | – |
+| Kiro (AWS) | ● | ● hooks | ◐ | ● waves | – | – | – |
+| Matt Pocock (327k★) | ● | – instruction | ● | ● | ◐ blocking edges | – | – |
+| everything-claude-code (306k★) | ◐ | ● Node hooks | ● | ◐ | – | ◐ scanning | ◐ |
+| Plain Claude Code | – | ● permissions and hooks | – | ● | – | – | ◐ manual |
+
+● covers · ◐ partly · – not described
+
+### Seven gaps nobody covers well, and AISEF's answer
+
+| Gap | How AISEF covers it | Limit |
+|---|---|---|
+| Governance at tool-call time | The gateway decides allow, ask or deny on every call, with a per-agent ceiling | It reads commands by pattern: it reduces risk, it does not isolate. Pair it with `/sandbox` |
+| Tamper-evident log | Each event carries the previous hash and an Ed25519 signature; the head lives outside the repo | It does not protect against someone holding your machine's private key |
+| Requirement to evidence | The RTM links requirement → slice → criterion → test → evidence, and the check flags gaps | The quick maintenance path has lighter traceability |
+| Validation with separate privileges | The validator only reads Git, never validates its own work and runs at an equal or higher level, preferably on another model | A large wave on one validator should be split |
+| Model chosen by risk | A Haiku → Opus ladder driven by risk, sensitive resources, complexity and attempts | Claude Code environment variables can override it; the router warns |
+| One place for decisions | Each decision is a request with impact, diff, rollback and risk; a reinforced approval covers the exact command, once | If you approve without reading, no technical layer stops it |
+| Memory reviewed before it becomes a rule | Lessons from recorded errors, approved by you, with confidence computed in code | Without your review at milestones nothing is learned, by design |
+
+### Where AISEF loses
+
+- **Claude Code only.** In Cursor, Codex or Gemini, `AGENTS.md` is guidance, not enforcement.
+- **More ceremony.** For an afternoon prototype, the process outweighs the risk. The quick path lightens small changes but does not remove the overhead.
+- **Latency.** About 0.17–0.25 s per hook on Windows, almost all of it Python process startup.
+- **Not a security boundary.** A well-disguised command can get through; real isolation comes from the sandbox.
+- **Small community.** It is a one-person project, with fewer eyes looking for bugs.
+
+**When not to use it:** throwaway proofs of concept, code with no sensitive data and no deploy, or teams that need the same process across several IDEs.
+
+### Adding up instead of competing
+
+AISEF is the **spine** (governance, traceability, decisions and reviewed learning). The **muscle** comes from ready-made skills maintained by their authors:
+- **Matt Pocock:** `grilling`, `domain-modeling`, `tdd` (preloaded in the `implementer` agent) and `code-review`.
+- **Design:** UI/UX Pro Max, Taste and Impeccable, working inside a design authority you approve.
+- **Code graphs:** codebase-memory-mcp (code) and Graphify (docs and decisions).
 
 ## Install
 
@@ -48,15 +130,15 @@ Requirements:
 /plugin install aisef@aisef
 ```
 
-If the Python with `cryptography` is not the first on your PATH, set `AISEF_PYTHON` to it (this also makes the hooks faster). A `SessionStart` doctor tells you if something is missing and stays silent otherwise.
+If the Python with `cryptography` is not the first one on your PATH, set `AISEF_PYTHON` to it (this also makes the hooks faster). To update an older install: `/plugin marketplace update aisef`, then `/plugin update aisef@aisef`.
 
 ## Start in 5 minutes
 
 1. In a project folder, say **"start AISEF in this project"**. On an existing codebase, AISEF investigates before proposing anything.
 2. Approve the agents and the native second-layer rules when asked.
-3. Ask for a feature in plain language. You approve the plan; execution runs inside the approved scope; the feature closes only with your acceptance.
-4. Watch it live in the panel (`aisef-panel`): what each agent is doing now, the next step, the flow of each feature and the parallel waves.
-5. Just a question? `/aisef:ask <question>` answers in a cheap read-only Haiku subagent; `/aisef:modo ask` keeps the whole session read-only (enforced by the gateway) until `/aisef:modo exec`.
+3. Describe what you want. AISEF tells you which phase you are in and walks you through Grill → Spec → Slices up to the plan you approve.
+4. Watch it live: `aisef-panel` opens the panel with what each agent is doing now, the next step, each feature's flow and the parallel waves.
+5. Just a question? `/aisef:ask <question>` answers by reading the project with Haiku, changing nothing; `/aisef:modo ask` keeps the whole session read-only until `/aisef:modo exec`. See [how it compares to Cursor's Ask](docs/guide/ask-mode.md) (Portuguese).
 
 To explore without spending tokens, follow the [walkthrough with the demo project](docs/guide/walkthrough.md) (Portuguese).
 
@@ -64,21 +146,19 @@ To explore without spending tokens, follow the [walkthrough with the demo projec
 
 | Component | Role |
 |---|---|
-| Skills | `aisef` (orchestrator), `ask` and `modo` (Ask mode), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design` (one design authority per project), `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel` |
-| Agents | `implementer` (vertical slices with TDD), `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, each capped by an Agent Contract and generated from one source |
-| Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`) |
-| Core | 9 JSON Schemas, permission and model policies, consistency checker, signed audit chain, brief generators, wave planner, context packs, panel |
-
-## Honest limits
-
-- **The gateway is not a security boundary.** It classifies commands by patterns and reduces risk. Pair it with the Claude Code sandbox (`/sandbox`) and the native rules it installs.
-- **Approval relies on you.** The model cannot answer the native permission prompt, but nothing stops you from approving without reading. That is why the riskiest operations need a recorded reinforced approval *before* the prompt appears.
-- **Hook latency.** About 0.2–0.3 s per hook on Windows, mostly process startup (`python tools/bench_hooks.py`).
-- **Claude Code only.** Elsewhere, `AGENTS.md` is guidance, not enforcement.
+| Skills | `aisef` (orchestrator), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel`, `ask`, `modo` |
+| Agents | `implementer` (vertical slices with TDD), `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, `ask`, each with a permission ceiling and generated from one source |
+| Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`), subagent events, Ask-mode reminder |
+| Core | JSON Schemas, permission and model policies, consistency checker, signed log, brief generators, batch dispatch, context packs, reviewed learning and live panel |
 
 ## Documentation
 
-Start at [docs/README.md](docs/README.md) for concepts, the workflow, the policy reference, commands, hooks, the generated list of check rules, the [architecture decisions](docs/adr/README.md) and the [roadmap](docs/roadmap.md).
+Start at [docs/README.md](docs/README.md) (Portuguese) for:
+- concepts and the workflow;
+- the policy, command and hook references;
+- the generated list of check rules;
+- the [architecture decisions](docs/adr/README.md);
+- the [roadmap](docs/roadmap.md).
 
 ## Development
 
