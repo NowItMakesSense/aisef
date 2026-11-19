@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.2 - 2026-11-18
+- **Painel redesenhado** (planejado e implementado pelo agente de frontend; plano em componentes e layouts):
+  - **App shell:** barra lateral com 5 grupos e 8 telas (Agora, Features e fatias, Dependências, Rastreabilidade, Governança, Histórico, Engenharia, Equipe de agentes) no lugar das 12 abas, e barra inferior no celular. Os links antigos continuam valendo.
+  - **Faixa fixa no topo:** projeto e fase, ao vivo ou estático, "Precisa de você: N", risco crítico e selo de integridade. Com a integridade comprometida, o banner fica impossível de ignorar e o comando de aprovar some.
+  - **Agora:** onde estamos e o próximo passo; cartões "o que depende de você" com o comando para copiar; agentes em execução com contador e última ação; stepper de fluxo de cada feature; raia de ondas nativa (Gantt em Mermaid opcional); o que vem depois e os números do projeto.
+  - **Rastreabilidade** como cadeia requisito → fatia → critério → evidência, com filtros. **Histórico** com os blocos da cadeia de hash.
+  - Claro e escuro com contraste AA verificado (novo `test_panel_contrast.py`), Mermaid nas cores do tema, teclado e `prefers-reduced-motion`, de 375 a 1920 px.
+  - **Atualização ao vivo por seção:** não perde rolagem, filtros, `<details>` abertos nem seleção, e os diagramas não piscam.
+- **Dados:** `live.timeline[]` e `hash`/`prev_hash`/`signed` na linha do tempo (opcionais, retrocompatíveis).
+
 ## 0.9.1 - 2026-11-18
 - **Modo Ask mais perto do Cursor** (explicação e comparação em `docs/guide/ask-mode.md`):
   - **`/aisef:ask`** deixou de usar `context: fork`, que entregava a pergunta a um subagente sem nenhum contexto. Agora a sessão escreve até 6 linhas do assunto em discussão e delega ao subagente `aisef:ask` (Haiku, só leitura) pela ferramenta Agent, o que é garantido para agentes de plugin. Durante essa resposta, a sessão fica sem escrita e sem shell (`disallowed-tools`).
