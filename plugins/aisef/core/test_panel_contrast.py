@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Contraste AA (WCAG 2.1) dos pares texto/fundo dos tokens do painel, nos temas claro e escuro.
+"""Contraste AA (WCAG 2.1) dos pares texto/fundo dos tokens do painel v3, nos temas claro e escuro.
 
-Le o bloco :root e o bloco dark de index.html; nao precisa de navegador. Uso: python3 -I test_panel_contrast.py
+Le o bloco `:root {` (claro) e o bloco `:root[data-theme="dark"] {` (escuro) de index.html; nao precisa de navegador.
+Uso: python3 -I test_panel_contrast.py
 """
 import os
 import re
@@ -13,13 +14,15 @@ css = re.search(r"<style>(.*?)</style>", html, re.S).group(1)
 
 
 def tokens(block):
-    return {k: v.upper() for k, v in re.findall(r"--([a-z0-9-]+):(#[0-9A-Fa-f]{6})", block)}
+    return {k: v.upper() for k, v in re.findall(r"--([a-z0-9-]+):\s*(#[0-9A-Fa-f]{6})\b", block)}
 
 
-light_block = re.search(r":root\{color-scheme.*?\}", css, re.S).group(0)
-dark_block = re.search(r"prefers-color-scheme:dark\)\{:root\{(.*?)\}\}", css, re.S).group(1)
+light_block = re.search(r"^:root \{(.*?)\n\}", css, re.S | re.M).group(1)
+dark_block = re.search(r':root\[data-theme="dark"\] \{(.*?)\n\}', css, re.S).group(1)
+media_dark = re.search(r':root:not\(\[data-theme="light"\]\) \{(.*?)\n  \}', css, re.S).group(1)
 THEMES = {"claro": tokens(light_block)}
 THEMES["escuro"] = dict(THEMES["claro"], **tokens(dark_block))
+same = tokens(dark_block) == tokens(media_dark)
 
 
 def lum(hexc):
@@ -34,12 +37,21 @@ def ratio(a, b):
     return (la + 0.05) / (lb + 0.05)
 
 
-# (texto, fundo, minimo): 4.5 para texto, 3 para componentes graficos (anel de foco)
-PAIRS = [("ink", "bg", 4.5), ("ink", "surface", 4.5), ("ink", "surface-2", 4.5), ("muted", "bg", 4.5), ("muted", "surface", 4.5),
-         ("muted", "surface-2", 4.5), ("ledger", "surface", 4.5), ("ledger", "ledger-soft", 4.5), ("ledger", "bg", 4.5),
-         ("amber", "surface", 4.5), ("amber", "amber-soft", 4.5), ("deny", "surface", 4.5), ("deny", "deny-soft", 4.5),
-         ("idle", "surface", 4.5), ("idle", "bg", 4.5), ("on-ledger", "ledger", 4.5), ("on-deny", "deny", 4.5), ("focus", "bg", 3.0), ("focus", "surface", 3.0)]
+# (texto, fundo, minimo): 4.5 para texto; 3.0 para contorno de foco e glifos de estado
+PAIRS = [("text", "ground", 4.5), ("text", "surface", 4.5), ("text", "raised", 4.5),
+         ("muted", "ground", 4.5), ("muted", "surface", 4.5), ("muted", "raised", 4.5),
+         ("faint", "surface", 4.5), ("faint", "ground", 4.5),
+         ("run", "surface", 4.5), ("run", "run-soft", 4.5), ("done", "surface", 4.5), ("done", "done-soft", 4.5),
+         ("you", "surface", 3.0), ("you", "you-soft", 4.5), ("fail", "surface", 4.5), ("fail", "fail-soft", 4.5),
+         ("wait", "surface", 4.5), ("surface", "fail", 4.5),  # faixa de integridade comprometida: texto na cor da superficie
+         ("run", "ground", 3.0)]  # anel de foco
 fails = total = 0
+total += 1
+if not same:
+    fails += 1
+    print("FALHA os dois blocos escuros (prefers-color-scheme e data-theme) divergem")
+else:
+    print("OK    os dois blocos escuros (sistema e escolha explicita) tem os mesmos valores")
 for theme, t in THEMES.items():
     for fg, bg, need in PAIRS:
         total += 1

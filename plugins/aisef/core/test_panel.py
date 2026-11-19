@@ -4,6 +4,7 @@
 Uso: python3 -I test_panel.py <diretorio-de-trabalho-temporario>
 """
 import copy
+import html as html_mod
 import json
 import os
 import pathlib
@@ -250,8 +251,8 @@ def dump(dest, tab, offline=False):
 
 if chrome:
     expected = {
-        "overview": ["Integridade do histórico verificada", "Aprovações pendentes", "Tarefas por estado"],
-        "features": ["FEAT-001", "Autenticacao JWT", "1/3 tarefas"],
+        "overview": ["Integridade do histórico verificada", "Mapa de execução", "Em paralelo", "Fatias"],
+        "features": ["FEAT-001", "Autenticacao JWT", "1/3 fatias", "Grafo de dependências"],
         "tasks": ["T-001", "Gerar access token", "Execuções entregues", "RPT-001"],
         "rtm": ["REQ-001 v1", "Coberto", "Não iniciado"],
         "approvals": ["Escopo de trabalho em dev para a T-003", "o trabalho independente continua", "APR-000", "Decida no chat", "aisef_project.py decide --project . --request APR-001 --choice approve"],
@@ -261,8 +262,9 @@ if chrome:
         "timeline": ["T-001 concluida", "Escopo para T-003 aguardando aprovacao"],
         "engineering": ["Desenho tecnico da autenticacao JWT", "POST /auth/token", "Token forjado", "dado pessoal", "MIG-1"],
         # telas novas (hash canonico), com os mesmos conteudos
-        "agora": ["Integridade do histórico verificada", "Precisa de você", "O que depende de você", "Tarefas por estado", "Aprovações pendentes"],
-        "trabalho": ["FEAT-001", "Gerar access token", "Execuções entregues", "1/3 tarefas"],
+        "agora": ["Integridade do histórico verificada", "1 decisão sua", "Esperando você", "Mapa de execução", "Em paralelo", "esperando outra fatia"],
+        "trabalho": ["FEAT-001", "Gerar access token", "Execuções entregues", "1/3 fatias"],
+        "mapa": ["Mapa dos agentes", "Quem disparou quem", "Orquestrador"],
         "rastreabilidade": ["REQ-001 v1", "Coberto", "Cobertura"],
         "governanca": ["Escopo de trabalho em dev para a T-003", "HS256", "Regressao nas rotas protegidas"],
         "governanca/decisoes": ["seguiu a recomendação"],
@@ -291,6 +293,22 @@ if chrome:
 
     out, _ = dump(base, "agora")
     check("Chrome: pagina estatica (file://) mostra o indicador 'estatico' no cabecalho", "estático · gerado" in out)
+    body = out[out.find("<body"):]
+    # autoteste da propria pagina em 375 px: nenhuma tela rola na horizontal; filtros, gaveta e rolagem sobrevivem a atualizacao ao vivo
+    build_panel.install_page(os.path.join(base, "panel"))
+    url = pathlib.Path(base, "panel", "index.html").resolve().as_uri() + "?selftest=1#agora"
+    r = subprocess.run([chrome, "--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--window-size=375,800",
+                        "--virtual-time-budget=6000", "--dump-dom", url], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
+    m = re.search(r'<pre id="selftest"[^>]*>(.*?)</pre>', r.stdout, re.S)
+    st = json.loads(html_mod.unescape(m.group(1))) if m and m.group(1).strip() else {}
+    over = {k: v for k, v in (st.get("overflow") or {}).items() if v > 0}
+    check("Chrome 375 px: nenhuma das 8 telas rola na horizontal", bool(st) and len(st.get("overflow") or {}) == 8 and not over)
+    check("Chrome: filtro, feature, gaveta aberta e rolagem sobrevivem a atualizacao ao vivo", bool(st) and all((st.get("kept") or {}).values()))
+    if over or not st or not all((st.get("kept") or {}).values()):
+        print("      autoteste:", st)
+    out, _ = dump(base, "fatias")
+    check("Chrome: grafo de dependencias nativo desenha um no por fatia, que abre a gaveta",
+          out.count('class="dnode') == 3 and 'data-open="T-002"' in out)
     out, _ = dump(base, "engineering", offline=True)
     body = out[out.find("<body"):]
     check("Chrome sem rede: aba Engenharia desenha arquitetura e ER (2 SVGs)", body.count("<svg") >= 2)

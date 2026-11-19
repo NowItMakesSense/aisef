@@ -174,6 +174,234 @@ def gantt_mermaid(log, tasks, now):
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------- mapa de execucao (painel v3)
+# Estado visual de cada fatia: run (rodando), val (validando), dep (esperando outra fatia), you (esperando voce),
+# done (concluida), fail (reprovada, aguardando retrabalho), todo (pronta, ainda nao despachada), off (cancelada).
+def _role(agent_type):
+    return (agent_type or "").split(":")[-1]
+
+
+def _match_parents(events):
+    """Liga cada SubagentStart ao `spawn` (PreToolUse Agent|Task) que o disparou. Sem certeza, marca `inferred`."""
+    spawns = [dict(e, used=False) for e in events if e.get("event") == "spawn"]
+    parents = {}
+    for e in events:
+        if e.get("event") != "start":
+            continue
+        role = _role(e.get("agent_type"))
+        cands = [s for s in spawns if not s["used"] and _role(s.get("subagent_type")) == role
+                 and (s.get("at") or "") <= (e.get("at") or "~")]
+        if not cands:
+            parents[e.get("agent_id")] = (None, None, True, None)  # sem registro do disparo: supoe a sessao principal
+            continue
+        pick = cands[0]
+        pick["used"] = True
+        inferred = len({c.get("parent_id") for c in cands}) > 1
+        parents[e.get("agent_id")] = (pick.get("parent_id"), (pick.get("description") or "")[:200] or None, inferred, pick.get("model"))
+    return parents
+
+
+def _lane(evs, st, denied):
+    """Barras e marcadores de uma fatia no tempo, a partir dos eventos de ciclo de vida do log."""
+    bars, marks, cur, kind = [], [], None, None
+    for e in evs:
+        et, ts = e["event_type"], e["timestamp"]
+        if et in ("delegation", "task_started", "task_resumed"):
+            if cur is None or kind == "fail":
+                cur, kind = ts, "run"
+        elif et == "task_executed" and cur is not None:
+            bars.append({"kind": "done", "start": cur, "end": ts})
+            cur, kind = ts, "val"
+        elif et == "task_rejected":
+            if cur is not None:
+                bars.append({"kind": "fail", "start": cur, "end": ts})
+            marks.append({"at": ts, "kind": "fail"})
+            cur, kind = None, None
+        elif et in ("task_validated", "task_completed"):
+            if cur is not None and kind in ("run", "val"):
+                bars.append({"kind": "done" if kind == "run" else "val", "start": cur, "end": ts})
+            if et == "task_completed":
+                marks.append({"at": ts, "kind": "done"})
+            cur, kind = None, None
+        elif et == "approval_requested" and cur is not None:
+            bars.append({"kind": kind or "run", "start": cur, "end": ts})
+            marks.append({"at": ts, "kind": "you"})
+            cur, kind = ts, "you"
+        elif et in ("approval_granted", "approval_denied") and kind == "you":
+            bars.append({"kind": "you", "start": cur, "end": ts})
+            cur, kind = ts, "run"
+    if cur is not None and st in ("run", "val", "you"):
+        bars.append({"kind": st, "start": cur, "end": None})
+    if denied:
+        marks.append({"at": denied["at"], "kind": "deny"})
+    return bars, marks
+
+
+def board(aisef_dir, loaded, log, now):
+    """Dados do mapa de execucao, das raias em paralelo, da tabela de fatias e da gaveta de detalhe."""
+    tasks = loaded["tasks"]
+    by_id = {t["task_id"]: t for t in tasks}
+    status = {t["task_id"]: t["state"]["status"] for t in tasks}
+    deps = {t["task_id"]: list((t.get("dependencies") or {}).get("depends_on") or []) for t in tasks}
+
+    holds = {}  # aprovacao pendente que segura a fatia
+    for a in loaded["approvals"]:
+        if a.get("status") != "pending":
+            continue
+        for tid in [a.get("task_id")] + list(a.get("blocked_task_ids") or []):
+            if tid and tid not in holds:
+                holds[tid] = a
+
+    wave = {}  # onda = profundidade no grafo de dependencias: so roda depois das anteriores
+
+    def depth(tid, seen=()):
+        if tid not in wave:
+            ds = [d for d in deps.get(tid, []) if d in by_id and d not in seen]
+            wave[tid] = 1 + max((depth(d, seen + (tid,)) for d in ds), default=0)
+        return wave[tid]
+    for tid in by_id:
+        depth(tid)
+
+    life = {}
+    for e in log:
+        if e.get("task_id") in by_id and e["event_type"] in LIFECYCLE + ("approval_requested", "approval_granted", "approval_denied"):
+            life.setdefault(e["task_id"], []).append(e)
+
+    rt = read_runtime(aisef_dir)
+    parents = _match_parents(rt)
+    agents, order = {}, []
+    for e in rt:
+        aid = e.get("agent_id")
+        if not aid:
+            continue
+        if e.get("event") == "start":
+            pid, desc, inf, model = parents.get(aid, (None, None, True, None))
+            agents[aid] = {"agent_id": aid, "agent_type": e.get("agent_type"), "role": _role(e.get("agent_type")),
+                           "started_at": e.get("at"), "ended_at": None, "running": True, "last_action": None,
+                           "last_action_at": None, "task_id": None, "parent_id": pid, "parent_inferred": inf,
+                           "description": desc, "model": model, "validating": [], "actions": [], "tool_count": 0}
+            order.append(aid)
+        elif aid in agents and e.get("event") == "stop":
+            agents[aid].update(ended_at=e.get("at"), running=False)
+        elif aid in agents and e.get("event") == "tool":
+            agents[aid].update(last_action=e.get("summary"), last_action_at=e.get("at"), tool_count=agents[aid]["tool_count"] + 1)
+            agents[aid]["actions"] = (agents[aid]["actions"] + [{"at": e.get("at"), "text": e.get("summary")}])[-10:]
+    for aid in order:
+        if agents[aid]["parent_id"] not in agents:
+            agents[aid]["parent_id"] = None
+
+    taken = set()  # executor: a fatia em andamento do seu papel; subagente: a fatia do pai
+    for aid in order:
+        a = agents[aid]
+        if a["parent_id"] or a["role"] == "validator" or not a["running"]:
+            continue
+        cand = [tid for tid in sorted(by_id) if status[tid] == "in_progress" and tid not in taken
+                and a["role"] in (by_id[tid]["assigned_agent"]["agent_id"], by_id[tid]["assigned_agent"].get("role"))]
+        if cand:
+            a["task_id"] = cand[0]
+            taken.add(cand[0])
+    last_dele = {}
+    for e in log:
+        if e["event_type"] == "delegation" and e.get("task_id"):
+            last_dele[e["task_id"]] = e.get("data") or {}
+    for aid in order:
+        a = agents[aid]
+        if a["task_id"] and not a["model"]:
+            d = last_dele.get(a["task_id"], {})
+            a["model"] = "/".join(x for x in (d.get("model"), d.get("effort")) if x) or None
+    for aid in order:
+        a = agents[aid]
+        p = agents.get(a["parent_id"]) if a["parent_id"] else None
+        if p and p["task_id"]:
+            a["task_id"] = p["task_id"]
+        if a["role"] == "validator" and a["running"] and not a["parent_id"]:
+            a["validating"] = [tid for tid in sorted(by_id) if status[tid] == "executed"]
+
+    denies = {}  # negacao do gateway, presa a fatia do agente que tentou
+    for e in log:
+        d = e.get("data") or {}
+        if e["event_type"] == "tool_used" and d.get("gateway") == "deny" and d.get("subagent"):
+            role = _role(d["subagent"])
+            exact = agents.get(d.get("agent_id") or "")
+            tid = exact["task_id"] if exact and exact["task_id"] else None
+            tid = tid or next((agents[a]["task_id"] for a in order if agents[a]["role"] == role and agents[a]["task_id"]), None)
+            tid = tid or next((t for t in sorted(by_id) if status[t] == "in_progress"
+                               and role in (by_id[t]["assigned_agent"]["agent_id"], by_id[t]["assigned_agent"].get("role"))), None)
+            if tid:
+                denies[tid] = {"at": e["timestamp"], "text": (d.get("target") or d.get("tool") or "")[:80]}
+
+    tdd = {}
+    for r in loaded.get("reports", []):
+        cyc = (r.get("tdd_evidence") or {}).get("cycles") or []
+        tdd[r.get("task_id")] = [sum(1 for c in cyc if (c.get("red") or {}).get("exit_code") not in (0, None)),
+                                 sum(1 for c in cyc if (c.get("green") or {}).get("exit_code") == 0)]
+
+    rows, events, lanes = [], {}, []
+    for t in sorted(tasks, key=lambda t: (wave[t["task_id"]], t["task_id"])):
+        tid, st = t["task_id"], status[t["task_id"]]
+        evs = life.get(tid, [])
+        dele = [e for e in evs if e["event_type"] == "delegation"]
+        meta = (dele[-1].get("data") or {}) if dele else {}
+        started = next((e["timestamp"] for e in evs if e["event_type"] in ("delegation", "task_started")), None)
+        ended = evs[-1]["timestamp"] if evs and st in ("completed", "validated", "cancelled") else None
+        waiting = [d for d in deps[tid] if status.get(d) != "completed"]
+        hold = holds.get(tid)
+        vs = ("off" if st == "cancelled" else "you" if hold else "run" if st == "in_progress" else "val" if st == "executed"
+              else "done" if st in ("completed", "validated") else "fail" if st == "rejected" else "dep" if waiting else "todo")
+        mine = [agents[a] for a in order if agents[a]["task_id"] == tid and not agents[a]["parent_id"]]
+        last = next((a for a in reversed(mine) if a["last_action"]), None)
+        row = {"task_id": tid, "feature_id": t["feature_id"], "title": t.get("title"), "wave": wave[tid], "st": vs,
+               "status": st, "role": t["assigned_agent"]["agent_id"], "model": meta.get("model"), "effort": meta.get("effort"),
+               "attempt": meta.get("attempt") or (t["state"].get("rejection_count", 0) or 0) + 1,
+               "started_at": started, "ended_at": ended, "depends_on": deps[tid], "waiting_on": waiting,
+               "unlocks": [x for x in sorted(by_id) if tid in deps[x]],
+               "approval": hold["request_id"] if hold else None, "approval_title": hold.get("title") if hold else None,
+               "approval_at": hold.get("created_at") if hold else None, "denied": denies.get(tid),
+               "tdd": tdd.get(tid, [0, 0]), "rejections": t["state"].get("rejection_count", 0) or 0,
+               "last_action": last["last_action"] if last else None, "last_action_at": last["last_action_at"] if last else None}
+        rows.append(row)
+        events[tid] = [{"at": e["timestamp"], "type": e["event_type"], "text": e.get("summary")} for e in evs][-8:]
+        if started:
+            bars, marks = _lane(evs, vs, row["denied"])
+            lanes.append({"key": tid, "label": "%s · %s" % (row["role"], tid), "task_id": tid, "st": vs, "child": False,
+                          "bars": bars, "marks": marks})
+            for aid in order:
+                a = agents[aid]
+                if a["task_id"] == tid and a["parent_id"]:
+                    lanes.append({"key": aid, "label": "%s (de %s)" % (a["role"] or "subagente", tid), "task_id": tid,
+                                  "st": "run" if a["running"] else "done", "child": True, "marks": [],
+                                  "bars": [{"kind": "run" if a["running"] else "done", "start": a["started_at"], "end": a["ended_at"]}]})
+    for aid in order:
+        a = agents[aid]
+        if a["role"] == "validator" and not a["parent_id"]:
+            lanes.append({"key": aid, "label": "validator", "task_id": None, "st": "val" if a["running"] else "done", "child": False,
+                          "marks": [], "bars": [{"kind": "val" if a["running"] else "done", "start": a["started_at"], "end": a["ended_at"]}]})
+
+    waves = {}
+    for r in rows:
+        w = waves.setdefault(r["wave"], {"wave": r["wave"], "dispatched_at": None, "tasks": []})
+        w["tasks"].append(r["task_id"])
+        if r["started_at"] and (w["dispatched_at"] is None or r["started_at"] < w["dispatched_at"]):
+            w["dispatched_at"] = r["started_at"]
+
+    count = {}
+    for r in rows:
+        count[r["st"]] = count.get(r["st"], 0) + 1
+    n_val = max(count.get("val", 0), 1 if any(a["role"] == "validator" and a["running"] for a in agents.values()) else 0)
+    parts = (["%d rodando" % count["run"]] if count.get("run") else []) + (["%d validando" % n_val] if n_val else [])
+    head = ("%s." % " e ".join(parts)) if parts else "Nenhum agente rodando agora."
+    detail = ["%s parada esperando a sua decisão %s" % (r["task_id"], r["approval"]) for r in rows if r["st"] == "you"][:2]
+    wait = [r["task_id"] for r in rows if r["st"] == "dep"]
+    if wait:
+        detail.append("%s %s fatias que ainda não terminaram" % (" e ".join(wait[:3]) + ("…" if len(wait) > 3 else ""),
+                                                             "espera" if len(wait) == 1 else "esperam"))
+    starts = [r["started_at"] for r in rows if r["started_at"]] + [a["started_at"] for a in agents.values() if a["started_at"]]
+    return {"tasks": rows, "events": events, "lanes": lanes, "waves": sorted(waves.values(), key=lambda w: w["wave"]),
+            "agents": [agents[a] for a in order], "headline": head[0].upper() + head[1:],
+            "detail": ("; ".join(detail) + ".").replace("; ", ". ", 1) if detail else "",
+            "since": min(starts, key=lambda s: _parse(s) or now) if starts else None}
+
+
 def derive_live(aisef_dir, loaded, log, now=None):
     now = now or datetime.datetime.now(datetime.timezone.utc)
     project = os.path.dirname(os.path.abspath(aisef_dir))
@@ -211,7 +439,7 @@ def derive_live(aisef_dir, loaded, log, now=None):
     return {"generated_at": now.isoformat(timespec="seconds"), "learning": learning, "model_runs": model_runs,
             "agents_in_flight": agents_in_flight(aisef_dir, log, tasks, now),
             "next": nxt, "flow": flow, "gantt": gantt_mermaid(log, tasks, now),
-            "timeline": timeline_rows(log, tasks, now)}
+            "timeline": timeline_rows(log, tasks, now), "board": board(aisef_dir, loaded, log, now)}
 
 
 # ---------------------------------------------------------------------------- servidor local
