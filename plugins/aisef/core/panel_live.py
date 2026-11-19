@@ -117,14 +117,15 @@ def flow_mermaid(stage):
         lines.append('  %s["%s%s"]' % (k, mark, label))
     for a, b in zip(keys, keys[1:]):
         lines.append("  %s --> %s" % (a, b))
-    lines += ["  classDef done fill:#d1fae5,stroke:#059669,color:#064e3b", "  classDef now fill:#fde68a,stroke:#b45309,stroke-width:3px,color:#451a03",
-              "  classDef todo fill:#f3f4f6,stroke:#9ca3af,color:#374151"]
+    # Cores de tom medio com texto escuro explicito: legiveis no tema claro e no escuro, sem re-renderizar na troca.
+    lines += ["  classDef done fill:#4FC395,stroke:#0B6E4F,color:#06251a", "  classDef now fill:#F0A637,stroke:#9A5B00,stroke-width:3px,color:#2b1a00",
+              "  classDef todo fill:#C9D3CD,stroke:#6B7A72,color:#15201B"]
     for i, k in enumerate(keys):
         lines.append("  class %s %s" % (k, "done" if i < cur else ("now" if i == cur else "todo")))
     return "\n".join(lines)
 
 
-def gantt_mermaid(log, tasks, now):
+def _task_rows(log, tasks, now):
     by_task = {}
     for e in log:
         if e["event_type"] in LIFECYCLE and e.get("task_id"):
@@ -141,6 +142,23 @@ def gantt_mermaid(log, tasks, now):
         if not end or (end - start).total_seconds() < 60:  # barra visivel mesmo para tarefa recem-iniciada
             end = start + datetime.timedelta(minutes=1)
         rows.append((feat.get(tid, "?"), tid, start, end, status.get(tid)))
+    return rows
+
+
+def timeline_rows(log, tasks, now):
+    """Linhas {task_id, wave, start, end, state} para a raia de ondas nativa. Onda = delegacoes feitas juntas (ate 120 s)."""
+    rows = sorted(_task_rows(log, tasks, now), key=lambda r: r[2])
+    out, wave_start, wave = [], None, 0
+    for _f, tid, start, end, st in rows:
+        if wave_start is None or (start - wave_start).total_seconds() > 120:
+            wave, wave_start = wave + 1, start
+        out.append({"task_id": tid, "wave": wave, "start": start.isoformat(timespec="seconds"),
+                    "end": end.isoformat(timespec="seconds"), "state": st})
+    return out
+
+
+def gantt_mermaid(log, tasks, now):
+    rows = _task_rows(log, tasks, now)
     if not rows:
         return None
     fmt = "%Y-%m-%dT%H:%M:%S"
@@ -149,7 +167,7 @@ def gantt_mermaid(log, tasks, now):
         lines.append("  section %s" % _mid(fid))
         for _f, tid, start, end, st in sorted((r for r in rows if r[0] == fid), key=lambda r: r[2]):
             tag = {"completed": "done", "in_progress": "active", "rejected": "crit"}.get(st, "")
-            label = ("%s %s" % (tid, title.get(tid, ""))).replace(":", " ").replace("#", " ").strip()
+            label = _mid(tid).replace("_", "-")  # so o ID: a barra fica legivel; o titulo aparece na raia nativa
             lines.append("  %s :%s%s, %s, %s" % (label, tag + ", " if tag else "", _mid(tid),
                                                  start.astimezone().strftime(fmt),
                                                  end.astimezone().strftime(fmt)))
@@ -192,7 +210,8 @@ def derive_live(aisef_dir, loaded, log, now=None):
             model_runs[m] = model_runs.get(m, 0) + 1
     return {"generated_at": now.isoformat(timespec="seconds"), "learning": learning, "model_runs": model_runs,
             "agents_in_flight": agents_in_flight(aisef_dir, log, tasks, now),
-            "next": nxt, "flow": flow, "gantt": gantt_mermaid(log, tasks, now)}
+            "next": nxt, "flow": flow, "gantt": gantt_mermaid(log, tasks, now),
+            "timeline": timeline_rows(log, tasks, now)}
 
 
 # ---------------------------------------------------------------------------- servidor local

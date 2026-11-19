@@ -34,7 +34,7 @@ sys.path.insert(0, HERE)
 import audit_chain  # noqa: E402
 import aisef_project  # noqa: E402
 
-BUILDER_VERSION = "0.1.0"
+BUILDER_VERSION = "0.2.0"
 SEVERITY = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 SCHEMA_FILES = {
     "features": "feature-contract.schema.v0.1.json",
@@ -313,6 +313,7 @@ def derive(loaded, log, integrity):
         "sequence": e["sequence"], "event_id": e["event_id"], "timestamp": e["timestamp"],
         "event_type": e["event_type"], "actor_type": e["actor"]["type"], "actor_id": e["actor"]["id"],
         "summary": e["summary"], "feature_id": e.get("feature_id"), "task_id": e.get("task_id"),
+        "hash": e.get("hash"), "prev_hash": e.get("prev_hash"), "signed": bool(e.get("signature")),
     } for e in reversed(visible)][:200]
 
     nodes = [{"id": r["task_id"], "feature_id": r["feature_id"], "title": r["title"], "status": r["status"]} for r in task_rows]
@@ -324,10 +325,10 @@ def derive(loaded, log, integrity):
                 missing_nodes.append(d)
 
     lines = ["flowchart TD",
-             "  classDef completed fill:#d4edda,stroke:#2e7d32,color:#111",
-             "  classDef in_progress fill:#fff3cd,stroke:#b8860b,color:#111",
-             "  classDef blocked fill:#f8d7da,stroke:#c62828,color:#111",
-             "  classDef other fill:#e9ecef,stroke:#6c757d,color:#111"]
+             "  classDef completed fill:#4FC395,stroke:#0B6E4F,color:#06251a",
+             "  classDef in_progress fill:#F0A637,stroke:#9A5B00,color:#2b1a00",
+             "  classDef blocked fill:#F2766C,stroke:#B3261E,color:#2b0a07",
+             "  classDef other fill:#C9D3CD,stroke:#6B7A72,color:#15201B"]
     by_feature = {}
     for n in nodes:
         by_feature.setdefault(n["feature_id"], []).append(n)

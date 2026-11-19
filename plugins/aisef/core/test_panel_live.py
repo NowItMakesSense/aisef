@@ -97,7 +97,9 @@ try:
     check("servidor: regenera quando .aisef/ muda (novo evento aparece sem rodar nada)",
           d2["manifest"]["source"]["event_count"] == d1["manifest"]["source"]["event_count"] + 1)
     check("pagina: aba Agora e atualizacao automatica quando servida por http",
-          'views.live' in page and '["live","Agora"]' in page and 'fetch("panel-data.json"' in page)
+          'SCREENS.agora' in page and 'ALIAS' in page and 'fetch("panel-data.json"' in page)
+    check("Agora: linha do tempo das tarefas (raia de ondas) com onda, inicio, fim e estado",
+          L["timeline"] and set(L["timeline"][0]) == {"task_id", "wave", "start", "end", "state"} and L["timeline"][0]["wave"] == 1, L.get("timeline"))
 finally:
     httpd.shutdown()
 
