@@ -131,7 +131,7 @@ Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedid
 ## Aprendizado continuo (licoes revisadas)
 O AISEF aprende com os **erros que ele mesmo registra**: reprovacoes (do validador e do `precheck`), bloqueios do gateway, `scope_discovery`, correcoes e problemas dos relatorios. Nunca aprende sozinho:
 1. **No fim de cada onda e no aceite da feature**, rode `python -I CORE/aisef_learn.py propose --project .`. Ele agrupa os sinais sem modelo, so desde a ultima rodada.
-2. Para cada grupo relevante, redija um `trigger` ("quando...") e uma `action` ("faca/evite..."), curtos e verificaveis. Se houver muitos grupos, use um subagente Haiku.
+2. Para cada grupo relevante, redija um `trigger` ("quando...") e uma `action` ("faca/evite..."), curtos e verificaveis. Se houver muitos grupos, delegue ao `aisef:conversation-analyzer` (Haiku), que so redige propostas e descarta casos isolados.
 3. Mostre a lista ao usuario (AskUserQuestion, multiSelect). **So o que ele escolher** vira licao:
    ```
    python -I CORE/aisef_learn.py accept --project . --proposal P-1 --trigger "..." --action "..." [--tags a,b]
@@ -140,6 +140,8 @@ O AISEF aprende com os **erros que ele mesmo registra**: reprovacoes (do validad
 4. Depois de cada onda, rode `python -I CORE/aisef_learn.py update --project .`. A confianca sobe quando a tarefa que recebeu a licao passa, cai quando e reprovada e decai sem uso; abaixo de 0,2 a licao e aposentada.
 
 A licao entra **so no pacote da tarefa relevante**, com a confianca e marcada como referencia (nao como ordem); o `dispatch` registra quem recebeu o que. Ela fica em `.aisef/knowledge/`, versionada, e o time herda.
+
+**Contexto insuficiente (recuperacao iterativa, ideia do iterative-retrieval do ECC):** se o executor devolver `needs_intervention` ou `scope_discoveries` por falta de contexto (nao por escopo), nao reenvie o mesmo pacote. Ate 3 rodadas: (1) leia o que faltou no relatorio; (2) busque so isso (grafo do Graphify, `aisef:code-explorer`, `aisef:docs-lookup` para API externa); (3) acrescente ao `context.on_demand` da tarefa ou ao prompt e despache de novo. Na terceira sem sucesso, escale ao usuario.
 
 **Contexto:** o doctor reinjeta o estado (fase, tarefas em andamento, decisoes pendentes) depois de `/compact` e `/resume`. Quando o `next` trouxer `guide.compact_hint`, sugira `/compact` ao usuario: e um marco de fase sem agente em voo.
 
