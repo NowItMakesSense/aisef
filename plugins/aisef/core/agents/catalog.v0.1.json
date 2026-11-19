@@ -1465,7 +1465,7 @@
       "name": "Revisor React",
       "kind": "evaluator",
       "group": "stack-review",
-      "activation": "manual",
+      "activation": "stack:react|nextjs",
       "level": 3,
       "task_types": [
         "review"
@@ -1485,7 +1485,7 @@
       "responsibilities": [
         "Revisar codigo React: hooks, desempenho de renderizacao, fronteira server/client e acessibilidade, sem opinar sobre o visual"
       ],
-      "description": "Revisor React do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata. Manual; nao opina sobre o visual.",
+      "description": "Revisor React do AISEF: hooks, renderizacao, fronteira server/client e seguranca; so relata, nao opina sobre o visual.",
       "prompt": "prompts/react-reviewer.md",
       "source": "ECC agents/react-reviewer.md"
     },
@@ -1494,7 +1494,7 @@
       "name": "Revisor Vue",
       "kind": "evaluator",
       "group": "stack-review",
-      "activation": "manual",
+      "activation": "stack:vue|nuxt",
       "level": 3,
       "task_types": [
         "review"
@@ -1514,7 +1514,7 @@
       "responsibilities": [
         "Revisar codigo Vue: Composition API, reatividade, arquitetura de componentes e seguranca, sem opinar sobre o visual"
       ],
-      "description": "Revisor Vue do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata. Manual; nao opina sobre o visual.",
+      "description": "Revisor Vue do AISEF: Composition API, reatividade e seguranca; so relata, nao opina sobre o visual.",
       "prompt": "prompts/vue-reviewer.md",
       "source": "ECC agents/vue-reviewer.md"
     },
@@ -2052,7 +2052,7 @@
       "name": "Revisor de acessibilidade",
       "kind": "evaluator",
       "group": "stack-review",
-      "activation": "manual",
+      "activation": "stack:react|nextjs|vue|nuxt|angular|svelte|flutter|android|swift",
       "level": 3,
       "task_types": [
         "review"
@@ -2072,7 +2072,7 @@
       "responsibilities": [
         "Revisar conformidade com WCAG 2.2 em web e apps nativos, sem alterar design"
       ],
-      "description": "Revisor de acessibilidade do AISEF: WCAG 2.2, so relata; nao altera o design. Manual.",
+      "description": "Revisor de acessibilidade do AISEF: WCAG 2.2 em telas web e nativas; so relata, nao altera o design.",
       "prompt": "prompts/a11y-architect.md",
       "source": "ECC agents/a11y-architect.md"
     }

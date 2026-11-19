@@ -156,6 +156,15 @@ for bad_ in (lambda: aisef_review.record(proj, "T-012", "code-reviewer", "APPROV
     except SystemExit:
         check("record recusa APPROVE com HIGH e papel que nao e avaliador", True)
 check("prompt do revisor manda gravar com o record (com sufixo na revisao dupla)", "record --project . --task T-012 --role code-reviewer" in d2[0]["prompt"] and "--suffix -B" in d2[0]["prompt"], d2[0]["prompt"])
+arch_p = os.path.join(proj, ".aisef", "architecture.json")
+json.dump({"stacks": [{"id": "typescript"}, {"id": "react"}]}, open(arch_p, "w", encoding="utf-8"))
+ui = dict(t12, touches=["ui"], scope=dict(t12["scope"], paths_allowed=["web/src/Login.tsx"]))
+rv_ui = aisef_review.reviewers_for(proj, ui)
+check("A-04: tarefa de UI em projeto React pede react-reviewer e a11y-architect",
+      "react-reviewer" in rv_ui and "a11y-architect" in rv_ui and "typescript-reviewer" in rv_ui, rv_ui)
+check("A-04: tarefa sem UI nao pede revisores de UI",
+      "a11y-architect" not in aisef_review.reviewers_for(proj, dict(t12, scope=dict(t12["scope"], paths_allowed=["src/a.py"]))))
+os.remove(arch_p)
 redo = dsp.dispatch_wave(proj, dry_run=True)
 check("fatia reprovada no precheck volta no proximo dispatch como tentativa 2 (sobe um nivel)",
       any(a["task_id"] == "T-010" and a["attempt"] == 2 for a in redo["agents"]), redo["agents"])

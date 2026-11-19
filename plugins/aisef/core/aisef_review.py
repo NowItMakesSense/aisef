@@ -33,7 +33,7 @@ EXT_REVIEWER = {".py": "python-reviewer", ".pyi": "python-reviewer", ".ts": "typ
                 ".kt": "kotlin-reviewer", ".kts": "kotlin-reviewer", ".swift": "swift-reviewer", ".cs": "csharp-reviewer",
                 ".fs": "fsharp-reviewer", ".cpp": "cpp-reviewer", ".cc": "cpp-reviewer", ".cxx": "cpp-reviewer",
                 ".hpp": "cpp-reviewer", ".h": "cpp-reviewer", ".php": "php-reviewer", ".rb": "ruby-reviewer",
-                ".dart": "flutter-reviewer", ".gd": "gdscript-reviewer", ".vue": "vue-reviewer"}
+                ".dart": "flutter-reviewer", ".gd": "gdscript-reviewer"}
 STACK_REVIEWER = {"python": "python-reviewer", "typescript": "typescript-reviewer", "javascript": "typescript-reviewer",
                   "go": "go-reviewer", "rust": "rust-reviewer", "java": "java-reviewer", "kotlin": "kotlin-reviewer",
                   "swift": "swift-reviewer", "csharp": "csharp-reviewer", "fsharp": "fsharp-reviewer", "cpp": "cpp-reviewer",
@@ -41,6 +41,8 @@ STACK_REVIEWER = {"python": "python-reviewer", "typescript": "typescript-reviewe
                   "godot": "gdscript-reviewer", "django": "django-reviewer", "fastapi": "fastapi-reviewer",
                   "react": "react-reviewer", "nextjs": "react-reviewer", "vue": "vue-reviewer", "nuxt": "vue-reviewer"}
 FRAMEWORK_REVIEWER = {"django": "django-reviewer", "fastapi": "fastapi-reviewer"}
+UI_EXT = {".tsx", ".jsx", ".vue", ".svelte", ".dart", ".html", ".css", ".scss"}
+UI_STACKS = {"react", "nextjs", "vue", "nuxt", "angular", "svelte", "flutter", "android", "swift"}
 STACK_FIXER = {"typescript": "build-error-resolver", "javascript": "build-error-resolver", "python": "python-build-resolver",
                "django": "django-build-resolver", "go": "go-build-resolver", "rust": "rust-build-resolver",
                "java": "java-build-resolver", "kotlin": "kotlin-build-resolver", "swift": "swift-build-resolver",
@@ -84,6 +86,14 @@ def reviewers_for(project, task):
     out += langs
     if "python-reviewer" in out:
         out += [FRAMEWORK_REVIEWER[s] for s in proj_stacks if s in FRAMEWORK_REVIEWER]
+    ui_task = "ui" in (task.get("touches") or []) or exts & UI_EXT
+    if ui_task:  # revisores de UI so relatam; o visual continua com o frontend e a autoridade de design
+        if set(proj_stacks) & {"react", "nextjs"}:
+            out.append("react-reviewer")
+        if set(proj_stacks) & {"vue", "nuxt"} or ".vue" in exts:
+            out.append("vue-reviewer")
+        if set(proj_stacks) & UI_STACKS or exts & UI_EXT:
+            out.append("a11y-architect")
     touches = set(task.get("touches") or [])
     resources = set((task.get("permissions") or {}).get("resources") or [])
     if "data" in touches or "db_schema" in resources:

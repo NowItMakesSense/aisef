@@ -61,6 +61,9 @@
     3. O `claude -p` do harness encerrava com subagentes em segundo plano ainda rodando. O harness agora usa `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` e retoma a sessão até o `next` parar. **Isso também invalida o benchmark da 0.11 rodado antes desta correção.**
 - **A-06, não mensurável com o benchmark atual.** As tarefas já chegam especificadas, então planner, architect e spec-miner nunca rodam. Seria preciso um benchmark de planejamento.
 - **A-07, decidido: manter a trava.**
+- **A-04, decidido:** `react-reviewer` e `vue-reviewer` ativados pela stack, `a11y-architect` por qualquer stack de UI; entram na revisao de tarefas de UI e so relatam. `react-build-resolver` segue manual.
+- **A-06, decidido: manter Opus** no planner, architect, spec-miner e healthcare-reviewer.
+- **A-05, pendente do usuario:** 3 repeticoes no WSL, na branch do PR #18.
 - **A-11, conferido.** Os 56 papéis portados têm `source`, as 33 práticas têm `source:` e o `THIRD_PARTY_NOTICES.md` traz a licença MIT íntegra.
 
 | # | O que avaliar | Como | Decide |

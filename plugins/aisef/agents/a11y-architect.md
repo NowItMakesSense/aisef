@@ -1,6 +1,6 @@
 ---
 name: a11y-architect
-description: 'Revisor de acessibilidade do AISEF: WCAG 2.2, so relata; nao altera o design. Manual.'
+description: 'Revisor de acessibilidade do AISEF: WCAG 2.2 em telas web e nativas; so relata, nao altera o design.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium
