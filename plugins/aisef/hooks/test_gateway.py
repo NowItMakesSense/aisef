@@ -323,6 +323,8 @@ case("Ask: Read e Grep seguem livres", "Read", "allow", file_path=os.path.join(p
 case("Ask: consultar o next segue livre", "Bash", "allow", command="python -I core/aisef_project.py next --project .")
 case("Ask: sair do modo continua possivel (prompt nativo)", "Bash", "ask", command="python -I core/aisef_project.py mode --project . --set exec")
 case("Ask: MCP fora de mcp_allow -> deny", "mcp__github__create_issue", "deny")
+case("Ask: pesquisar na web segue livre", "WebFetch", "allow", url="https://docs.python.org/3/library/json.html")
+case("Ask: URL com token continua negada", "WebFetch", "deny", url="https://x.example/a?token=abcdefghijklmnopqrstuvwxyz")
 r = run("prompt_mode.py", {"hook_event_name": "UserPromptSubmit", "prompt": "como funciona o login?"})
 total += 1
 ok = "modo Ask" in r.stdout and "UserPromptSubmit" in r.stdout
