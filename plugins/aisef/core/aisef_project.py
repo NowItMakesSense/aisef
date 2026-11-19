@@ -20,6 +20,8 @@ Uso:
                                        [--authorization rascunho.json]
     python3 -I aisef_project.py agents --project REPO [--activate] [--roles backend,qa]
         (sem --activate: cria os drafts dos papeis que se aplicam ao projeto pelo catalogo, ou os de --roles)
+    python3 -I aisef_project.py verify-loop --project REPO [--task T-010]
+        (aisef_verify: build, tipos, lint, testes por stack, segredos no diff e resumo; PASS/FAIL; --task grava a evidencia)
     python3 -I aisef_project.py practices --project REPO [--apply]
         (boas praticas aplicaveis ao projeto: common + linguagens + estilo de arquitetura; --apply grava em .claude/rules/aisef/)
     python3 -I aisef_project.py detect --project REPO
@@ -1081,7 +1083,7 @@ def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["init", "append", "decide", "agents", "settings", "rotate-key", "anchor",
                                         "verify", "status", "waves", "next", "request", "dispatch", "validate-wave",
-                                        "precheck", "mode", "metrics", "detect", "practices"])
+                                        "precheck", "mode", "metrics", "detect", "practices", "verify-loop"])
     ap.add_argument("--since", help="metrics: so eventos e pedidos a partir desta data (ISO 8601)")
     ap.add_argument("--no-check", action="store_true", help="metrics: nao roda o aisef-check")
     ap.add_argument("--set", choices=["ask", "exec"], help="mode: troca o modo da sessao (decisao do usuario)")
@@ -1207,6 +1209,9 @@ def main(argv):
         a_ = anchor(project)
         print("ancora gravada: sequencia %d em %s" % (a_["sequence"], anchors_path(load_config(project)["project_id"])))
         return 0
+    if a.command == "verify-loop":
+        import aisef_verify
+        return aisef_verify.main(["--project", project] + (["--task", a.task] if a.task else []))
     if a.command == "practices":
         import aisef_practices
         if a.apply:

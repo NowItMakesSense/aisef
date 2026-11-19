@@ -39,6 +39,11 @@
   - Tarefa antiga, sem o campo `review`, não muda de comportamento.
   - Schemas: `review` no Task Contract e no Execution Report (veredito e contagem de achados). Nova regra `REPORT-REVIEW-ROLE`.
   - A skill `aisef` traz a equipe por tipo e diz quem usar quando.
+- **Gates do ECC no gateway e verify-loop (E6).**
+  - **Proteção de config de qualidade** (config-protection do ECC): escrever em config de lint, formatação ou tipos (`.eslintrc*`, `eslint.config.*`, `.prettierrc*`, `biome.json`, `tsconfig*.json`, `ruff.toml`, `mypy.ini`, `.rubocop.yml`, `.golangci.yml`, `.pre-commit-config.yaml`, `.husky/` e outros) exige `config_ci_iac`. Os executores não têm esse recurso: consertam o código em vez de afrouxar a regra.
+  - **`--no-verify`, `--no-gpg-sign` e `-c commit.gpgsign=false` no Git são sempre negados** (block-no-verify do ECC).
+  - **`aisef_project.py verify-loop`** (`core/aisef_verify.py`): build → tipos → lint → testes por stack (de `architecture.json`, sobrescrevíveis em `config.json` → `verify`) → segredos nas linhas adicionadas do diff (o valor nunca é impresso) → resumo do diff. Ferramenta ausente vira SKIP; veredito PASS/FAIL/INCOMPLETE. `--task` grava `.aisef/evidence/VERIFY-<T>.json`. O prompt do executor manda rodar antes de entregar.
+  - Testes em `core/test_verify.py` e em `hooks/test_gateway.py`.
 
 ## Não lançado (0.11.0: medir)
 - **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:

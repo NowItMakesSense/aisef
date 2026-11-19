@@ -69,6 +69,16 @@ CONFIG_PATH_RE = re.compile(
     r"(?:^|/)(?:\.github/workflows/|\.gitlab-ci\.yml$|Jenkinsfile$|azure-pipelines\.yml$|\.circleci/|"
     r"Dockerfile[^/]*$|docker-compose[^/]*\.ya?ml$|compose\.ya?ml$|[^/]+\.tf$|[^/]+\.tfvars$|helm/|charts/|k8s/|"
     r"kubernetes/|\.claude/settings[^/]*\.json$|\.claude/(?:skills|agents|commands)/|\.mcp\.json$)", re.I)
+# Configuracao de qualidade (lint, formatacao, tipos): o agente conserta o codigo, nao afrouxa a regra (ideia do
+# config-protection do ECC). Escrever nela exige config_ci_iac, que os executores nao tem no teto.
+QUALITY_CONFIG_RE = re.compile(
+    r"(?:^|/)(?:\.eslintrc[^/]*|eslint\.config\.[cm]?[jt]s|\.prettierrc[^/]*|prettier\.config\.[cm]?js|biome\.jsonc?|"
+    r"tsconfig[^/]*\.json|jsconfig\.json|\.stylelintrc[^/]*|ruff\.toml|\.ruff\.toml|\.flake8|mypy\.ini|\.mypy\.ini|"
+    r"\.pylintrc|pyrightconfig\.json|\.rubocop[^/]*\.ya?ml|\.golangci\.ya?ml|clippy\.toml|rustfmt\.toml|"
+    r"\.swiftlint\.ya?ml|detekt[^/]*\.ya?ml|\.editorconfig|phpstan[^/]*\.neon(?:\.dist)?|psalm\.xml|\.clang-tidy|"
+    r"\.clang-format|\.pre-commit-config\.ya?ml|\.husky/[^/]+|lefthook\.ya?ml|\.lintstagedrc[^/]*)$", re.I)
+# Pular hooks ou assinatura do Git esconde problema (block-no-verify do ECC): sempre negado.
+GIT_SKIP_HOOKS_RE = re.compile(r"\bgit\b[^;&|]*\s(?:--no-verify|--no-gpg-sign)\b|\bgit\b[^;&|]*\s-c\s+commit\.gpgsign=false\b", re.I)
 AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:approvals|authorizations|contracts/agents|session)/|(?:^|[/\s\"'=>])\.aisef/(?:config|policy\.local)\.json\b")
 # Escrita por shell (redirecionamento ou comando que grava, move ou apaga) cujo alvo e um arquivo de decisao do AISEF.
 SHELL_PROTECTED_WRITE_RE = re.compile(
@@ -197,6 +207,8 @@ def write_resource(path, patterns):
         return "sensitive_files", "arquivo sensivel"
     if CONFIG_PATH_RE.search(p):
         return "config_ci_iac", "config/CI/IaC"
+    if QUALITY_CONFIG_RE.search(p):
+        return "config_ci_iac", "configuracao de lint/formatacao/tipos (conserte o codigo, nao afrouxe a regra)"
     return "repo_code", "codigo"
 
 
@@ -483,6 +495,9 @@ def decide(data, project, policy, patterns, config, now):
     operation = ""
     if tool in SHELL_TOOLS:
         operation = inp.get("command", "") or ""
+        if GIT_SKIP_HOOKS_RE.search(operation):
+            raise Decision("deny", "pular hooks ou assinatura do Git (--no-verify, --no-gpg-sign) esconde problemas: "
+                                   "corrija o que o hook acusa")
         items = classify_bash(operation, patterns, env)
     else:
         paths = [norm(inp.get(k)) for k in ("file_path", "path", "notebook_path", "pattern", "glob") if isinstance(inp.get(k), str)]

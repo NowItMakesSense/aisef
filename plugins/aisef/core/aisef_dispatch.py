@@ -31,6 +31,7 @@ import aisef_review  # noqa: E402
 import aisef_route as rt  # noqa: E402
 
 PY = "python -I %s" % os.path.join(HERE, "aisef_project.py").replace("\\", "/")
+VERIFY = "python -I %s" % os.path.join(HERE, "aisef_verify.py").replace("\\", "/")
 
 
 def _load(project, rel):
@@ -63,10 +64,12 @@ def executor_prompt(project, task, route, attempt, pack_text):
         "--task %s --summary \"%s iniciada\"" % (PY, role, fid, tid, tid),
         "2. Faca a tarefa%s." % (" com TDD: um comportamento por vez, teste vermelho antes do verde, nos seams de "
                                  "tests.seams; registre cada ciclo em tdd_evidence.cycles" if tdd else ""),
-        "3. Grave o Execution Report em .aisef/reports/RPT-%s-%d.json (schema execution-report do plugin) e o "
+        "3. Antes de entregar, rode a verificacao: %s --project . --task %s (build, tipos, lint, testes, segredos no diff). "
+        "FAIL e para corrigir; cite .aisef/evidence/VERIFY-%s.json nas evidencias." % (VERIFY, tid, tid),
+        "4. Grave o Execution Report em .aisef/reports/RPT-%s-%d.json (schema execution-report do plugin) e o "
         "relatorio legivel, com execution_profile = {\"model\": \"%s\", \"effort\": \"%s\", \"level\": %d, \"attempt\": %d}."
         % (tid, attempt, route["model"], route["effort"], route["level"], attempt),
-        "4. Ao terminar, registre: %s append --project . --type task_executed --actor agent --actor-id %s --feature %s "
+        "5. Ao terminar, registre: %s append --project . --type task_executed --actor agent --actor-id %s --feature %s "
         "--task %s --summary \"%s executada\"" % (PY, role, fid, tid, tid),
         "Achou algo fora do escopo ou uma decisao que nao e sua: pare a parte afetada e reporte em scope_discoveries.",
         "",
