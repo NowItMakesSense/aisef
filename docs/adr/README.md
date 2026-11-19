@@ -24,3 +24,5 @@ Cada decisão tem data, contexto, o que foi decidido e as consequências. Para m
 | [0018](0018-modo-ask-e-revisao-de-ferramentas.md) | Modo Ask e revisão periódica de ferramentas | 2026-11-18 |
 | [0019](0019-painel-v3-mapa-de-execucao.md) | Painel v3: mapa de execução e quem disparou quem | 2026-11-19 |
 | [0020](0020-catalogo-de-agentes-e-port-do-ecc.md) | Catálogo de agentes como fonte única e port da equipe do ECC | 2026-11-19 |
+| [0021](0021-deteccao-de-arquitetura-e-boas-praticas.md) | Detecção de arquitetura e boas práticas | 2026-11-19 |
+| [0022](0022-revisores-em-codigo-e-gates-do-ecc.md) | Revisores escolhidos em código e gates portados do ECC | 2026-11-19 |

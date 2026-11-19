@@ -15,6 +15,8 @@ O detalhe de cada versão entregue está no [CHANGELOG](../CHANGELOG.md); as dec
 | ~~0.8.2~~ | Entregue: busca de ferramentas por gatilho, revisão periódica (`/skill-doctor`, `claude plugin eval`), desinstalação com aprovação |
 | ~~0.9.0~~ | Entregue: modo Ask (`/aisef:ask` em Haiku só de leitura e `/aisef:modo ask` aplicado pelo gateway) |
 | ~~0.9.3~~ | Entregue: o Ask pesquisa na internet com fontes e escolhe o modelo pela pergunta |
+| 0.11.0 | Medir: `metrics`, benchmark de resultado, tokens por subagente, Graphify padrão (PR #17) |
+| 0.12.0 | Trilha E ([plano](plan/trilha-e-ecc.md)): 66 agentes num catálogo, detecção de stack e arquitetura, boas práticas, revisores em código, `verify-loop`. Lista de avaliação na seção 3 do plano |
 | ~~0.10.0~~ | Entregue: painel v3 (mapa de execução, raias em paralelo, quem disparou quem, gaveta do agente, grafo de dependências com caminho crítico, busca e atalhos) |
 | depois | Confirmar numa sessão real que o Claude Code entrega o `agent_id` de quem chama a ferramenta Agent; sem isso, a ligação pai → subagente continua marcada como inferida |
 

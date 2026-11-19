@@ -13,6 +13,11 @@ AISEF is a Claude Code plugin that turns a plain-language request into a specifi
 
 ## What's new
 
+- **0.12.0, the team, best practices and architecture (port of everything-claude-code ideas).**
+  - **66 agents from one catalog**, grouped by kind: executors, evaluators (code, architecture, database, security, tests, silent failures, types, comments and 16 language reviewers), fixers (simplifier, dead-code cleaner, performance and 13 build resolvers) and advisors (planner, architect, spec miner, explorer, docs lookup). Language agents are switched on only when their stack is detected. The `frontend` agent is unchanged.
+  - **Architecture detection.** `aisef_project.py detect` finds the stack and the style (Clean, hexagonal, DDD, CQRS, MVC, modular monolith, microservices...), checks the dependency rule from imports and recommends improvements. Adopting a style is your decision and becomes an ADR.
+  - **Best practices** (common, per architecture with "when not to use", per language) installed into `.claude/rules/aisef/`.
+  - **Reviewers chosen in code**, all must approve before the validator, with a double review on high risk. Plus `verify-loop`, no `--no-verify`, and lint configs that agents cannot loosen.
 - **0.10.0, panel v3.** The **execution map** is now the main view: one column per wave, every slice with its state, time and last action, and subagents attached to the agent that spawned them. A new hook records **who spawned whom**; when it cannot be sure, the link says "inferred".
   - Click a slice for its drawer. Click an agent or subagent for its own drawer: what it was asked, who spawned it, model, time and latest actions.
   - **Parallel lanes** mark rejections, gateway denials and decision requests at the exact moment.
@@ -164,9 +169,9 @@ To explore without spending tokens, follow the [walkthrough with the demo projec
 | Component | Role |
 |---|---|
 | Skills | `aisef` (orchestrator), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel`, `ask`, `modo` |
-| Agents | `implementer` (vertical slices with TDD), `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, `ask`, each with a permission ceiling and generated from one source |
+| Agents | 66 roles from one catalog (`core/agents/catalog.v0.1.json`): executors (`implementer`, `backend`, `frontend`...), evaluators, fixers, advisors and the `validator`; stack-specific ones switch on with detection. Each has a permission ceiling |
 | Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`), subagent events and who spawned whom (`PreToolUse` Agent), Ask-mode reminder |
-| Core | JSON Schemas, permission and model policies, consistency checker, signed log, brief generators, batch dispatch, context packs, reviewed learning and live panel |
+| Core | JSON Schemas, permission and model policies, consistency checker, signed log, brief generators, batch dispatch, context packs, reviewed learning, live panel, stack and architecture detection, best practices, reviewer routing and verify-loop |
 
 ## Documentation
 
