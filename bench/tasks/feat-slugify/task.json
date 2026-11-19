@@ -1,0 +1,3 @@
+{"id": "feat-slugify", "kind": "feature",
+ "prompt": "Add a function slugify(title: str, max_len: int = 60) -> str to textutil.py. Rules: lowercase; remove accents (e.g. 'ação' -> 'acao'); any run of characters that are not a-z or 0-9 becomes a single '-'; no leading or trailing '-'; if the result is longer than max_len, cut at the last '-' that keeps it within max_len (never cut a word in half; if a single word is longer than max_len, cut that word at max_len); an empty or symbol-only title returns 'untitled'. Add tests.",
+ "test_cmd": ["python", "-m", "unittest", "discover", "-s", "hidden", "-t", "."]}

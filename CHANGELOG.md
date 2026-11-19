@@ -11,6 +11,10 @@
   - erros do check por regra.
   
   Aceita `--feature`, `--since`, `--json` e `--no-check`. Testes em `core/test_metrics.py`.
+- **Benchmark de resultado (M-03).** `tools/bench_outcomes.py` com 6 tarefas em `bench/tasks/` (2 features, 2 bugs, 1 refatoração, 1 segurança), cada uma com testes escondidos e uma solução de referência.
+  - `--check-fixtures` (no `run_tests.py`) garante que cada tarefa falha no repositório inicial e passa com a referência.
+  - `--prepare-only` monta os dois braços sem modelo.
+  - `--run` roda `claude -p` nos braços puro e AISEF (`--plugin-dir`), com o harness no papel do usuário (feature gerada e plano aprovado). Grava `docs/benchmarks/outcomes-<data>.md`.
 - **Tokens e duração por subagente (M-02).** O hook `SubagentStop` soma o uso do transcript do próprio subagente (`agent_transcript_path`; o hook não traz `usage`, segundo a documentação do Claude Code).
   - Conta cada mensagem uma vez, mesmo com streaming.
   - Grava `.aisef/runtime/usage.jsonl`, um histórico local que não é truncado, com tarefa, modelo e duração.

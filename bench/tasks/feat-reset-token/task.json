@@ -1,0 +1,3 @@
+{"id": "feat-reset-token", "kind": "feature",
+ "prompt": "Implement password reset tokens in reset.py, class ResetTokens(store: dict). Methods: issue(user_id: str, now: float) -> str returns a new random token (at least 32 url-safe characters) valid for 30 minutes; consume(token: str, now: float) -> str returns the user_id and invalidates the token so it can be used only once; consume raises InvalidToken (define it in reset.py) for an unknown, already used or expired token (expired means now >= issued + 1800 seconds). Issuing a new token for the same user invalidates that user's previous tokens. The store dict is the only state. Add tests.",
+ "test_cmd": ["python", "-m", "unittest", "discover", "-s", "hidden", "-t", "."]}

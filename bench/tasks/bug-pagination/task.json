@@ -1,0 +1,3 @@
+{"id": "bug-pagination", "kind": "bug",
+ "prompt": "Users report that the last page of results is sometimes missing items, and that asking for page 0 or a page size of 0 crashes or behaves oddly. pages.py has paginate(items, page, size) (pages start at 1) and page_count(total, size). Fix the bugs: the last partial page must be returned; page_count must round up; page < 1 or size < 1 must raise ValueError; a page beyond the end returns an empty list. Keep the existing tests passing and add a regression test.",
+ "test_cmd": ["python", "-m", "unittest", "discover", "-s", "hidden", "-t", "."]}

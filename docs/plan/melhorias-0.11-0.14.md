@@ -85,7 +85,7 @@ Estimativas em dias de trabalho seu com o Claude, como faixa.
     Bônus da F-04 já entregue: ligação exata subagente → tarefa pelo "T-xxx:" do disparo
       (core/aisef_runtime.py).
 
-[ ] M-03: Harness do benchmark de resultado
+[x] M-03: Harness do benchmark de resultado (pronto; a primeira execução com --run é sua, gasta tokens)
     Descrição: tools/bench_outcomes.py e bench/ com 6 tarefas em repositórios fixture
       (2 de feature, 2 de bug, 1 de refatoração, 1 de segurança), cada uma com testes escondidos
       fora do alcance do agente. Dois braços via claude -p: Claude Code puro e AISEF com escopo
@@ -97,7 +97,7 @@ Estimativas em dias de trabalho seu com o Claude, como faixa.
       roda em Linux ou WSL com um comando só.
     Estimativa: 3–5 dias (confiança média)
 
-[ ] M-04: Eval de resultado no plugin
+[-] M-04: Eval de resultado no plugin (substituída: o `claude plugin eval` só tem graders regex, tool_used e llm, nenhum roda comandos; o `bench_outcomes.py --run --reps 1` cobre o mesmo papel)
     Descrição: o caso evals/outcome-slice (tag shell) roda os testes escondidos e o
       check_project no fixture depois do agente.
     Depende de: M-03 (reaproveita um fixture)

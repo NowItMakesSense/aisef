@@ -1,0 +1,3 @@
+{"id": "bug-split-bill", "kind": "bug",
+ "prompt": "Finance reports that splitting a bill sometimes loses cents: split(1000, 3) returns shares that add up to 999. Fix split(total_cents, people) in money.py so the shares always add up exactly to total_cents, differ by at most 1 cent, and the extra cents go to the first people in the list. people < 1 or total_cents < 0 must raise ValueError. Add a regression test.",
+ "test_cmd": ["python", "-m", "unittest", "discover", "-s", "hidden", "-t", "."]}

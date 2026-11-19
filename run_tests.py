@@ -41,6 +41,7 @@ SUITES = [
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),
     ("hook consultivo graph_nudge", [os.path.join(HOOKS, "test_graph_nudge.py")]),
+    ("benchmark: fixtures validos (sem modelo)", [os.path.join(ROOT, "tools", "bench_outcomes.py"), "--check-fixtures"]),
     ("agentes gerados da fonte unica", [os.path.join(ROOT, "tools", "gen_agents.py"), "--check"]),
     ("referencia de regras do check (docs)", [os.path.join(ROOT, "tools", "gen_docs.py"), "--check"]),
 ]

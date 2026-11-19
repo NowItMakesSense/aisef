@@ -1,0 +1,3 @@
+{"id": "refactor-shipping", "kind": "refactor",
+ "prompt": "shipping.py has a long if/elif chain in shipping_cost(region, weight_kg, express). Refactor it so the rates live in one data table and the function has no duplicated branches. Behavior must not change at all, including the errors raised. Keep the public function name and signature. Add characterization tests that pin the current behavior before refactoring.",
+ "test_cmd": ["python", "-m", "unittest", "discover", "-s", "hidden", "-t", "."]}
