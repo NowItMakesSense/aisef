@@ -402,6 +402,7 @@ def build_pack(project, task_id, limit=DEFAULT_LIMIT, graph=True):
     context_mode = "graphify" if related and related.get("items") is not None and not related.get("error") else (
         "mcp" if servers else "none")
 
+    architecture = _architecture_for(project, patterns + [f for f in files[:200]])
     design = _design_for(project, task)
     if design and design["status"] != "approved":
         warnings.append("autoridade de design em %s ainda nao aprovada: siga-a como proposta e avise o orquestrador"
@@ -414,7 +415,7 @@ def build_pack(project, task_id, limit=DEFAULT_LIMIT, graph=True):
             "blueprint": ({"path": _rel(project, bp_path), "id": bp.get("blueprint_id"), "version": bp.get("contract_version"),
                            "elements": elements} if bp else None),
             "requirements": reqs, "business_rules": rules, "acceptance_criteria": criteria, "decisions": decisions,
-            "design": design},
+            "design": design, "architecture": architecture},
         "referenced": {"limit": limit, "files": shown, "matched_total": len(files), "truncated": max(0, len(files) - len(shown)),
                        "patterns_without_match": unmatched, "docs": docs},
         "on_demand": {"knowledge": know, "knowledge_truncated": know_cut,
@@ -423,6 +424,31 @@ def build_pack(project, task_id, limit=DEFAULT_LIMIT, graph=True):
                                 "queries": queries, "notes": gnotes, "related": related}},
         "context_mode": context_mode,
         "warnings": warnings}
+
+
+def _architecture_for(project, paths):
+    """Estilo de arquitetura (adotado, ou detectado e ainda nao adotado) e as boas praticas que valem para os arquivos da
+    tarefa (instaladas em .claude/rules/aisef/ quando existem; senao, o caminho no plugin). So caminhos, sem o texto."""
+    apath = os.path.join(project, ".aisef", "architecture.json")
+    arch = _load_json(apath) if os.path.isfile(apath) else None
+    try:
+        import aisef_practices
+        rels = aisef_practices.for_paths(project, [p.replace(os.sep, "/") for p in paths])
+    except (OSError, ValueError, ImportError):
+        rels = []
+    if not isinstance(arch, dict) and not rels:
+        return None
+    practices = []
+    for rel in rels:
+        installed = os.path.join(project, ".claude", "rules", "aisef", rel)
+        practices.append(_rel(project, installed) if os.path.isfile(installed) else "<CORE>/practices/" + rel)
+    out = {"practices": practices}
+    if isinstance(arch, dict):
+        approved = (arch.get("approved") or {}).get("styles")
+        out.update({"styles": approved or [s["id"] for s in arch.get("styles", []) if s.get("confidence", 0) >= 0.5],
+                    "adopted": bool(approved), "path": _rel(project, apath),
+                    "dependency_check": "python -I <CORE>/aisef_detect.py deps --project ."})
+    return out
 
 
 def _design_for(project, task):
@@ -474,6 +500,16 @@ def render_pack(p):
             L.append("    - componentes existentes (reuse antes de criar): " + ", ".join(d["components"]))
         L += ["    - regra: " + x for x in d["rules"]]
         L.append("    - use so estes valores; confira com: " + d["check"])
+    if m.get("architecture"):
+        a = m["architecture"]
+        if a.get("styles") is not None:
+            L.append("- Arquitetura (%s): %s; %s" % ("adotada" if a["adopted"] else "detectada, ainda nao adotada",
+                                                 ", ".join(a["styles"]) or "nenhum estilo", a["path"]))
+            L.append("    - regra de dependencia: dominio nao importa aplicacao, infraestrutura nem framework; confira com: "
+                     + a["dependency_check"])
+        if a["practices"]:
+            L.append("- Boas praticas que valem para estes arquivos (leia antes de editar):")
+            L += ["    - " + x for x in a["practices"]]
     L += ["", "## 2. Referenciado (limite %d)" % r["limit"]]
     L += ["- " + f for f in r["files"]] or ["- (nenhum arquivo existente casa com os caminhos da tarefa)"]
     if r["truncated"]:

@@ -20,6 +20,8 @@ Uso:
                                        [--authorization rascunho.json]
     python3 -I aisef_project.py agents --project REPO [--activate] [--roles backend,qa]
         (sem --activate: cria os drafts dos papeis que se aplicam ao projeto pelo catalogo, ou os de --roles)
+    python3 -I aisef_project.py practices --project REPO [--apply]
+        (boas praticas aplicaveis ao projeto: common + linguagens + estilo de arquitetura; --apply grava em .claude/rules/aisef/)
     python3 -I aisef_project.py detect --project REPO
         (aisef_detect: grava .aisef/architecture.json, registra no log e cria os drafts dos papeis da stack detectada)
     python3 -I aisef_project.py waves --project REPO [--feature FEAT-x] [--json]
@@ -1079,14 +1081,15 @@ def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["init", "append", "decide", "agents", "settings", "rotate-key", "anchor",
                                         "verify", "status", "waves", "next", "request", "dispatch", "validate-wave",
-                                        "precheck", "mode", "metrics", "detect"])
+                                        "precheck", "mode", "metrics", "detect", "practices"])
     ap.add_argument("--since", help="metrics: so eventos e pedidos a partir desta data (ISO 8601)")
     ap.add_argument("--no-check", action="store_true", help="metrics: nao roda o aisef-check")
     ap.add_argument("--set", choices=["ask", "exec"], help="mode: troca o modo da sessao (decisao do usuario)")
     ap.add_argument("--dry-run", action="store_true", help="dispatch/validate-wave: mostra sem registrar nada no log")
     ap.add_argument("--json", action="store_true", help="waves/next: saida em JSON")
     ap.add_argument("--file", help="request: rascunho JSON do pedido (status pending)")
-    ap.add_argument("--apply", action="store_true", help="settings: grava as regras em .claude/settings.json")
+    ap.add_argument("--apply", action="store_true", help="settings: grava as regras em .claude/settings.json; "
+                                                         "practices: grava as boas praticas em .claude/rules/aisef/")
     ap.add_argument("--project", default=os.getcwd())
     ap.add_argument("--project-id")
     ap.add_argument("--name")
@@ -1203,6 +1206,21 @@ def main(argv):
     if a.command == "anchor":
         a_ = anchor(project)
         print("ancora gravada: sequencia %d em %s" % (a_["sequence"], anchors_path(load_config(project)["project_id"])))
+        return 0
+    if a.command == "practices":
+        import aisef_practices
+        if a.apply:
+            done, kept = aisef_practices.apply(project)
+            print("gravados: %s" % (", ".join(done) or "nada mudou"))
+            if kept:
+                print("mantidos (modificados no projeto): %s" % ", ".join(kept))
+            if done:
+                append(project, {"event_type": "evidence_recorded", "actor": {"type": "system", "id": "aisef_practices"},
+                                 "summary": "Boas praticas instaladas em .claude/rules/aisef/: %d arquivo(s)" % len(done)})
+        else:
+            for r in aisef_practices.plan(project):
+                print("%-24s %s" % (r["state"], r["target"]))
+            print("(--apply grava em .claude/rules/aisef/; o gateway pede aprovacao)")
         return 0
     if a.command == "detect":
         import aisef_detect

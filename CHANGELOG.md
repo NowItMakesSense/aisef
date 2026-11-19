@@ -24,6 +24,13 @@
   - **Novas regras:** `ARCH-SCHEMA`, `ARCH-UNAPPROVED` (erro), `ARCH-PENDING` e `ARCH-DEPENDENCY` (aviso).
   - As skills `aisef-init` e `aisef-discovery` usam a detecção: confirmar o estilo no código, apresentar as recomendações e levar a adoção ao Approval Center.
   - Testes em `core/test_detect.py`, com fixtures de cada estilo.
+- **Boas práticas (E2).** 33 arquivos em `core/practices/`:
+  - `common/`: estilo de código, testes/TDD, revisão (severidades e veredito), segurança, Git, fluxo (search-first antes de construir), padrões, desempenho, SOLID e Clean Code;
+  - `architecture/`: Clean/Onion, hexagonal, DDD tático e estratégico, CQRS/event sourcing, monólito modular, microsserviços, camadas/MVC, fatias verticais, contract-first, orientado a eventos. Cada um diz **quando não usar**;
+  - `lang/`: Python, TS/JS, web, Go, Rust, Java, Kotlin, Swift, C#/F#, C++, PHP, Ruby e Dart, com `paths:` para o Claude Code carregar só nos arquivos certos.
+  - `aisef_project.py practices [--apply]` (`core/aisef_practices.py`) instala em `.claude/rules/aisef/` só o que a detecção indicar; o estilo adotado prevalece; arquivo mudado no projeto é mantido sem `--force`.
+  - O `pack` da tarefa traz o estilo de arquitetura e as práticas que valem para os arquivos dela. O blueprint ganhou `architecture.style` e `architecture.layers` (opcionais). O `AGENTS.aisef.md` cita o estilo adotado e as práticas.
+  - Testes em `core/test_practices.py`.
 
 ## Não lançado (0.11.0: medir)
 - **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:

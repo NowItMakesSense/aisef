@@ -18,3 +18,7 @@ blocks you technically.
   only the user decides approvals.
 - Whoever implements a task does not validate it; acceptance criteria need evidence (tests run, output read).
 - Never write secrets or your internal reasoning into logs, reports or docs.
+- **Follow the adopted architecture and practices.** The architecture style the user adopted is in
+  `.aisef/architecture.json` (`approved`), with its ADR; keep the dependency rule (domain never imports
+  application, infrastructure or frameworks). Coding, testing, review and security practices are in
+  `.claude/rules/aisef/` (language rules apply to the matching files).
