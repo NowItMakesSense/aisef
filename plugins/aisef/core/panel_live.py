@@ -25,6 +25,7 @@ import threading
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import aisef_runtime  # noqa: E402
 
 STAGES = [("spec", "Spec"), ("plan", "Plano"), ("execute", "Execução"), ("validate", "Validação"),
           ("review", "Revisão e aceite"), ("closed", "Encerrada")]
@@ -177,28 +178,8 @@ def gantt_mermaid(log, tasks, now):
 # ---------------------------------------------------------------------------- mapa de execucao (painel v3)
 # Estado visual de cada fatia: run (rodando), val (validando), dep (esperando outra fatia), you (esperando voce),
 # done (concluida), fail (reprovada, aguardando retrabalho), todo (pronta, ainda nao despachada), off (cancelada).
-def _role(agent_type):
-    return (agent_type or "").split(":")[-1]
-
-
-def _match_parents(events):
-    """Liga cada SubagentStart ao `spawn` (PreToolUse Agent|Task) que o disparou. Sem certeza, marca `inferred`."""
-    spawns = [dict(e, used=False) for e in events if e.get("event") == "spawn"]
-    parents = {}
-    for e in events:
-        if e.get("event") != "start":
-            continue
-        role = _role(e.get("agent_type"))
-        cands = [s for s in spawns if not s["used"] and _role(s.get("subagent_type")) == role
-                 and (s.get("at") or "") <= (e.get("at") or "~")]
-        if not cands:
-            parents[e.get("agent_id")] = (None, None, True, None)  # sem registro do disparo: supoe a sessao principal
-            continue
-        pick = cands[0]
-        pick["used"] = True
-        inferred = len({c.get("parent_id") for c in cands}) > 1
-        parents[e.get("agent_id")] = (pick.get("parent_id"), (pick.get("description") or "")[:200] or None, inferred, pick.get("model"))
-    return parents
+_role = aisef_runtime.role
+_match_parents = aisef_runtime.match_parents
 
 
 def _lane(evs, st, denied):
@@ -275,10 +256,10 @@ def board(aisef_dir, loaded, log, now):
         if not aid:
             continue
         if e.get("event") == "start":
-            pid, desc, inf, model = parents.get(aid, (None, None, True, None))
+            pid, desc, inf, model, spawn_task = parents.get(aid, (None, None, True, None, None))
             agents[aid] = {"agent_id": aid, "agent_type": e.get("agent_type"), "role": _role(e.get("agent_type")),
                            "started_at": e.get("at"), "ended_at": None, "running": True, "last_action": None,
-                           "last_action_at": None, "task_id": None, "parent_id": pid, "parent_inferred": inf,
+                           "last_action_at": None, "task_id": spawn_task if spawn_task in by_id else None, "parent_id": pid, "parent_inferred": inf,
                            "description": desc, "model": model, "validating": [], "actions": [], "tool_count": 0}
             order.append(aid)
         elif aid in agents and e.get("event") == "stop":
@@ -290,9 +271,12 @@ def board(aisef_dir, loaded, log, now):
         if agents[aid]["parent_id"] not in agents:
             agents[aid]["parent_id"] = None
 
-    taken = set()  # executor: a fatia em andamento do seu papel; subagente: a fatia do pai
+    # executor: a fatia em andamento do seu papel; subagente: a fatia do pai. Ligacoes exatas (pelo disparo) primeiro.
+    taken = {a["task_id"] for a in agents.values() if a["task_id"]}
     for aid in order:
         a = agents[aid]
+        if a["task_id"]:  # o disparo trouxe "T-xxx:" na descricao: ligacao exata, sem heuristica
+            continue
         if a["parent_id"] or a["role"] == "validator" or not a["running"]:
             continue
         cand = [tid for tid in sorted(by_id) if status[tid] == "in_progress" and tid not in taken

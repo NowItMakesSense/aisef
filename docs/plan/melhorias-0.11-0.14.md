@@ -76,15 +76,14 @@ Estimativas em dias de trabalho seu com o Claude, como faixa.
     Feito na branch feat/v0.11-metrics (core/aisef_metrics.py, test_metrics.py, 15 testes).
     Falta: commit e PR.
 
-[ ] M-02: Tokens e duração por tarefa
-    Descrição: confirmar os campos que SubagentStop e SubagentStart recebem (doc oficial e uma
-      sessão real com o payload gravado em .aisef/runtime/). Somar o usage pelo transcript_path,
-      se existir. Gravar em .aisef/runtime/usage.jsonl. execution_profile.usage fica opcional no schema.
-      O metrics mostra tokens por tarefa e por modelo.
-    Depende de: M-01
-    Critério de aceite: numa sessão real, o metrics mostra tokens por tarefa; sem o dado,
-      mostra "não disponível" em vez de zero.
-    Estimativa: 1–2 dias (confiança média: depende do payload)
+[x] M-02: Tokens e duração por tarefa
+    Feito: o SubagentStop soma o usage do agent_transcript_path (a doc oficial confirma que o hook
+      não traz usage) em .aisef/runtime/usage.jsonl, com tarefa, modelo e duração. O metrics ganha
+      a seção Custo. Validado num transcript real.
+    Mudança de escopo: execution_profile.usage no schema foi descartado (o agente não sabe os
+      próprios tokens). O dado vai para o task_executed na F-04.
+    Bônus da F-04 já entregue: ligação exata subagente → tarefa pelo "T-xxx:" do disparo
+      (core/aisef_runtime.py).
 
 [ ] M-03: Harness do benchmark de resultado
     Descrição: tools/bench_outcomes.py e bench/ com 6 tarefas em repositórios fixture

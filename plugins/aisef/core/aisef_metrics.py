@@ -22,6 +22,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import aisef_project as ap  # noqa: E402
+import aisef_runtime  # noqa: E402
 import audit_chain  # noqa: E402
 
 GIT_REQUESTS = ("git_operation",)
@@ -188,6 +189,10 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
                         "lead_time_minutes": _minutes(s["first_delegation"], s["completed_at"])}
                   for tid, s in sorted(per.items())},
     }
+    out["cost"] = _cost(project, per, completed, in_window, in_feature, tasks)
+    for tid, row in out["tasks"].items():
+        row["tokens"] = out["cost"].get("_per_task", {}).get(tid)
+    out["cost"].pop("_per_task", None)
     if run_check:
         import check_project
         rep = check_project.check(project, policy_path=DEFAULT_POLICY, defaults_path=DEFAULT_DEFAULTS, now=now)
@@ -198,6 +203,37 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
         out["consistency"] = {"errors": rep.count("error"), "warnings": rep.count("warning"),
                               "errors_by_rule": dict(sorted(rules.items(), key=lambda x: -x[1]))}
     return out
+
+
+def _cost(project, per, completed, in_window, in_feature, tasks):
+    """Tokens por tarefa a partir de .aisef/runtime/usage.jsonl (gravado pelo hook SubagentStop)."""
+    runs = [r for r in aisef_runtime.read_usage(ap.aisef_dir(project)) if in_window(r.get("at"))]
+    runs = [r for r in runs if r.get("task_id") is None and in_feature(None) or
+            r.get("task_id") is not None and in_feature((tasks.get(r["task_id"]) or {}).get("feature_id"))]
+    with_usage = [r for r in runs if isinstance(r.get("usage"), dict)]
+    if not with_usage:
+        return {"available": False, "subagent_runs": len(runs),
+                "note": "sem uso registrado: o hook SubagentStop grava .aisef/runtime/usage.jsonl a partir da 0.11"}
+    per_task, by_model, unlinked = {}, {}, 0
+    total = cache_read = 0
+    for r in with_usage:
+        u = r["usage"]
+        n = aisef_runtime.billable_tokens(u)
+        total += n
+        cache_read += u.get("cache_read_input_tokens") or 0
+        model = (u.get("models") or ["?"])[0]
+        by_model[model] = by_model.get(model, 0) + n
+        if r.get("task_id"):
+            per_task[r["task_id"]] = per_task.get(r["task_id"], 0) + n
+        else:
+            unlinked += 1
+    return {"available": True, "subagent_runs": len(runs), "runs_with_usage": len(with_usage),
+            "runs_without_task": unlinked, "billable_tokens": total, "cache_read_tokens": cache_read,
+            "tokens_per_completed_task": _summary([per_task.get(t) for t in completed]),
+            "by_model": dict(sorted(by_model.items(), key=lambda x: -x[1])),
+            "duration_minutes": _summary([round(r["duration_ms"] / 60000.0, 1) for r in runs
+                                          if isinstance(r.get("duration_ms"), int)]),
+            "_per_task": per_task}
 
 
 def _fmt(v, suffix=""):
@@ -242,6 +278,20 @@ def format_metrics(m):
         "  eventos                  %d, tool_used %d (%s)" % (n["events"], n["tool_used"], _pct(n["tool_used_share"])),
         "  gateway                  negou %d, perguntou %d" % (n["gateway_denied"], n["gateway_asked"]),
     ]
+    k = m.get("cost") or {}
+    lines += ["", "Custo (subagentes)"]
+    if not k.get("available"):
+        lines.append("  tokens                   nao disponivel (%d execucao(oes) sem uso registrado)" % k.get("subagent_runs", 0))
+    else:
+        lines += [
+            "  tokens faturaveis        %d (leitura de cache %d) em %d execucao(oes)" % (
+                k["billable_tokens"], k["cache_read_tokens"], k["runs_with_usage"]),
+            "  por tarefa concluida     mediana %s, p90 %s (n=%d)" % (
+                _fmt(k["tokens_per_completed_task"]["median"]), _fmt(k["tokens_per_completed_task"]["p90"]),
+                k["tokens_per_completed_task"]["n"]),
+            "  por modelo               " + (", ".join("%s %d" % kv for kv in k["by_model"].items()) or "-"),
+            "  sem tarefa ligada        %d" % k["runs_without_task"],
+        ]
     c = m.get("consistency")
     if c is not None:
         lines += ["", "Consistencia (aisef-check)",

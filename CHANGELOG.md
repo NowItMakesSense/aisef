@@ -11,6 +11,14 @@
   - erros do check por regra.
   
   Aceita `--feature`, `--since`, `--json` e `--no-check`. Testes em `core/test_metrics.py`.
+- **Tokens e duração por subagente (M-02).** O hook `SubagentStop` soma o uso do transcript do próprio subagente (`agent_transcript_path`; o hook não traz `usage`, segundo a documentação do Claude Code).
+  - Conta cada mensagem uma vez, mesmo com streaming.
+  - Grava `.aisef/runtime/usage.jsonl`, um histórico local que não é truncado, com tarefa, modelo e duração.
+  - O `metrics` ganha a seção "Custo": tokens faturáveis, leitura de cache à parte, por tarefa concluída e por modelo. Sem dado, mostra "não disponível", nunca zero.
+- **Ligação exata subagente → tarefa.** O disparo de um agente `aisef:*` cuja descrição começa com `T-xxx:` (como o `dispatch` escreve) grava a tarefa, e o `SubagentStart` a herda.
+  - O painel usa essa ligação antes da heurística por papel.
+  - A lógica de "quem disparou quem" saiu do `panel_live.py` para `core/aisef_runtime.py`, compartilhada com o hook.
+  - Testes em `hooks/test_agent_events.py`.
 
 ## 0.10.0 - 2026-11-19
 - **Painel v3** (o protótipo aprovado virou o painel real; ADR 0019):

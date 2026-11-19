@@ -106,6 +106,34 @@ check("lead time e espera pela validacao medidos",
       m["time_minutes"]["lead_time"]["n"] == 2 and m["time_minutes"]["validation_wait"]["n"] == 2, m["time_minutes"])
 check("sem --check nao ha bloco de consistencia", "consistency" not in m)
 
+check("sem usage.jsonl: custo marcado como nao disponivel", m["cost"]["available"] is False
+      and "nao disponivel" in mt.format_metrics(m), m["cost"])
+
+print("--- custo (usage.jsonl gravado pelo hook SubagentStop)")
+rdir = os.path.join(ap.aisef_dir(p), "runtime")
+os.makedirs(rdir, exist_ok=True)
+with open(os.path.join(rdir, "usage.jsonl"), "w", encoding="utf-8") as fh:
+    for rec in ({"at": ap.now_iso(), "task_id": "T-1", "duration_ms": 60000,
+                 "usage": {"input_tokens": 100, "output_tokens": 50, "cache_creation_input_tokens": 0,
+                           "cache_read_input_tokens": 900, "models": ["claude-sonnet-5-5"]}},
+                {"at": ap.now_iso(), "task_id": "T-2", "duration_ms": 120000,
+                 "usage": {"input_tokens": 300, "output_tokens": 100, "cache_creation_input_tokens": 100,
+                           "cache_read_input_tokens": 0, "models": ["claude-opus-5-5"]}},
+                {"at": ap.now_iso(), "task_id": "T-2", "duration_ms": 60000,
+                 "usage": {"input_tokens": 50, "output_tokens": 50, "models": ["claude-opus-5-5"]}},
+                {"at": ap.now_iso(), "task_id": None, "duration_ms": 1000, "usage": None},
+                {"at": ap.now_iso(), "task_id": "T-9", "usage": {"input_tokens": 7, "output_tokens": 0}}):
+        fh.write(json.dumps(rec) + "\n")
+k = mt.compute_metrics(p, run_check=False)["cost"]
+check("tokens faturaveis somados (cache de leitura a parte)", k["available"] and k["billable_tokens"] == 757
+      and k["cache_read_tokens"] == 900 and k["runs_with_usage"] == 4, k)
+check("tokens por tarefa concluida: T-1 150, T-2 600", k["tokens_per_completed_task"]["n"] == 2
+      and k["tokens_per_completed_task"]["median"] == 375.0, k["tokens_per_completed_task"])
+check("por modelo", k["by_model"]["claude-opus-5-5"] == 600 and k["by_model"]["claude-sonnet-5-5"] == 150, k["by_model"])
+kf = mt.compute_metrics(p, feature="FEAT-A", run_check=False)
+check("--feature: execucoes de outra feature e sem tarefa ficam de fora",
+      kf["cost"]["billable_tokens"] == 750 and kf["tasks"]["T-2"]["tokens"] == 600, kf["cost"])
+
 print("--- filtros")
 mf = mt.compute_metrics(p, feature="FEAT-A", run_check=False)
 check("--feature: so tarefas e pedidos da feature",
