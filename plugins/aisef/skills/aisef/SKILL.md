@@ -62,6 +62,8 @@ O `next` deriva o estado do log (`delegation`/`task_started` -> em andamento, `t
 6. `dispatch`: rode `python -I CORE/aisef_project.py dispatch --project .` (**uma** chamada: monta pacote, rota e prompt de cada tarefa da onda e ja registra os `delegation`). Para cada item de `agents`, uma chamada de Agent com `subagent_type`, `model`, `prompt` e `run_in_background: true`, todas na mesma mensagem. Nao rode `pack`/`route`/`append` tarefa a tarefa.
 7. `wait`: espere a notificacao dos agentes. Ao receber, volte ao `next`.
 
+Se o `guide` trouxer `graph_refresh`, rode o comando dele (`graphify update .`, sem modelo) antes do `dispatch`. O `pack` le o grafo do Graphify, e um grafo velho entrega ao agente decisoes e dependencias desatualizadas.
+
 Pare quando `stop_reason` vier preenchido e resuma ao usuario o que foi feito e o que depende dele:
 - `critical_risk`: pare na hora, nada mais e despachado.
 - `attempts_exhausted`: limite de correcoes atingido (contrato ou `orchestration-defaults`); escale.

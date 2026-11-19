@@ -33,6 +33,11 @@
     - do que ela depende.
   - Grafo velho vira aviso. `pack --no-graph` desliga, e o `dispatch` registra `context_mode` (`graphify`, `mcp` ou `none`) em cada `delegation`, para o `metrics` comparar depois (G-05).
   - Leva 10 ms num grafo de 1.262 nós.
+- **Regenerar o grafo nos marcos (G-03).** O `next` traz `guide.graph_refresh` (com o comando `GRAPHIFY_BACKEND=<backend> python -m graphify update .`) quando o grafo falta ou está velho.
+  - Só antes de despachar uma onda ou num marco de fase, nunca enquanto apenas espera agentes.
+  - Sem hook de git.
+- **Com e sem grafo, medido (G-05).** O `metrics` agrupa as tarefas pelo `context_mode` da 1ª delegação e compara, por modo: 1ª validação, despachos, lead time e tokens.
+  - Com menos de 20 tarefas, avisa que a amostra é pequena para decidir.
 - **Graphify neste repositório (G-04).** `graphify update .` roda sem modelo e cobre código e docs. O comando está no README de desenvolvimento, e `graphify-out/` fica fora do Git.
 
 ## 0.10.0 - 2026-11-19

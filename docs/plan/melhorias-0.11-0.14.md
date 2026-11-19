@@ -130,7 +130,7 @@ Estimativas em dias de trabalho seu com o Claude, como faixa.
       nunca passa do limite.
     Estimativa: 2–3 dias (confiança média: a API do Graphify não está toda documentada)
 
-[ ] G-03: Reconstruir o grafo nos marcos
+[x] G-03: Reconstruir o grafo nos marcos
     Descrição: o next sugere atualizar o grafo depois de contract_changed, do blueprint
       aprovado e do aceite de feature. Sem hook de git (o README do Graphify altera .git/hooks).
     Depende de: G-01
@@ -146,7 +146,7 @@ Estimativas em dias de trabalho seu com o Claude, como faixa.
       está documentada.
     Estimativa: 0,5 dia
 
-[ ] G-05: Medir o efeito do grafo
+[~] G-05: Medir o efeito do grafo (código pronto; falta a coleta de ~20 tarefas e o ADR)
     Descrição: o dispatch registra context_mode (graphify, codebase-memory, nenhum) no
       delegation.data; o metrics compara 1ª validação, tokens e lead time por modo.
     Depende de: M-01, M-02, G-02

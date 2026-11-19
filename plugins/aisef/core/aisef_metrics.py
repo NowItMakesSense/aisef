@@ -90,6 +90,7 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
     def slot(tid):
         return per.setdefault(tid, {"delegations": 0, "rejections": 0, "precheck_rejections": 0,
                                     "validator_rejections": 0, "first_delegation": None, "completed_at": None,
+                                    "context_mode": None,
                                     "executed_at": None, "validation_waits": [], "first_verdict": None,
                                     "feature_id": (tasks.get(tid) or {}).get("feature_id")})
 
@@ -103,6 +104,8 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
         ts = _parse(e.get("timestamp"))
         if et == "delegation":
             s["delegations"] += 1
+            if s["context_mode"] is None:
+                s["context_mode"] = (e.get("data") or {}).get("context_mode") or "unknown"
             s["first_delegation"] = s["first_delegation"] or ts
         elif et == "task_started":
             s["first_delegation"] = s["first_delegation"] or ts
@@ -192,6 +195,7 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
     out["cost"] = _cost(project, per, completed, in_window, in_feature, tasks)
     for tid, row in out["tasks"].items():
         row["tokens"] = out["cost"].get("_per_task", {}).get(tid)
+    out["context_modes"] = _by_context_mode(per, out["cost"].get("_per_task", {}))
     out["cost"].pop("_per_task", None)
     if run_check:
         import check_project
@@ -234,6 +238,25 @@ def _cost(project, per, completed, in_window, in_feature, tasks):
             "duration_minutes": _summary([round(r["duration_ms"] / 60000.0, 1) for r in runs
                                           if isinstance(r.get("duration_ms"), int)]),
             "_per_task": per_task}
+
+
+def _by_context_mode(per, tokens_per_task):
+    """G-05: compara as tarefas pelo contexto que receberam na 1a delegacao (graphify, mcp, none). Sem modelo:
+    so agrega o que o dispatch registrou. A decisao sobre o grafo sai daqui, com dado."""
+    groups = {}
+    for tid, s in per.items():
+        if not s["context_mode"]:
+            continue
+        groups.setdefault(s["context_mode"], []).append((tid, s))
+    out = {}
+    for mode, items in sorted(groups.items()):
+        verdicts = [s["first_verdict"] for _, s in items if s["first_verdict"]]
+        out[mode] = {"tasks": len(items),
+                     "first_pass_validation_rate": _ratio(verdicts.count("validated"), len(verdicts)),
+                     "dispatches_median": _summary([s["delegations"] for _, s in items])["median"],
+                     "lead_time_median": _summary([_minutes(s["first_delegation"], s["completed_at"]) for _, s in items])["median"],
+                     "tokens_median": _summary([tokens_per_task.get(tid) for tid, _ in items])["median"]}
+    return out
 
 
 def _fmt(v, suffix=""):
@@ -292,6 +315,15 @@ def format_metrics(m):
             "  por modelo               " + (", ".join("%s %d" % kv for kv in k["by_model"].items()) or "-"),
             "  sem tarefa ligada        %d" % k["runs_without_task"],
         ]
+    cm = m.get("context_modes") or {}
+    if cm:
+        lines += ["", "Contexto do agente (G-05: com e sem grafo)"]
+        for mode, g in cm.items():
+            lines.append("  %-24s %d tarefa(s), 1a validacao %s, despachos %s, lead time %s min, tokens %s" % (
+                mode, g["tasks"], _pct(g["first_pass_validation_rate"]), _fmt(g["dispatches_median"]),
+                _fmt(g["lead_time_median"]), _fmt(g["tokens_median"])))
+        if sum(g["tasks"] for g in cm.values()) < 20:
+            lines.append("  (menos de 20 tarefas: amostra pequena para decidir sobre o grafo)")
     c = m.get("consistency")
     if c is not None:
         lines += ["", "Consistencia (aisef-check)",

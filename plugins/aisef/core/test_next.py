@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -302,6 +303,35 @@ approval(g3, "APR-009", "feature_acceptance", status="approved", decision={"choi
 check("revisao de ferramentas: devida depois de uma feature aceita", nx.compute_next(g3)["guide"]["tooling_review_due"] is True)
 ev(g3, "evidence_recorded", feature_id=None, summary="Revisao de ferramentas", data={"kind": "tooling_review"})
 check("revisao de ferramentas: registrada a revisao, deixa de ser devida", nx.compute_next(g3)["guide"]["tooling_review_due"] is False)
+
+print("--- grafo do Graphify nos marcos (G-03)")
+gr = new_project("grafo", [feature(tids=["T-1"])], [task("T-1")])
+r = nx.compute_next(gr, git_state=NOGIT)
+check("Graphify ligado (padrao) e sem grafo: sugere gerar antes do dispatch, sem modelo",
+      r["guide"]["graph_refresh"] and r["guide"]["graph_refresh"]["before_dispatch"]
+      and "GRAPHIFY_BACKEND=none" in r["guide"]["graph_refresh"]["cmd"] and "graphify update ." in r["guide"]["graph_refresh"]["cmd"]
+      and "Regenere antes do dispatch" in nx.format_next(r), r["guide"].get("graph_refresh"))
+gpath = os.path.join(gr, "graphify-out", "graph.json")
+os.makedirs(os.path.dirname(gpath))
+with open(gpath, "w", encoding="utf-8") as fh:
+    fh.write('{"nodes": [], "links": []}')
+os.utime(gpath, (time.time() + 3600,) * 2)
+check("grafo fresco: nada a sugerir", nx.compute_next(gr, git_state=NOGIT)["guide"]["graph_refresh"] is None)
+os.makedirs(os.path.join(gr, "docs"))
+with open(os.path.join(gr, "docs", "spec.md"), "w", encoding="utf-8") as fh:
+    fh.write("# spec\n")
+os.utime(os.path.join(gr, "docs", "spec.md"), (time.time() + 7200,) * 2)
+r = nx.compute_next(gr, git_state=NOGIT)
+check("fonte mais nova que o grafo: sugere regenerar e diz qual mudou",
+      r["guide"]["graph_refresh"] and "docs/spec.md" in r["guide"]["graph_refresh"]["reason"], r["guide"].get("graph_refresh"))
+ev(gr, "delegation", "T-1")
+check("so espera (sem dispatch nem marco de fase): nao interrompe com o grafo",
+      nx.compute_next(gr, git_state=NOGIT)["guide"]["graph_refresh"] is None)
+cfg = ap.load_config(gr)
+cfg["graphify"]["enabled"] = False
+ap.write_json(os.path.join(ap.aisef_dir(gr), "config.json"), cfg)
+ev(gr, "task_executed", "T-1", actor=("agent", "backend"))
+check("Graphify desligado: nunca sugere", nx.compute_next(gr, git_state=NOGIT)["guide"]["graph_refresh"] is None)
 
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

@@ -159,5 +159,30 @@ me = mt.compute_metrics(empty, run_check=False)
 check("projeto sem tarefas nao quebra (taxas vazias)", me["quality"]["first_pass_validation_rate"] is None
       and me["attention"]["per_completed_task"] is None and "-" in mt.format_metrics(me), me["quality"])
 
+print("--- contexto do agente: com e sem grafo (G-05)")
+check("delegacao antiga, sem context_mode, cai em 'unknown'", set(m["context_modes"]) == {"unknown"}, m["context_modes"])
+cx = os.path.join(work, "contexto")
+os.makedirs(cx)
+ap.init(cx, "PRJ-CTX", "ctx", "dev")
+for tid in ("T-1", "T-2", "T-3"):
+    ap.write_json(os.path.join(ap.aisef_dir(cx), "contracts", "tasks", tid + ".json"), task(tid, "FEAT-A"))
+ev(cx, "delegation", "T-1", data={"context_mode": "graphify"})
+ev(cx, "task_executed", "T-1", actor=AGENT)
+ev(cx, "task_validated", "T-1", actor=VALIDATOR)
+ev(cx, "delegation", "T-2", data={"context_mode": "graphify"})
+ev(cx, "task_executed", "T-2", actor=AGENT)
+ev(cx, "task_rejected", "T-2", actor=VALIDATOR)
+ev(cx, "delegation", "T-2", data={"context_mode": "none"})  # o modo que conta e o da 1a delegacao
+ev(cx, "delegation", "T-3", data={"context_mode": "none"})
+ev(cx, "task_executed", "T-3", actor=AGENT)
+ev(cx, "task_validated", "T-3", actor=VALIDATOR)
+mc2 = mt.compute_metrics(cx, run_check=False)
+cm = mc2["context_modes"]
+check("agrupa pelo modo da 1a delegacao", cm["graphify"]["tasks"] == 2 and cm["none"]["tasks"] == 1, cm)
+check("1a validacao por modo: graphify 50%, none 100%", cm["graphify"]["first_pass_validation_rate"] == 0.5
+      and cm["none"]["first_pass_validation_rate"] == 1.0, cm)
+txt = mt.format_metrics(mc2)
+check("texto mostra a comparacao e avisa amostra pequena", "Contexto do agente" in txt and "amostra pequena" in txt, txt[-600:])
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)
