@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**155 regras** em 27 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**156 regras** em 27 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -122,7 +122,7 @@ Tokens de design validos, aprovados como decisao arquitetural, e UI coberta por 
 
 Validação independente, nunca do próprio executor.
 
-`VAL-NO-VALIDATOR`, `VAL-SELF-ATTEST`
+`VAL-NO-VALIDATOR`, `VAL-REVIEW-MISSING`, `VAL-SELF-ATTEST`
 
 ## Roteamento (`ROUTE-*`)
 

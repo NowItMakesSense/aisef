@@ -163,14 +163,85 @@ def status(project, task, reports):
     return {"approved": approved, "pending": pending, "rejected": rejected, "inactive": p["inactive"], "dual": p["dual"]}
 
 
+def record(project, task_id, role, verdict, counts, summary, findings_text="", model=None, effort=None, level=None, suffix=""):
+    """Grava o relatorio de avaliacao do revisor (o revisor nao tem Write: chama isto via `python -I`, sem editar codigo).
+    Gera o JSON valido pelo schema execution-report, com `review`, e o relatorio legivel com hash."""
+    import datetime
+    import hashlib
+    if verdict not in VERDICTS:
+        raise SystemExit("veredito invalido: %s (use %s)" % (verdict, "/".join(VERDICTS)))
+    if role not in aisef_catalog.evaluator_roles():
+        raise SystemExit("%s nao e papel avaliador do catalogo" % role)
+    if verdict == "APPROVE" and (counts.get("critical") or counts.get("high")):
+        raise SystemExit("APPROVE nao combina com achado CRITICAL ou HIGH (use WARNING ou BLOCK)")
+    adir = os.path.join(project, ".aisef")
+    task = _load(os.path.join(adir, "contracts", "tasks", task_id + ".json"))
+    rid = "RPT-%s-REV-%s%s" % (task_id, role, suffix)
+    now = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat(timespec="seconds")
+    md_rel = "reports/%s.md" % rid
+    md = "# Revisao %s de %s\n\nVeredito: **%s**\n\nAchados: %s\n\n%s\n\n%s\n" % (
+        role, task_id, verdict, ", ".join("%s %d" % (k, v) for k, v in counts.items()), summary, findings_text)
+    os.makedirs(os.path.join(adir, "reports"), exist_ok=True)
+    with open(os.path.join(adir, md_rel), "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(md)
+    doc = {"schema_version": "0.1.0", "report_id": rid, "task_id": task_id, "contract_version": task["contract_version"],
+           "feature_id": task["feature_id"],
+           "agent": {"agent_id": role, "agent_contract_version": 1, "role": role},
+           "status": "executed", "timing": {"started_at": now, "finished_at": now},
+           "attempts": {"fix_attempts_used": 0, "specialist_consultations_used": 0},
+           "files": {"created": [], "modified": [], "deleted": []},
+           "changes": [{"summary": "revisao %s: %s" % (role, verdict), "reason": summary[:200] or "revisao"}],
+           "tests": {"executed": 0, "passed": 0, "failed": 0, "skipped": 0},
+           "evidence": [{"id": "EV-REV", "type": "report", "ref": md_rel, "secrets_redacted": True}],
+           "criteria_results": [{"criterion_id": c["id"], "required": c.get("required", True), "result": "not_verifiable", "evidence_ids": [], "notes": "revisao: o criterio e verificado pelo validador"} for c in task["acceptance_criteria"]], "problems": [], "risks": [], "pending": [], "limitations": [],
+           "intervention": {"needed": False},
+           "technical_report": {"ref": md_rel, "sha256": hashlib.sha256(md.encode("utf-8")).hexdigest()},
+           "integrity": {"created_at": now, "event_log_ref": "audit/log.jsonl"},
+           "review": {"verdict": verdict, "findings": {k: int(counts.get(k, 0)) for k in ("critical", "high", "medium", "low")}}}
+    if model:
+        doc["execution_profile"] = {"model": model, "effort": effort or "medium", "level": int(level or 0)}
+    try:
+        import jsonschema
+        with open(os.path.join(HERE, "execution-report.schema.v0.1.json"), encoding="utf-8") as fh:
+            errs = sorted(jsonschema.Draft202012Validator(json.load(fh)).iter_errors(doc), key=lambda e: list(e.path))
+        if errs:
+            raise SystemExit("relatorio invalido: " + "; ".join("%s: %s" % ("/".join(map(str, e.path)), e.message) for e in errs[:5]))
+    except ImportError:
+        pass
+    with open(os.path.join(adir, "reports", rid + ".json"), "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(doc, fh, ensure_ascii=False, indent=2)
+    return rid
+
+
 def main(argv=None):
     import aisef_dispatch as dsp
     ap = argparse.ArgumentParser(description="AISEF: revisores por tarefa")
-    ap.add_argument("command", choices=["plan", "status"])
+    ap.add_argument("command", choices=["plan", "status", "record"])
     ap.add_argument("--project", default=".")
     ap.add_argument("--task", required=True)
+    ap.add_argument("--role", help="record: papel do revisor (ex.: code-reviewer)")
+    ap.add_argument("--verdict", choices=VERDICTS, help="record: APPROVE | WARNING | BLOCK")
+    for k in ("critical", "high", "medium", "low"):
+        ap.add_argument("--" + k, type=int, default=0)
+    ap.add_argument("--summary", default="", help="record: resumo de uma ou duas frases")
+    ap.add_argument("--findings-file", help="record: arquivo com a tabela de achados (texto); opcional")
+    ap.add_argument("--suffix", default="", help="record: -A ou -B na revisao dupla")
+    ap.add_argument("--model")
+    ap.add_argument("--effort")
+    ap.add_argument("--level", type=int)
     a = ap.parse_args(argv)
     project = os.path.abspath(a.project)
+    if a.command == "record":
+        if not (a.role and a.verdict):
+            ap.error("record exige --role e --verdict")
+        text = ""
+        if a.findings_file:
+            with open(a.findings_file, encoding="utf-8") as fh:
+                text = fh.read()
+        rid = record(project, a.task, a.role, a.verdict, {k: getattr(a, k) for k in ("critical", "high", "medium", "low")},
+                     a.summary, text, a.model, a.effort, a.level, a.suffix)
+        print("gravado .aisef/reports/%s.json" % rid)
+        return 0
     task = _load(os.path.join(project, ".aisef", "contracts", "tasks", a.task + ".json"))
     out = plan(project, task) if a.command == "plan" else status(project, task, dsp._reports(project, a.task))
     print(json.dumps(out, ensure_ascii=False, indent=2))

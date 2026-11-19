@@ -32,6 +32,7 @@ import aisef_route as rt  # noqa: E402
 
 PY = "python -I %s" % os.path.join(HERE, "aisef_project.py").replace("\\", "/")
 VERIFY = "python -I %s" % os.path.join(HERE, "aisef_verify.py").replace("\\", "/")
+REVIEW = "python -I %s" % os.path.join(HERE, "aisef_review.py").replace("\\", "/")
 
 
 def _load(project, rel):
@@ -178,11 +179,13 @@ def review_dispatch(project, task, rv, policy):
             suffix = "-" + "AB"[i] if dual else ""
             rid = "RPT-%s-REV-%s%s" % (tid, p["role"], suffix)
             prompt = ("Revise a entrega da tarefa %s (Task Contract .aisef/contracts/tasks/%s.json, Execution Report do executor em "
-                      ".aisef/reports/). Siga o seu papel e o checklist; nao corrija nada. Grave o relatorio de avaliacao "
-                      ".aisef/reports/%s.json (schema execution-report) com `review`: {\"verdict\": \"APPROVE|WARNING|BLOCK\", "
-                      "\"findings\": {\"critical\": n, \"high\": n, \"medium\": n, \"low\": n}} e execution_profile = "
-                      "{\"model\": \"%s\", \"effort\": \"%s\", \"level\": %d}.%s"
-                      % (tid, tid, rid, r["model"], r["effort"], r["level"],
+                      ".aisef/reports/, diff com git). Siga o seu papel e o checklist; nao corrija nada.\n"
+                      "Ao terminar, OBRIGATORIAMENTE grave o veredito (voce nao tem Write: use este comando; sem ele a tarefa "
+                      "nao avanca):\n  %s record --project . --task %s --role %s --verdict APPROVE|WARNING|BLOCK "
+                      "--critical N --high N --medium N --low N --summary \"<1-2 frases>\" --model %s --effort %s --level %d%s\n"
+                      "APPROVE so sem CRITICAL nem HIGH. Depois devolva a tabela de achados no texto.%s"
+                      % (tid, tid, REVIEW, tid, p["role"], r["model"], r["effort"], r["level"],
+                         " --suffix " + suffix if suffix else "",
                          " Revisao dupla (risco alto): voce e um revisor independente; nao leia a outra revisao." if rv["dual"] else ""))
             out.append({"task_id": tid, "subagent_type": "aisef:" + p["role"], "role": p["role"], "model": r["model"],
                         "effort": r["effort"], "level": r["level"], "report_id": rid,

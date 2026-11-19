@@ -275,7 +275,7 @@
   "allOf": [
     {
       "$comment": "Regra de consistencia: 'executed' nao pode coexistir com criterio obrigatorio nao atendido ou nao verificavel.",
-      "if": { "properties": { "status": { "const": "executed" } }, "required": ["status"] },
+      "if": { "properties": { "status": { "const": "executed" } }, "required": ["status"], "not": { "required": ["review"] } },
       "then": {
         "properties": {
           "criteria_results": {

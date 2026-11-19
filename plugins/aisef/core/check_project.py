@@ -31,7 +31,8 @@ Regras (codigo -> o que verifica):
                     arquitetural, estilo pendente de decisao, violacoes da regra de dependencia
     CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
     CONFIG-GRAPHIFY opcoes do Graphify no config.json (enabled, backend none|ollama|auto, paths e graph relativos)
-    VAL-*           validacao independente (existe validador, validador diferente do executor)
+    VAL-*           validacao independente (existe validador, validador diferente do executor); VAL-REVIEW-MISSING: validada sem o
+                    APPROVE de todos os revisores ativos de review.reviewers
     PERM-* / AUTH-* permissoes da tarefa x politica e autorizacoes (existe, escopo, ambiente, validade)
     BP-*            blueprint x feature (versao, requisitos, componentes, endpoints, entidades, decisoes aprovadas, cobertura)
     STATE-*         estado da tarefa/feature x relatorios e eventos de auditoria
@@ -641,6 +642,14 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         if st in ("validated", "completed") and t["validation"]["independent_validator_required"]:
             if "task_validated" not in types:
                 rep.err("STATE-NO-VALIDATION", where, "estado '%s' exige validacao independente, sem evento task_validated" % st)
+        if st in ("validated", "completed") and (t.get("review") or {}).get("reviewers"):
+            import aisef_review
+            root = os.path.dirname(project) if os.path.basename(project) == ".aisef" else project
+            rv = aisef_review.status(root, t, [r for r in reports if r["task_id"] == t["task_id"]])
+            missing = [x["role"] for x in rv["pending"]] + [x["role"] for x in rv["rejected"]]
+            if missing:
+                rep.err("VAL-REVIEW-MISSING", where, "estado '%s' sem APPROVE dos revisores ativos: %s (aisef_review.py record)"
+                        % (st, ", ".join(missing)))
         if st == "completed" and "task_completed" not in types:
             rep.err("STATE-NO-COMPLETE-EVENT", where, "concluida sem evento task_completed")
 

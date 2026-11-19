@@ -144,6 +144,18 @@ check("revisao: risco alto pede security e revisao dupla",
       "security" in aisef_review.reviewers_for(proj, dict(t12, risk={"level": "high"})) and aisef_review.dual_review(dict(t12, risk={"level": "high"})))
 check("revisao: arquivo .py pede o revisor python", "python-reviewer" in aisef_review.reviewers_for(
     proj, dict(t12, scope=dict(t12["scope"], paths_allowed=["src/a.py"]))))
+rid = aisef_review.record(proj, "T-012", "comment-analyzer", "APPROVE", {"medium": 1}, "ok")
+rep = json.load(open(os.path.join(proj, ".aisef", "reports", rid + ".json"), encoding="utf-8"))
+check("record: grava relatorio de avaliacao com veredito e relatorio legivel",
+      rep["review"]["verdict"] == "APPROVE" and os.path.exists(os.path.join(proj, ".aisef", rep["technical_report"]["ref"])), rep.get("review"))
+for bad_ in (lambda: aisef_review.record(proj, "T-012", "code-reviewer", "APPROVE", {"high": 1}, "x"),
+             lambda: aisef_review.record(proj, "T-012", "implementer", "APPROVE", {}, "x")):
+    try:
+        bad_()
+        check("record recusa APPROVE com HIGH e papel que nao e avaliador", False)
+    except SystemExit:
+        check("record recusa APPROVE com HIGH e papel que nao e avaliador", True)
+check("prompt do revisor manda gravar com o record (com sufixo na revisao dupla)", "record --project . --task T-012 --role code-reviewer" in d2[0]["prompt"] and "--suffix -B" in d2[0]["prompt"], d2[0]["prompt"])
 redo = dsp.dispatch_wave(proj, dry_run=True)
 check("fatia reprovada no precheck volta no proximo dispatch como tentativa 2 (sobe um nivel)",
       any(a["task_id"] == "T-010" and a["attempt"] == 2 for a in redo["agents"]), redo["agents"])
