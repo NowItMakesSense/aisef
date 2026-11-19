@@ -128,16 +128,6 @@ Based on each project's README and official docs as of 2026-11-18. "Instruction"
 | One place for decisions | Each decision is a request with impact, diff, rollback and risk; a reinforced approval covers the exact command, once | If you approve without reading, no technical layer stops it |
 | Memory reviewed before it becomes a rule | Lessons from recorded errors, approved by you, with confidence computed in code | Without your review at milestones nothing is learned, by design |
 
-### Where AISEF loses
-
-- **Claude Code only.** In Cursor, Codex or Gemini, `AGENTS.md` is guidance, not enforcement.
-- **More ceremony.** For an afternoon prototype, the process outweighs the risk. The quick path lightens small changes but does not remove the overhead.
-- **Latency.** About 0.17–0.25 s per hook on Windows, almost all of it Python process startup.
-- **Not a security boundary.** A well-disguised command can get through; real isolation comes from the sandbox.
-- **Small community.** It is a one-person project, with fewer eyes looking for bugs.
-
-**When not to use it:** throwaway proofs of concept, code with no sensitive data and no deploy, or teams that need the same process across several IDEs.
-
 ### Adding up instead of competing
 
 AISEF is the **spine** (governance, traceability, decisions and reviewed learning). The **muscle** comes from ready-made skills maintained by their authors:
