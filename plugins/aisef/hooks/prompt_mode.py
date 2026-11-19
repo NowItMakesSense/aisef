@@ -18,7 +18,8 @@ def main():
     if mode != "ask":
         return
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext":
-                      "AISEF em modo Ask: responda a pergunta lendo o que precisar, sem editar arquivos nem executar "
+                      "AISEF em modo Ask: responda a pergunta lendo o projeto e pesquisando na internet (WebSearch/WebFetch, fontes "
+                      "oficiais primeiro, cite as URLs) quando a resposta depender de algo de fora, sem editar arquivos nem executar "
                       "comandos que mudem algo (o gateway nega). Se a resposta pedir uma mudanca, descreva-a e diga que, "
                       "para executar, o usuario troca o modo com /aisef:modo exec."}}, ensure_ascii=False))
 

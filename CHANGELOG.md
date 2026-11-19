@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.3 - 2026-11-18
+- **Ask pesquisa na internet com precisão:**
+  - o agente `aisef:ask` ganhou `WebSearch` e `WebFetch` e um método de pesquisa: fonte primária primeiro, leitura da página inteira, data e versão conferidas, duas fontes para o que decide a resposta, divergências mostradas e URLs citadas;
+  - ele não se limita ao projeto quando a pergunta pede mais.
+- **`/aisef:ask` escolhe o modelo pela pergunta:** Haiku para achar algo no projeto, Sonnet para pesquisa e análise (o padrão na dúvida) e Opus só a pedido.
+- **Modo Ask fixo:** o lembrete por mensagem orienta a pesquisar na internet com fontes. O gateway segue liberando a pesquisa e negando URL com token.
+
 ## 0.9.2 - 2026-11-18
 - **Painel redesenhado** (planejado e implementado pelo agente de frontend; plano em componentes e layouts):
   - **App shell:** barra lateral com 5 grupos e 8 telas (Agora, Features e fatias, Dependências, Rastreabilidade, Governança, Histórico, Engenharia, Equipe de agentes) no lugar das 12 abas, e barra inferior no celular. Os links antigos continuam valendo.
