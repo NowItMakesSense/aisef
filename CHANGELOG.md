@@ -1,5 +1,17 @@
 # Changelog
 
+## Não lançado (0.11.0: medir)
+- **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:
+  - pedidos de aprovação por tarefa e por tipo, e a fatia Git;
+  - taxa de aprovação na 1ª validação e reprovações (precheck × validador);
+  - despachos por tarefa;
+  - lead time e espera pela validação;
+  - fração do log que é `tool_used`;
+  - negações e perguntas do gateway;
+  - erros do check por regra.
+  
+  Aceita `--feature`, `--since`, `--json` e `--no-check`. Testes em `core/test_metrics.py`.
+
 ## 0.10.0 - 2026-11-19
 - **Painel v3** (o protótipo aprovado virou o painel real; ADR 0019):
   - **Trilho de ícones com 8 telas:** Agora, Mapa dos agentes, Features e fatias, Rastreabilidade, Governança, Histórico, Engenharia e Equipe de agentes. Os links antigos continuam valendo.

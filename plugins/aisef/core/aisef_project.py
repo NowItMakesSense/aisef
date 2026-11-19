@@ -988,7 +988,9 @@ def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["init", "append", "decide", "agents", "settings", "rotate-key", "anchor",
                                         "verify", "status", "waves", "next", "request", "dispatch", "validate-wave",
-                                        "precheck", "mode"])
+                                        "precheck", "mode", "metrics"])
+    ap.add_argument("--since", help="metrics: so eventos e pedidos a partir desta data (ISO 8601)")
+    ap.add_argument("--no-check", action="store_true", help="metrics: nao roda o aisef-check")
     ap.add_argument("--set", choices=["ask", "exec"], help="mode: troca o modo da sessao (decisao do usuario)")
     ap.add_argument("--dry-run", action="store_true", help="dispatch/validate-wave: mostra sem registrar nada no log")
     ap.add_argument("--json", action="store_true", help="waves/next: saida em JSON")
@@ -1070,6 +1072,11 @@ def main(argv):
         import aisef_next
         res = aisef_next.compute_next(project, a.feature)
         print(json.dumps(res, ensure_ascii=False, indent=2) if a.json else aisef_next.format_next(res))
+        return 0
+    if a.command == "metrics":
+        import aisef_metrics
+        res = aisef_metrics.compute_metrics(project, a.feature, a.since, run_check=not a.no_check)
+        print(json.dumps(res, ensure_ascii=False, indent=2) if a.json else aisef_metrics.format_metrics(res))
         return 0
     if a.command == "mode":
         path = os.path.join(aisef_dir(project), "session", "mode.json")

@@ -18,6 +18,7 @@ Todos ficam em `plugins/aisef/core/` (chamado `CORE` nas skills) e rodam com `py
 | `validate-wave [--feature F] [--dry-run]` | `precheck` de cada tarefa executada, reprovação imediata de quem falha e um único validador para o resto |
 | `precheck --task T [--json]` | Checagem determinística, sem modelo e sem rodar comandos: relatório, critérios com evidência, TDD, escopo e tokens de design |
 | `mode [--set ask\|exec]` | Mostra ou troca o modo da sessão (trocar abre o prompt nativo) |
+| `metrics [--feature F] [--since ISO] [--json] [--no-check]` | Custo e retorno do processo, só leitura: pedidos de aprovação por tarefa e fatia Git, 1ª validação, reprovações (precheck × validador), lead time, espera pela validação, ruído do log, negações e perguntas do gateway, erros do check |
 | `verify` / `status` | Integridade do log (cadeia, assinaturas, head externo) / resumo |
 | `rotate-key` / `anchor` | Gira a chave de assinatura / grava uma âncora do log em `~/.aisef/anchors/` |
 
