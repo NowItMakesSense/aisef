@@ -128,16 +128,6 @@ Leitura dos READMEs e da documentação oficial em 18/11/2026. "Instrução" que
 | Uma central de decisões | Cada decisão é um pedido com impacto, diff, rollback e risco; a reforçada vale para o comando exato, uma vez | Se você aprovar sem ler, nenhuma camada técnica impede |
 | Memória revisada antes de virar regra | Lições de erros registrados, aprovadas por você, com confiança calculada em código | Sem a sua revisão nos marcos, nada é aprendido, e isso é de propósito |
 
-### Onde o AISEF perde
-
-- **Só no Claude Code.** Em Cursor, Codex ou Gemini, o `AGENTS.md` é só orientação.
-- **Mais cerimônia.** Para um protótipo de uma tarde, o processo pesa mais que o risco. O caminho rápido alivia mudanças pequenas, mas não some.
-- **Latência.** Cerca de 0,17 a 0,25 s por hook no Windows, quase todo gasto abrindo o processo Python.
-- **Não é fronteira de segurança.** Um comando bem disfarçado pode passar; isolamento de verdade vem do sandbox.
-- **Comunidade pequena.** É um projeto individual, com menos olhos em busca de bugs.
-
-**Quando não usar:** prova de conceito descartável, código sem dado sensível nem deploy, ou equipe que precisa do mesmo processo em várias IDEs.
-
 ### Somar em vez de competir
 
 O AISEF é a **espinha** (governança, rastreabilidade, decisões e aprendizado revisado). O **músculo** vem de skills prontas, mantidas por quem as criou:
