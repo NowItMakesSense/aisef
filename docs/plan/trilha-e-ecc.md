@@ -41,6 +41,26 @@
   - **Violações:** antes 6 falsas; depois das correções, 0 falsas. Sobram 1 real (ardalis: `Domain/Order.cs` importa `Infrastructure.Data`) e 2 discutíveis (Sairyss: `application` importando `libs/api` e uma porta guardada em `database/`).
   - **Correções:** `Infrastructure/Domain` conta como infraestrutura; import do próprio projeto `.API` não é violação; arquivos `*.port.*`/`*.adapter.*` e `AggregateRoot`/`DomainEvent` contam como sinal; Clean em Go (`domain`, `repository`, `rest`); microsserviços como pastas irmãs `*.API`/`*-service` com manifest. Regressão em `test_detect.py`.
 - **A-08, confirmado na prática** (`claude -p`, Haiku): o subagente recebe as regras sem `paths:` ao iniciar e as com `paths:` quando lê um arquivo que casa. O CLAUDE.md também chega (documentação oficial).
+- **A-01, decidido: encurtar.** As descrições dos 56 papéis novos foram reescritas: ~4.700 → **~3.000 tokens** por sessão. As 10 originais (inclusive `frontend`) não mudaram.
+- **A-04, testado** (US$ 0,41). `react-reviewer` e `a11y-architect` rodaram só para leitura em `features/conta` do frontend do deckloom (cópia, sem tocar no projeto):
+  - **`react-reviewer`:** 3 achados MEDIUM reais (400 sem feedback, `refreshSession` que trava a navegação, `key` que descarta a escolha do usuário).
+  - **`a11y-architect`:** 3 achados MEDIUM de WCAG 4.1.3 e 3.3.1, mais uma regra de negócio "PENDENTE" sem ADR.
+  - **Nenhum dos dois** propôs mudar layout, cores, espaçamento ou tokens. O que dependia do design system ficou como "não verificável".
+- **A-05, medido** (feat-slugify, Sonnet, 1 repetição; `docs/benchmarks/outcomes-2026-11-19.*`):
+
+  | Braço | Testes escondidos | Custo | Tempo |
+  |---|---|---|---|
+  | plain | 7/7 | US$ 0,11 | 21 s |
+  | aisef (3 revisores + validador) | 7/7 | US$ 1,48 | 329 s |
+  | aisef-norev (só validador) | 7/7 | US$ 1,91 | 533 s |
+
+  Com uma repetição, a variação entre execuções é maior que o custo dos revisores (o braço sem revisores saiu mais caro). Conclusão possível hoje: o custo dos revisores não aparece acima do ruído; o custo do AISEF inteiro é ~14× o do Claude puro numa tarefa pequena. Para separar, são precisas 3+ repetições (WSL).
+  - **O benchmark achou 3 defeitos, já corrigidos:**
+    1. Os revisores, sem Write, não gravavam o veredito. Agora `aisef_review.py record` grava.
+    2. O orquestrador seguia para o validador sem os vereditos. A regra `VAL-REVIEW-MISSING` passou a acusar.
+    3. O `claude -p` do harness encerrava com subagentes em segundo plano ainda rodando. O harness agora usa `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` e retoma a sessão até o `next` parar. **Isso também invalida o benchmark da 0.11 rodado antes desta correção.**
+- **A-06, não mensurável com o benchmark atual.** As tarefas já chegam especificadas, então planner, architect e spec-miner nunca rodam. Seria preciso um benchmark de planejamento.
+- **A-07, decidido: manter a trava.**
 - **A-11, conferido.** Os 56 papéis portados têm `source`, as 33 práticas têm `source:` e o `THIRD_PARTY_NOTICES.md` traz a licença MIT íntegra.
 
 | # | O que avaliar | Como | Decide |

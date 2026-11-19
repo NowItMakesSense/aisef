@@ -193,7 +193,7 @@ def run_claude(claude, workdir, env, arm, prompt, model, timeout):
         cmd += ["--allowedTools", *PLAIN_TOOLS]
     start = datetime.datetime.now()
     try:
-        r = subprocess.run(cmd, cwd=workdir, env=dict(env, CLAUDE_PROJECT_DIR=workdir), capture_output=True, text=True,
+        r = subprocess.run(cmd, cwd=workdir, env=dict(env, CLAUDE_PROJECT_DIR=workdir, CLAUDE_CODE_DISABLE_BACKGROUND_TASKS="1"), capture_output=True, text=True,
                            encoding="utf-8", errors="replace", timeout=timeout)
         out, err = r.stdout, r.stderr
     except subprocess.TimeoutExpired:
