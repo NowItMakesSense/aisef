@@ -25,6 +25,15 @@
   - **Doctor:** lembra quando o grafo falta e avisa quando ele está velho (uma fonte mais nova que o `graph.json`, dizendo qual).
   - **Nova regra `CONFIG-GRAPHIFY`** (backend `none|ollama|auto`, caminhos relativos sem `..`).
   - Projetos antigos, sem a chave, ficam como antes.
+- **O `pack` usa o grafo do Graphify (G-02).**
+  - Lê o `graph.json` direto, só com a biblioteca padrão, em `core/aisef_graph.py`. O pacote do Graphify fica no Python do usuário, que o `python -I` não enxerga.
+  - O pacote da tarefa ganha, com teto de 15 itens e 2.500 caracteres:
+    - decisões e docs que citam os ids ou os arquivos da tarefa;
+    - quem de fora depende do código dela;
+    - do que ela depende.
+  - Grafo velho vira aviso. `pack --no-graph` desliga, e o `dispatch` registra `context_mode` (`graphify`, `mcp` ou `none`) em cada `delegation`, para o `metrics` comparar depois (G-05).
+  - Leva 10 ms num grafo de 1.262 nós.
+- **Graphify neste repositório (G-04).** `graphify update .` roda sem modelo e cobre código e docs. O comando está no README de desenvolvimento, e `graphify-out/` fica fora do Git.
 
 ## 0.10.0 - 2026-11-19
 - **Painel v3** (o protótipo aprovado virou o painel real; ADR 0019):

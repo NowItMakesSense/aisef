@@ -121,7 +121,7 @@ Estimativas em dias de trabalho seu com o Claude, como faixa.
       nada; o doctor avisa quando o grafo está velho (mais antigo que o último contract_changed).
     Estimativa: 1–2 dias
 
-[ ] G-02: O pack usa o Graphify por padrão
+[x] G-02: O pack usa o Graphify por padrão
     Descrição: o aisef_context.py pack, com o Graphify presente, inclui o resultado das
       consultas (não só a sugestão) de decisões e specs ligadas à tarefa, limitado em tokens.
       Novo modo --no-graph.
@@ -137,7 +137,7 @@ Estimativas em dias de trabalho seu com o Claude, como faixa.
     Critério de aceite: test_next cobre a sugestão.
     Estimativa: 0,5–1 dia
 
-[ ] G-04: Graphify no repositório do AISEF
+[x] G-04: Graphify no repositório do AISEF
     Descrição: instalar (uv tool install graphifyy, com a sua aprovação), rodar sobre docs/,
       ADRs e skills, e registrar o uso no README de desenvolvimento.
       graphify-out/ fica no .gitignore.
