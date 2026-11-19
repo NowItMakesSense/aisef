@@ -1,0 +1,609 @@
+{
+  "$comment": "Mapeamento de stacks do AISEF (aisef_detect.py). Derivado de config/project-stack-mappings.json e scripts/lib/project-detect.js do ECC (MIT), reescrito. markers: arquivos (glob, ate 3 niveis); deps: nomes procurados nos manifests do ecossistema (python, node, jvm, php, ruby, dart); extensions: linguagem conta se tiver arquivos-fonte suficientes; commands: sugestoes para o verify-loop; practices: pastas de core/practices/ aplicaveis.",
+  "stacks_version": "0.1.0",
+  "stacks": [
+    {
+      "id": "python",
+      "name": "Python",
+      "kind": "language",
+      "markers": [
+        "pyproject.toml",
+        "setup.py",
+        "setup.cfg",
+        "Pipfile",
+        "requirements.txt"
+      ],
+      "extensions": [
+        ".py"
+      ],
+      "commands": {
+        "test": "pytest -q",
+        "lint": "ruff check .",
+        "typecheck": "mypy ."
+      },
+      "practices": [
+        "lang/python"
+      ]
+    },
+    {
+      "id": "django",
+      "name": "Django",
+      "kind": "framework",
+      "parent": "python",
+      "markers": [
+        "manage.py"
+      ],
+      "deps": {
+        "python": [
+          "django"
+        ]
+      },
+      "commands": {
+        "test": "python manage.py test",
+        "build": "python manage.py check"
+      },
+      "practices": [
+        "lang/python"
+      ]
+    },
+    {
+      "id": "fastapi",
+      "name": "FastAPI",
+      "kind": "framework",
+      "parent": "python",
+      "deps": {
+        "python": [
+          "fastapi"
+        ]
+      },
+      "practices": [
+        "lang/python"
+      ]
+    },
+    {
+      "id": "flask",
+      "name": "Flask",
+      "kind": "framework",
+      "parent": "python",
+      "deps": {
+        "python": [
+          "flask"
+        ]
+      },
+      "practices": [
+        "lang/python"
+      ]
+    },
+    {
+      "id": "pytorch",
+      "name": "PyTorch",
+      "kind": "framework",
+      "parent": "python",
+      "deps": {
+        "python": [
+          "torch"
+        ]
+      }
+    },
+    {
+      "id": "typescript",
+      "name": "TypeScript",
+      "kind": "language",
+      "markers": [
+        "tsconfig.json"
+      ],
+      "deps": {
+        "node": [
+          "typescript"
+        ]
+      },
+      "extensions": [
+        ".ts",
+        ".tsx"
+      ],
+      "commands": {
+        "typecheck": "npx tsc --noEmit",
+        "lint": "npx eslint .",
+        "test": "npm test",
+        "build": "npm run build"
+      },
+      "practices": [
+        "lang/typescript"
+      ]
+    },
+    {
+      "id": "javascript",
+      "name": "JavaScript",
+      "kind": "language",
+      "markers": [
+        "package.json",
+        "jsconfig.json"
+      ],
+      "extensions": [
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs"
+      ],
+      "commands": {
+        "lint": "npx eslint .",
+        "test": "npm test",
+        "build": "npm run build"
+      },
+      "practices": [
+        "lang/typescript"
+      ]
+    },
+    {
+      "id": "react",
+      "name": "React",
+      "kind": "framework",
+      "parent": "javascript",
+      "deps": {
+        "node": [
+          "react"
+        ]
+      },
+      "practices": [
+        "lang/typescript",
+        "lang/web"
+      ]
+    },
+    {
+      "id": "nextjs",
+      "name": "Next.js",
+      "kind": "framework",
+      "parent": "javascript",
+      "markers": [
+        "next.config.js",
+        "next.config.mjs",
+        "next.config.ts"
+      ],
+      "deps": {
+        "node": [
+          "next"
+        ]
+      },
+      "practices": [
+        "lang/typescript",
+        "lang/web"
+      ]
+    },
+    {
+      "id": "vue",
+      "name": "Vue",
+      "kind": "framework",
+      "parent": "javascript",
+      "deps": {
+        "node": [
+          "vue"
+        ]
+      },
+      "practices": [
+        "lang/typescript",
+        "lang/web"
+      ]
+    },
+    {
+      "id": "nuxt",
+      "name": "Nuxt",
+      "kind": "framework",
+      "parent": "javascript",
+      "markers": [
+        "nuxt.config.ts",
+        "nuxt.config.js"
+      ],
+      "deps": {
+        "node": [
+          "nuxt"
+        ]
+      },
+      "practices": [
+        "lang/typescript",
+        "lang/web"
+      ]
+    },
+    {
+      "id": "angular",
+      "name": "Angular",
+      "kind": "framework",
+      "parent": "javascript",
+      "markers": [
+        "angular.json"
+      ],
+      "deps": {
+        "node": [
+          "@angular/core"
+        ]
+      },
+      "practices": [
+        "lang/typescript",
+        "lang/web"
+      ]
+    },
+    {
+      "id": "svelte",
+      "name": "Svelte",
+      "kind": "framework",
+      "parent": "javascript",
+      "deps": {
+        "node": [
+          "svelte"
+        ]
+      },
+      "practices": [
+        "lang/typescript",
+        "lang/web"
+      ]
+    },
+    {
+      "id": "express",
+      "name": "Express",
+      "kind": "framework",
+      "parent": "javascript",
+      "deps": {
+        "node": [
+          "express"
+        ]
+      },
+      "practices": [
+        "lang/typescript"
+      ]
+    },
+    {
+      "id": "nestjs",
+      "name": "NestJS",
+      "kind": "framework",
+      "parent": "javascript",
+      "markers": [
+        "nest-cli.json"
+      ],
+      "deps": {
+        "node": [
+          "@nestjs/core"
+        ]
+      },
+      "practices": [
+        "lang/typescript"
+      ]
+    },
+    {
+      "id": "electron",
+      "name": "Electron",
+      "kind": "framework",
+      "parent": "javascript",
+      "deps": {
+        "node": [
+          "electron"
+        ]
+      },
+      "practices": [
+        "lang/typescript"
+      ]
+    },
+    {
+      "id": "go",
+      "name": "Go",
+      "kind": "language",
+      "markers": [
+        "go.mod"
+      ],
+      "extensions": [
+        ".go"
+      ],
+      "commands": {
+        "build": "go build ./...",
+        "test": "go test ./...",
+        "lint": "go vet ./..."
+      },
+      "practices": [
+        "lang/go"
+      ]
+    },
+    {
+      "id": "rust",
+      "name": "Rust",
+      "kind": "language",
+      "markers": [
+        "Cargo.toml"
+      ],
+      "extensions": [
+        ".rs"
+      ],
+      "commands": {
+        "build": "cargo build",
+        "test": "cargo test",
+        "lint": "cargo clippy -- -D warnings"
+      },
+      "practices": [
+        "lang/rust"
+      ]
+    },
+    {
+      "id": "java",
+      "name": "Java",
+      "kind": "language",
+      "markers": [
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts"
+      ],
+      "extensions": [
+        ".java"
+      ],
+      "commands": {
+        "build": "./mvnw -q compile",
+        "test": "./mvnw -q test"
+      },
+      "practices": [
+        "lang/java"
+      ]
+    },
+    {
+      "id": "spring",
+      "name": "Spring Boot",
+      "kind": "framework",
+      "parent": "java",
+      "deps": {
+        "jvm": [
+          "spring-boot"
+        ]
+      },
+      "practices": [
+        "lang/java"
+      ]
+    },
+    {
+      "id": "quarkus",
+      "name": "Quarkus",
+      "kind": "framework",
+      "parent": "java",
+      "deps": {
+        "jvm": [
+          "quarkus"
+        ]
+      },
+      "practices": [
+        "lang/java"
+      ]
+    },
+    {
+      "id": "kotlin",
+      "name": "Kotlin",
+      "kind": "language",
+      "markers": [
+        "build.gradle.kts"
+      ],
+      "extensions": [
+        ".kt",
+        ".kts"
+      ],
+      "commands": {
+        "build": "./gradlew build",
+        "test": "./gradlew test"
+      },
+      "practices": [
+        "lang/kotlin"
+      ]
+    },
+    {
+      "id": "android",
+      "name": "Android",
+      "kind": "framework",
+      "parent": "kotlin",
+      "markers": [
+        "AndroidManifest.xml"
+      ],
+      "practices": [
+        "lang/kotlin"
+      ]
+    },
+    {
+      "id": "swift",
+      "name": "Swift",
+      "kind": "language",
+      "markers": [
+        "Package.swift"
+      ],
+      "extensions": [
+        ".swift"
+      ],
+      "commands": {
+        "build": "swift build",
+        "test": "swift test"
+      },
+      "practices": [
+        "lang/swift"
+      ]
+    },
+    {
+      "id": "csharp",
+      "name": "C# / .NET",
+      "kind": "language",
+      "markers": [
+        "*.csproj",
+        "*.sln"
+      ],
+      "extensions": [
+        ".cs"
+      ],
+      "commands": {
+        "build": "dotnet build",
+        "test": "dotnet test"
+      },
+      "practices": [
+        "lang/csharp"
+      ]
+    },
+    {
+      "id": "fsharp",
+      "name": "F#",
+      "kind": "language",
+      "markers": [
+        "*.fsproj"
+      ],
+      "extensions": [
+        ".fs"
+      ],
+      "commands": {
+        "build": "dotnet build",
+        "test": "dotnet test"
+      },
+      "practices": [
+        "lang/csharp"
+      ]
+    },
+    {
+      "id": "cpp",
+      "name": "C++",
+      "kind": "language",
+      "markers": [
+        "CMakeLists.txt",
+        "meson.build"
+      ],
+      "extensions": [
+        ".cpp",
+        ".cc",
+        ".cxx",
+        ".hpp",
+        ".hh"
+      ],
+      "commands": {
+        "build": "cmake --build build",
+        "test": "ctest --test-dir build"
+      },
+      "practices": [
+        "lang/cpp"
+      ]
+    },
+    {
+      "id": "php",
+      "name": "PHP",
+      "kind": "language",
+      "markers": [
+        "composer.json"
+      ],
+      "extensions": [
+        ".php"
+      ],
+      "commands": {
+        "test": "vendor/bin/phpunit",
+        "lint": "vendor/bin/phpstan analyse"
+      },
+      "practices": [
+        "lang/php"
+      ]
+    },
+    {
+      "id": "laravel",
+      "name": "Laravel",
+      "kind": "framework",
+      "parent": "php",
+      "markers": [
+        "artisan"
+      ],
+      "deps": {
+        "php": [
+          "laravel/framework"
+        ]
+      },
+      "practices": [
+        "lang/php"
+      ]
+    },
+    {
+      "id": "ruby",
+      "name": "Ruby",
+      "kind": "language",
+      "markers": [
+        "Gemfile"
+      ],
+      "extensions": [
+        ".rb"
+      ],
+      "commands": {
+        "test": "bundle exec rspec",
+        "lint": "bundle exec rubocop"
+      },
+      "practices": [
+        "lang/ruby"
+      ]
+    },
+    {
+      "id": "rails",
+      "name": "Rails",
+      "kind": "framework",
+      "parent": "ruby",
+      "markers": [
+        "config/routes.rb"
+      ],
+      "deps": {
+        "ruby": [
+          "rails"
+        ]
+      },
+      "practices": [
+        "lang/ruby"
+      ]
+    },
+    {
+      "id": "dart",
+      "name": "Dart",
+      "kind": "language",
+      "markers": [
+        "pubspec.yaml"
+      ],
+      "extensions": [
+        ".dart"
+      ],
+      "commands": {
+        "lint": "dart analyze",
+        "test": "dart test"
+      },
+      "practices": [
+        "lang/dart"
+      ]
+    },
+    {
+      "id": "flutter",
+      "name": "Flutter",
+      "kind": "framework",
+      "parent": "dart",
+      "deps": {
+        "dart": [
+          "flutter"
+        ]
+      },
+      "commands": {
+        "test": "flutter test",
+        "lint": "dart analyze"
+      },
+      "practices": [
+        "lang/dart"
+      ]
+    },
+    {
+      "id": "godot",
+      "name": "Godot (GDScript)",
+      "kind": "framework",
+      "markers": [
+        "project.godot"
+      ],
+      "extensions": [
+        ".gd"
+      ]
+    },
+    {
+      "id": "harmonyos",
+      "name": "HarmonyOS (ArkTS)",
+      "kind": "framework",
+      "markers": [
+        "oh-package.json5",
+        "hvigorfile.ts"
+      ],
+      "extensions": [
+        ".ets"
+      ]
+    }
+  ]
+}

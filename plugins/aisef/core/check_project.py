@@ -27,6 +27,8 @@ Regras (codigo -> o que verifica):
     AGENT-*         agente da tarefa (existe, versao, papel, ativo, ambiente, recursos); AGENT-ROLE-UNKNOWN: papel fora
                     do catalogo de agentes (core/agents/catalog.v0.1.json); AGENT-PATH-CEILING:
                     path do escopo que exige recurso fora do teto do agente (mesma classificacao do gateway)
+    ARCH-*          .aisef/architecture.json (aisef_detect): schema, estilo adotado aprovado como decisao
+                    arquitetural, estilo pendente de decisao, violacoes da regra de dependencia
     CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
     CONFIG-GRAPHIFY opcoes do Graphify no config.json (enabled, backend none|ollama|auto, paths e graph relativos)
     VAL-*           validacao independente (existe validador, validador diferente do executor)
@@ -734,6 +736,38 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                     rep.err("SPEC-SEAM-UNKNOWN", where, "seams fora da spec da feature: %s" % ", ".join(sorted(unknown)))
 
     # ------------------------------------------------------------------ autoridade de design (0.6.1)
+    # ------------------------------------------------------------------ arquitetura detectada (aisef_detect)
+    arch_file = os.path.join(project, "architecture.json")
+    if os.path.exists(arch_file):
+        try:
+            with open(arch_file, encoding="utf-8") as fh:
+                arch = json.load(fh)
+            try:
+                import jsonschema as _js
+            except ImportError:
+                _js = None
+            with open(os.path.join(HERE, "architecture.schema.v0.1.json"), encoding="utf-8") as fh:
+                for e in (_js.Draft202012Validator(json.load(fh)).iter_errors(arch) if _js else []):
+                    rep.err("ARCH-SCHEMA", "architecture.json", "%s: %s" % ("/".join(map(str, e.path)) or "(raiz)", e.message))
+            ok_ = arch.get("approved")
+            if ok_:
+                a = approvals.get(ok_.get("request_id"))
+                if a is None or a.get("status") != "approved" or a.get("request_type") != "architecture_decision":
+                    rep.err("ARCH-UNAPPROVED", "architecture.json",
+                            "estilo adotado sem pedido architecture_decision aprovado (%s)" % ok_.get("request_id"))
+            elif arch.get("styles") or arch.get("recommendations"):
+                rep.warn("ARCH-PENDING", "architecture.json",
+                         "estilo de arquitetura detectado mas nao adotado: confirme com o usuario e registre como ADR "
+                         "(skill aisef-discovery). Recomendacoes abertas: %s"
+                         % (", ".join(r["id"] for r in arch.get("recommendations", [])) or "nenhuma"))
+            high = [v for v in arch.get("violations", []) if v.get("severity") == "high"]
+            if high:
+                rep.warn("ARCH-DEPENDENCY", "architecture.json",
+                         "%d violacao(oes) da regra de dependencia (ex.: %s:%d importa %s); rode aisef_detect.py deps"
+                         % (len(high), high[0]["file"], high[0]["line"], high[0]["import"]))
+        except ValueError as exc:
+            rep.err("ARCH-SCHEMA", "architecture.json", "JSON invalido: %s" % exc)
+
     tokens_file = os.path.join(project, "design", "tokens.json")
     tokens = None
     if os.path.exists(tokens_file):

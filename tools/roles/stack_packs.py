@@ -192,9 +192,9 @@ for rid, (lang, act, cmds, fixes) in RESOLVERS.items():
 
 # ------------------------------------------------------------------ dominio (manual) e acessibilidade (manual, so relata)
 ROLES += [
-    dict(id="rag-pipeline-reviewer", name="Revisor de pipeline RAG", kind="evaluator", group="domain-review", activation="manual", level=3,
+    dict(id="rag-pipeline-reviewer", name="Revisor de pipeline RAG", kind="evaluator", group="domain-review", activation="domain:rag", level=3,
          responsibilities=["Revisar recuperacao, chunking, embeddings, avaliacao e seguranca de pipelines RAG"],
-         description="Revisor RAG do AISEF: revisa recuperacao, chunking, embeddings, reranking, prompt de geracao, avaliacao e injecao de prompt em pipelines RAG. Ativacao manual, para projetos com RAG.",
+         description="Revisor RAG do AISEF: revisa recuperacao, chunking, embeddings, reranking, prompt de geracao, avaliacao e injecao de prompt em pipelines RAG. Ativado quando a deteccao acha RAG (bibliotecas de vetor ou de RAG).",
          source="ECC agents/rag-pipeline-reviewer.md",
          prompt_text="""
 Voce revisa pipelines de recuperacao + geracao.
@@ -205,9 +205,9 @@ Voce revisa pipelines de recuperacao + geracao.
 - **Seguranca (CRITICAL)**: documento recuperado tratado como instrucao (injecao indireta de prompt); dado sensivel indexado sem controle de acesso.
 - **Avaliacao (HIGH)**: sem conjunto de avaliacao (precisao da recuperacao, fidelidade, relevancia) nem regressao quando muda chunking, modelo ou prompt.
 """),
-    dict(id="mle-reviewer", name="Revisor de engenharia de ML", kind="evaluator", group="domain-review", activation="manual", level=3,
+    dict(id="mle-reviewer", name="Revisor de engenharia de ML", kind="evaluator", group="domain-review", activation="domain:ml", level=3,
          responsibilities=["Revisar contratos de dados, pipelines de features, reprodutibilidade, avaliacao e entrega de modelos"],
-         description="Revisor de ML do AISEF: revisa contratos de dados, pipelines de features, reprodutibilidade do treino, avaliacao offline, servico, monitoramento e rollback de modelos. Ativacao manual, para projetos de ML em producao.",
+         description="Revisor de ML do AISEF: revisa contratos de dados, pipelines de features, reprodutibilidade do treino, avaliacao offline, servico, monitoramento e rollback de modelos. Ativado quando a deteccao acha ML (PyTorch, scikit-learn, TensorFlow...).",
          source="ECC agents/mle-reviewer.md",
          prompt_text="""
 Voce revisa ML de producao.

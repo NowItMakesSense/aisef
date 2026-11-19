@@ -1,6 +1,6 @@
 ---
 name: mle-reviewer
-description: 'Revisor de ML do AISEF: revisa contratos de dados, pipelines de features, reprodutibilidade do treino, avaliacao offline, servico, monitoramento e rollback de modelos. Ativacao manual, para projetos de ML em producao.'
+description: 'Revisor de ML do AISEF: revisa contratos de dados, pipelines de features, reprodutibilidade do treino, avaliacao offline, servico, monitoramento e rollback de modelos. Ativado quando a deteccao acha ML (PyTorch, scikit-learn, TensorFlow...).'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

@@ -15,6 +15,15 @@
   - **Manuais:** RAG, ML, saúde; e os ligados a UI (React, Vue, acessibilidade, build React), que só relatam e não mexem em layout nem em tokens.
   - `security` e `database` ganharam os checklists do ECC. **`frontend`, `implementer` e `validator` não mudaram.**
 - **Gateway:** subagente `aisef:<papel>` sem Agent Contract no projeto não edita nem faz operação sensível. Antes ele ficava sem teto.
+- **Detecção de stack e arquitetura (E1).** `core/aisef_detect.py` (stdlib, sem modelo) e `aisef_project.py detect`.
+  - **Stack:** 35 entradas em `core/detect/stacks.v0.1.json` (linguagens, frameworks, gerenciador de pacotes, comandos por stack). Derivado do ECC.
+  - **Estilos com confiança e evidência:** Clean/Onion, hexagonal, DDD tático e estratégico, CQRS, event sourcing, camadas/MVC, fatias verticais, orientado a eventos, monólito modular e microsserviços. Entende nomes .NET/Java com ponto (`Loja.Pedidos.Domain`).
+  - **Regra de dependência pelos imports** (Python, TS/JS, Java/Kotlin, C#, Go, PHP, Ruby, Dart, Rust): domínio importando aplicação, infraestrutura ou framework vira violação com `arquivo:linha`. `aisef_detect.py deps` sai 1 se houver.
+  - **Recomendações** com motivo, impacto e esforço (corrigir a regra de dependência, definir um estilo, tirar regra de controllers, glossário DDD, avaliar DDD tático, separação CQRS, fronteiras de serviço, testes). Domínios `ml` e `rag` ativam os revisores correspondentes.
+  - Grava `.aisef/architecture.json` (schema `architecture.schema.v0.1.json`) e cria os drafts dos agentes da stack. `detect --adopt <estilos> --request REQ-x` registra o estilo adotado, só com `architecture_decision` aprovado.
+  - **Novas regras:** `ARCH-SCHEMA`, `ARCH-UNAPPROVED` (erro), `ARCH-PENDING` e `ARCH-DEPENDENCY` (aviso).
+  - As skills `aisef-init` e `aisef-discovery` usam a detecção: confirmar o estilo no código, apresentar as recomendações e levar a adoção ao Approval Center.
+  - Testes em `core/test_detect.py`, com fixtures de cada estilo.
 
 ## Não lançado (0.11.0: medir)
 - **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:

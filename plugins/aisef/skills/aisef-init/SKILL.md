@@ -30,8 +30,21 @@ Isso cria `.aisef/{contracts/{features,tasks,agents},blueprints,approvals,author
 
 Pergunte tambem se o usuario quer **uma branch por feature** (e apagar a branch depois do merge do PR). Se sim, com o OK, acrescente em `config.json` (a edicao pede aprovacao): `"git": {"branch_per_feature": true, "delete_branch_after_merge": true, "branch_prefix": "feat/"}`. Detalhes na skill **aisef**, secao "Branch por feature".
 
+## 3b. Projeto existente: detecte stack e arquitetura
+```
+python -I CORE/aisef_project.py detect --project .
+```
+Grava `.aisef/architecture.json` (stacks, estilos com confianca e evidencia, violacoes da regra de dependencia, praticas e recomendacoes) e cria os drafts dos agentes da stack detectada (revisor e corretor de build da linguagem). Mostre o resumo ao usuario dizendo que e **heuristica**; confirmar o estilo e adota-lo fica para a **aisef-discovery**. Em projeto novo, rode o mesmo comando depois que a stack existir.
+
 ## 4. Ative os agentes (decisao do usuario)
-O init criou os Agent Contracts do orquestrador e dos 9 agentes do plugin (inclusive o `implementer`, que faz as fatias verticais) em `.aisef/contracts/agents/*.json`, com `status: "draft"`. Agente em draft e bloqueado pelo gateway. Mostre ao usuario, numa tabela, o teto de cada um (recursos, Git, ambiente maximo; o `validator` so tem Git de leitura) e pergunte se aprova (AskUserQuestion: todos, alguns, nenhum agora). Com o OK:
+O init criou os Agent Contracts dos papeis `always` do catalogo (`CORE/agents/catalog.v0.1.json`) em `.aisef/contracts/agents/*.json`, com `status: "draft"`; o `detect` acrescentou os da stack. Agente em draft e bloqueado pelo gateway, e agente sem contrato nao edita. Mostre a equipe agrupada por tipo (`python -I CORE/aisef_catalog.py list`):
+- **executores**: implementer, backend, frontend, database, devops, doc-updater, e2e-runner;
+- **avaliadores** (so relatam): qa, security, code-reviewer, architecture-reviewer, database-reviewer e os demais revisores;
+- **corretores** (diff minimo): code-simplifier, refactor-cleaner, performance-optimizer e os corretores de build da stack;
+- **consultores**: planner, architect, code-architect, code-explorer, spec-miner, domain e outros;
+- o `validator`, so com Git de leitura.
+
+Mostre o teto de cada grupo (recursos, Git, ambiente maximo) e pergunte se aprova (AskUserQuestion: todos, so os essenciais `implementer,validator,qa,security,code-reviewer`, escolher, nenhum agora). Papeis `manual` (React, Vue, acessibilidade, saude) so entram se o usuario pedir: `agents --roles react-reviewer`. Com o OK:
 ```
 python -I CORE/aisef_project.py agents --project . --activate [--roles backend,qa]
 ```
@@ -64,7 +77,7 @@ claude plugin install mattpocock-skills@claude-plugins-official --scope project
 O gateway abre o prompt nativo. Nao rode o `/setup-matt-pocock-skills` (tracker e labels): no AISEF, spec e fatias ficam em `.aisef/`, nao no issue tracker.
 
 ### Grafos: Graphify e padrao, codebase-memory-mcp e opcional (pergunte antes de instalar)
-- **Graphify (docs e decisoes: ADRs, specs, `docs/`, `.aisef/`) e padrao desde a 0.11.0.** O `init` ja grava
+- **Graphify (docs e decisoes: ADRs, specs, `docs/`, `.aisef/`) e padrao desde a 0.11.0.** Em **projeto existente**, proponha incluir as pastas de codigo em `graphify.paths` (ex.: `["docs", ".aisef", "src"]`): o grafo do codigo alimenta o `pack`, o `code-explorer` e a regra de dependencia. O `init` ja grava
   `"graphify": {"enabled": true, "backend": "none", "paths": ["docs", ".aisef"]}` no `.aisef/config.json`.
   - `backend: none`: so o passo estrutural, nada enviado a provedor de modelo.
   - Pergunte uma vez (AskUserQuestion), com o Graphify como primeira opcao, marcada "(Recomendado, padrao)":

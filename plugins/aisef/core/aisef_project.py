@@ -20,6 +20,8 @@ Uso:
                                        [--authorization rascunho.json]
     python3 -I aisef_project.py agents --project REPO [--activate] [--roles backend,qa]
         (sem --activate: cria os drafts dos papeis que se aplicam ao projeto pelo catalogo, ou os de --roles)
+    python3 -I aisef_project.py detect --project REPO
+        (aisef_detect: grava .aisef/architecture.json, registra no log e cria os drafts dos papeis da stack detectada)
     python3 -I aisef_project.py waves --project REPO [--feature FEAT-x] [--json]
     python3 -I aisef_project.py next --project REPO [--feature FEAT-x] [--json]
     python3 -I aisef_project.py dispatch --project REPO [--feature FEAT-x] [--dry-run]   (onda: prompts + delegation)
@@ -474,9 +476,32 @@ def project_traits(project):
         return (), (), ()
     with open(path, encoding="utf-8") as fh:
         doc = json.load(fh)
-    return (tuple(s["id"] for s in doc.get("stacks", [])),
-            tuple(s["id"] for s in doc.get("styles", []) if s.get("confidence", 0) >= 0.5),
-            tuple(doc.get("domains", [])))
+    styles = (doc.get("approved") or {}).get("styles") or [s["id"] for s in doc.get("styles", []) if s.get("confidence", 0) >= 0.5]
+    return tuple(s["id"] for s in doc.get("stacks", [])), tuple(styles), tuple(doc.get("domains", []))
+
+
+def adopt_styles(project, styles, request_id):
+    """Registra em architecture.json o estilo que o USUARIO adotou, so com architecture_decision aprovado."""
+    import aisef_detect
+    if not styles or not request_id:
+        raise SystemExit("--adopt exige os estilos e --request (architecture_decision aprovado)")
+    path = os.path.join(aisef_dir(project), "approvals", request_id + ".json")
+    if not os.path.exists(path):
+        raise SystemExit("pedido %s nao existe" % request_id)
+    with open(path, encoding="utf-8") as fh:
+        req = json.load(fh)
+    if req.get("status") != "approved" or req.get("request_type") != "architecture_decision":
+        raise SystemExit("pedido %s precisa ser architecture_decision aprovado pelo usuario" % request_id)
+    known = set(aisef_detect.STYLES) | {"modular-monolith", "microservices"}
+    unknown = [s for s in styles if s not in known]
+    if unknown:
+        raise SystemExit("estilo desconhecido: %s (validos: %s)" % (", ".join(unknown), ", ".join(sorted(known))))
+    doc = aisef_detect.detect(project)
+    doc["approved"] = {"styles": styles, "request_id": request_id, "approved_at": now_iso()}
+    aisef_detect.write(project, doc)
+    append(project, {"event_type": "decision_recorded", "actor": {"type": "system", "id": "aisef_detect"},
+                     "summary": "Estilo de arquitetura adotado: %s (%s)" % (", ".join(styles), request_id)})
+    return doc["approved"]
 
 
 def write_agent_drafts(project, roles=None):
@@ -1054,7 +1079,7 @@ def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["init", "append", "decide", "agents", "settings", "rotate-key", "anchor",
                                         "verify", "status", "waves", "next", "request", "dispatch", "validate-wave",
-                                        "precheck", "mode", "metrics"])
+                                        "precheck", "mode", "metrics", "detect"])
     ap.add_argument("--since", help="metrics: so eventos e pedidos a partir desta data (ISO 8601)")
     ap.add_argument("--no-check", action="store_true", help="metrics: nao roda o aisef-check")
     ap.add_argument("--set", choices=["ask", "exec"], help="mode: troca o modo da sessao (decisao do usuario)")
@@ -1081,6 +1106,8 @@ def main(argv):
     ap.add_argument("--ack", default="", help="impact_read,rollback_read,diff_reviewed")
     ap.add_argument("--authorization", help="rascunho JSON da autorizacao gerada (escopo ou reforcada)")
     ap.add_argument("--activate", action="store_true", help="agents: ativa os Agent Contracts em draft (decisao do usuario)")
+    ap.add_argument("--adopt", default="", help="detect: estilos adotados (ids separados por virgula), com --request de "
+                                                "architecture_decision ja aprovado pelo usuario")
     ap.add_argument("--roles", default="", help="agents: lista separada por virgula (padrao: todos)")
     a = ap.parse_args(argv)
     project = os.path.abspath(a.project)
@@ -1176,6 +1203,25 @@ def main(argv):
     if a.command == "anchor":
         a_ = anchor(project)
         print("ancora gravada: sequencia %d em %s" % (a_["sequence"], anchors_path(load_config(project)["project_id"])))
+        return 0
+    if a.command == "detect":
+        import aisef_detect
+        if a.adopt:
+            adopted = adopt_styles(project, [x for x in a.adopt.split(",") if x], a.request)
+            print("estilo adotado: %s (%s)" % (", ".join(adopted["styles"]), adopted["request_id"]))
+            created = write_agent_drafts(project)
+            print("drafts de Agent Contract criados para o estilo: %s" % (", ".join(created) or "nenhum novo"))
+            return 0
+        doc = aisef_detect.detect(project)
+        aisef_detect.write(project, doc)
+        created = write_agent_drafts(project)
+        append(project, {"event_type": "evidence_recorded", "actor": {"type": "system", "id": "aisef_detect"},
+                         "summary": "Deteccao de stack e arquitetura: %s; estilos: %s" % (
+                             ", ".join(s["id"] for s in doc["stacks"]) or "nenhuma",
+                             ", ".join("%s %.2f" % (s["id"], s["confidence"]) for s in doc["styles"]) or "nenhum")})
+        print(aisef_detect.summary(doc))
+        print("drafts de Agent Contract criados para a stack: %s (ativar e decisao do usuario: agents --activate --roles ...)"
+              % (", ".join(created) or "nenhum novo"))
         return 0
     if a.command == "agents":
         roles = [x for x in a.roles.split(",") if x] or None

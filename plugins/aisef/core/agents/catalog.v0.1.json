@@ -1965,7 +1965,7 @@
       "name": "Revisor de pipeline RAG",
       "kind": "evaluator",
       "group": "domain-review",
-      "activation": "manual",
+      "activation": "domain:rag",
       "level": 3,
       "task_types": [
         "review"
@@ -1985,7 +1985,7 @@
       "responsibilities": [
         "Revisar recuperacao, chunking, embeddings, avaliacao e seguranca de pipelines RAG"
       ],
-      "description": "Revisor RAG do AISEF: revisa recuperacao, chunking, embeddings, reranking, prompt de geracao, avaliacao e injecao de prompt em pipelines RAG. Ativacao manual, para projetos com RAG.",
+      "description": "Revisor RAG do AISEF: revisa recuperacao, chunking, embeddings, reranking, prompt de geracao, avaliacao e injecao de prompt em pipelines RAG. Ativado quando a deteccao acha RAG (bibliotecas de vetor ou de RAG).",
       "prompt": "prompts/rag-pipeline-reviewer.md",
       "source": "ECC agents/rag-pipeline-reviewer.md"
     },
@@ -1994,7 +1994,7 @@
       "name": "Revisor de engenharia de ML",
       "kind": "evaluator",
       "group": "domain-review",
-      "activation": "manual",
+      "activation": "domain:ml",
       "level": 3,
       "task_types": [
         "review"
@@ -2014,7 +2014,7 @@
       "responsibilities": [
         "Revisar contratos de dados, pipelines de features, reprodutibilidade, avaliacao e entrega de modelos"
       ],
-      "description": "Revisor de ML do AISEF: revisa contratos de dados, pipelines de features, reprodutibilidade do treino, avaliacao offline, servico, monitoramento e rollback de modelos. Ativacao manual, para projetos de ML em producao.",
+      "description": "Revisor de ML do AISEF: revisa contratos de dados, pipelines de features, reprodutibilidade do treino, avaliacao offline, servico, monitoramento e rollback de modelos. Ativado quando a deteccao acha ML (PyTorch, scikit-learn, TensorFlow...).",
       "prompt": "prompts/mle-reviewer.md",
       "source": "ECC agents/mle-reviewer.md"
     },

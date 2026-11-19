@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**150 regras** em 26 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**154 regras** em 27 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -105,6 +105,12 @@ Toda fatia tem ao menos um criterio verificado por teste automatizado.
 Evidencia de teste vermelho antes do verde, no relatorio do executor.
 
 `TDD-EVIDENCE-MISSING`, `TDD-GREEN-FAILING`, `TDD-RED-BEFORE-GREEN`, `TDD-RED-NOT-FAILING`
+
+## Arquitetura (`ARCH-*`)
+
+Deteccao valida, estilo adotado aprovado como decisao arquitetural e regra de dependencia.
+
+`ARCH-DEPENDENCY`, `ARCH-PENDING`, `ARCH-SCHEMA`, `ARCH-UNAPPROVED`
 
 ## Autoridade de design (`DESIGN-*`)
 
