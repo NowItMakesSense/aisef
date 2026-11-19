@@ -20,9 +20,7 @@ Depois abra `/tmp/demo/panel/index.html` no navegador. O demo traz uma feature (
 - um blueprint;
 - um log assinado.
 
-| Aprovações | Engenharia |
-|---|---|
-| ![Aprovações](../img/panel-approvals.png) | ![Engenharia](../img/panel-engineering.png) |
+![Telas do painel](../img/panel-tour.gif)
 
 Para ver um exemplo de brief, que é o que o modelo escreve em vez de JSON completo:
 

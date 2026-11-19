@@ -1,18 +1,26 @@
-<p align="center"><img src="plugins/aisef/.claude-plugin/icon.png" width="96" alt=""></p>
+<p align="center"><img src="docs/img/banner.svg" width="100%" alt="AISEF. Fast agents are easy. Agents you can audit are not."></p>
 
-# AISEF
-
-**English** · [Português](README.pt-BR.md)
-
-**Fast agents are easy. Agents you can audit are not.**
+<p align="center"><b>English</b> · <a href="README.pt-BR.md">Português</a></p>
 
 AISEF is a Claude Code plugin that turns a plain-language request into a specified feature: broken into vertical slices, implemented test-first by agents running in parallel, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log.
 
-| 148 | 857 | 18 | ~0.2 s |
+| 148 | 919 | 19 | ~0.2 s |
 |---|---|---|---|
 | consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | recorded architecture decisions ([ADRs](docs/adr/README.md), Portuguese) | per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
-![Panel](docs/img/panel-overview.png)
+<p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="The AISEF live panel: execution map, a pending decision, a task drawer and a subagent drawer, parallel lanes"></p>
+<p align="center"><sub>The live panel on demo data: who is running, who is waiting and why, which subagent each agent spawned, and the lanes over time.</sub></p>
+
+## What's new
+
+- **0.10.0, panel v3.** The **execution map** is now the main view: one column per wave, every slice with its state, time and last action, and subagents attached to the agent that spawned them. A new hook records **who spawned whom**; when it cannot be sure, the link says "inferred".
+  - Click a slice for its drawer. Click an agent or subagent for its own drawer: what it was asked, who spawned it, model, time and latest actions.
+  - **Parallel lanes** mark rejections, gateway denials and decision requests at the exact moment.
+  - The dependency graph is drawn natively and highlights the **critical path**.
+  - Global search (`Ctrl K`), keyboard shortcuts, filters that survive a reload, light and dark with AA contrast checked, and a self-test in headless Chrome.
+- **0.9.3, Ask researches the web.** `/aisef:ask` reads primary sources, cites URLs and picks the model by question: Haiku to find something in the project, Sonnet for research (the default), Opus only on request.
+
+Full history in the [CHANGELOG](CHANGELOG.md) (Portuguese).
 
 ## One feature, two ways
 
@@ -70,6 +78,25 @@ flowchart LR
 | **Evidence** | Every operation and every blocked attempt goes to a hash-chained log signed with Ed25519. The signed head is kept outside the repository. |
 | **Cost** | Model and effort are routed per task by risk and complexity, from Haiku to Opus; each failed attempt moves one level up. |
 | **Learning** | Lessons drawn from errors already on record (rejections, blocks), which only apply after your approval and lose confidence when they stop helping. |
+
+## The panel
+
+<p align="center"><img src="docs/img/panel-tour.gif" width="100%" alt="Tour of the eight panel screens and the global search"></p>
+
+Eight screens on an icon rail. Each one is derived from the contracts and the signed log, and none is a source of truth:
+
+| Screen | What you see |
+|---|---|
+| **Now** | What runs and what waits, the execution map, decisions waiting for you with the command to copy, the next step, the parallel lanes and the slice table with TDD cycles |
+| **Agent map** | The map and lanes full width, plus the tree of who spawned whom |
+| **Features and slices** | Each feature's stage, its slices, the native dependency graph with the critical path and the delivered execution reports |
+| **Traceability** | Requirement → slice → criterion → evidence, with a "gaps only" filter |
+| **Governance** | Pending decisions, past decisions, architecture choices with discarded options, and risks |
+| **History** | The hash-chained log, each event with its block and signature |
+| **Engineering** | Architecture and data diagrams, endpoints, threats and migrations from the blueprint |
+| **Agent team** | Who works on what, subagents in flight, approved lessons and dispatches per model |
+
+A broken log puts a red banner on top and hides every approve command. Run it live with `build_panel.py --serve` (it refreshes every 3 s without losing scroll, filters or the open drawer) or as a static page.
 
 ## Where AISEF sits among the alternatives
 
@@ -137,8 +164,8 @@ If the Python with `cryptography` is not the first one on your PATH, set `AISEF_
 1. In a project folder, say **"start AISEF in this project"**. On an existing codebase, AISEF investigates before proposing anything.
 2. Approve the agents and the native second-layer rules when asked.
 3. Describe what you want. AISEF tells you which phase you are in and walks you through Grill → Spec → Slices up to the plan you approve.
-4. Watch it live: `aisef-panel` opens the panel with what each agent is doing now, the next step, each feature's flow and the parallel waves.
-5. Just a question? `/aisef:ask <question>` answers by reading the project with Haiku, changing nothing; `/aisef:modo ask` keeps the whole session read-only until `/aisef:modo exec`. See [how it compares to Cursor's Ask](docs/guide/ask-mode.md) (Portuguese).
+4. Watch it live: `aisef-panel` opens the panel with the execution map, who spawned whom, the decisions waiting for you and the parallel lanes.
+5. Just a question? `/aisef:ask <question>` answers without changing anything: it reads the project and, when the question calls for it, researches the web with cited sources, choosing the model by the question. `/aisef:modo ask` keeps the whole session read-only until `/aisef:modo exec`. See [how it compares to Cursor's Ask](docs/guide/ask-mode.md) (Portuguese).
 
 To explore without spending tokens, follow the [walkthrough with the demo project](docs/guide/walkthrough.md) (Portuguese).
 
@@ -148,7 +175,7 @@ To explore without spending tokens, follow the [walkthrough with the demo projec
 |---|---|
 | Skills | `aisef` (orchestrator), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel`, `ask`, `modo` |
 | Agents | `implementer` (vertical slices with TDD), `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, `ask`, each with a permission ceiling and generated from one source |
-| Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`), subagent events, Ask-mode reminder |
+| Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`), subagent events and who spawned whom (`PreToolUse` Agent), Ask-mode reminder |
 | Core | JSON Schemas, permission and model policies, consistency checker, signed log, brief generators, batch dispatch, context packs, reviewed learning and live panel |
 
 ## Documentation

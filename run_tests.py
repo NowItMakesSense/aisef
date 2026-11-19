@@ -45,7 +45,7 @@ SUITES = [
 
 failed = []
 for name, args in SUITES:
-    r = subprocess.run([sys.executable, "-I"] + args, capture_output=True, text=True, encoding="utf-8", env=env)
+    r = subprocess.run([sys.executable, "-I"] + args, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     last = (r.stdout.strip().splitlines() or ["(sem saida)"])[-1]
     print("%-40s %s  %s" % (name, "OK   " if r.returncode == 0 else "FALHA", last))
     if r.returncode != 0:
@@ -53,12 +53,12 @@ for name, args in SUITES:
         print("\n".join("    " + line for line in (r.stdout + r.stderr).splitlines() if "FALHA" in line or "Error" in line or "ERRO" in line))
 
 demo = os.path.join(work, "demo")
-r = subprocess.run([sys.executable, "-I", os.path.join(CORE, "make_demo_project.py"), demo], capture_output=True, text=True, encoding="utf-8", env=env)
+r = subprocess.run([sys.executable, "-I", os.path.join(CORE, "make_demo_project.py"), demo], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
 r = subprocess.run([sys.executable, "-I", os.path.join(CORE, "check_project.py"), "--project", demo, "--strict",
                     "--policy", os.path.join(CORE, "permission-policy.v0.1.json"),
                     "--defaults", os.path.join(CORE, "orchestration-defaults.v0.1.json"),
                     "--now", "2026-11-05T15:00:00-03:00"],  # relogio do demo (make_demo_project.DEMO_NOW)
-                   capture_output=True, text=True, encoding="utf-8", env=env)
+                   capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
 print("%-40s %s  %s" % ("demo: check_project --strict", "OK   " if r.returncode == 0 else "FALHA", r.stdout.strip().splitlines()[-1]))
 if r.returncode != 0:
     failed.append("demo")

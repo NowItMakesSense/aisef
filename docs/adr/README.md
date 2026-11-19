@@ -22,3 +22,4 @@ Cada decisão tem data, contexto, o que foi decidido e as consequências. Para m
 | [0016](0016-validacao-por-onda-e-precheck.md) | Validação por onda e precheck determinístico | 2026-11-18 |
 | [0017](0017-aprendizado-continuo-revisado.md) | Aprendizado contínuo revisado (melhor que o do ECC) | 2026-11-18 |
 | [0018](0018-modo-ask-e-revisao-de-ferramentas.md) | Modo Ask e revisão periódica de ferramentas | 2026-11-18 |
+| [0019](0019-painel-v3-mapa-de-execucao.md) | Painel v3: mapa de execução e quem disparou quem | 2026-11-19 |

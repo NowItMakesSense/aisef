@@ -43,6 +43,9 @@ dsp.dispatch_wave(proj)
 # hook SubagentStart/SubagentStop -> .aisef/runtime/agents.jsonl
 env = dict(os.environ, CLAUDE_PROJECT_DIR=proj)
 for payload in ({"hook_event_name": "SubagentStart", "agent_id": "ag-1", "agent_type": "aisef:implementer"},
+                {"hook_event_name": "PreToolUse", "tool_name": "Agent", "agent_id": "ag-1", "agent_type": "aisef:implementer",
+                 "tool_input": {"subagent_type": "Explore", "description": "achar o middleware de sessao", "model": "haiku"}},
+                {"hook_event_name": "PreToolUse", "tool_name": "Bash", "agent_id": "ag-1", "tool_input": {"command": "ls"}},
                 {"hook_event_name": "SubagentStart", "agent_id": "ag-2", "agent_type": "Explore"},
                 {"hook_event_name": "SubagentStop", "agent_id": "ag-2", "agent_type": "Explore"}):
     subprocess.run([sys.executable, "-I", os.path.join(HOOKS, "agent_events.py")], input=json.dumps(payload),
@@ -53,7 +56,12 @@ subprocess.run([sys.executable, "-I", os.path.join(HOOKS, "audit_hook.py")],
                capture_output=True, text=True, env=env, timeout=30)
 rt = panel_live.read_runtime(os.path.join(proj, ".aisef"))
 check("hook de subagentes grava inicio e fim; a auditoria grava a ultima acao do subagente",
-      [r["event"] for r in rt] == ["start", "start", "stop", "tool"], rt)
+      [r["event"] for r in rt] == ["start", "spawn", "start", "stop", "tool"], rt)
+check("hook PreToolUse Agent grava o disparo (pai, tipo, pedido, modelo); outras ferramentas sao ignoradas",
+      rt[1]["parent_id"] == "ag-1" and rt[1]["subagent_type"] == "Explore" and rt[1]["model"] == "haiku"
+      and "middleware" in rt[1]["description"], rt[1])
+ap.append(proj, {"event_type": "tool_used", "actor": {"type": "system", "id": "execution-gateway"}, "summary": "Gateway: deny Read",
+                 "data": {"tool": "Read", "gateway": "deny", "target": ".env", "subagent": "aisef:implementer", "agent_id": "ag-1"}})
 check("pasta runtime fica fora do Git", open(os.path.join(proj, ".aisef", "runtime", ".gitignore"), encoding="utf-8").read().strip() == "*")
 
 out = os.path.join(work, "panel")
@@ -63,6 +71,19 @@ fl = L["agents_in_flight"]
 check("Agora: so o subagente ainda em execucao aparece, ligado a fatia que ele recebeu e com a ultima acao",
       len(fl) == 1 and fl[0]["agent_type"] == "aisef:implementer" and fl[0]["task_id"] == "T-010"
       and "reset.py" in (fl[0]["last_action"] or ""), fl)
+BD = L["board"]
+ag = {a["agent_id"]: a for a in BD["agents"]}
+check("mapa: o subagente fica ligado ao agente que o disparou (sem inferencia), herda a fatia e guarda o pedido e o modelo",
+      ag["ag-2"]["parent_id"] == "ag-1" and ag["ag-2"]["parent_inferred"] is False and ag["ag-2"]["task_id"] == "T-010"
+      and ag["ag-2"]["model"] == "haiku" and "middleware" in (ag["ag-2"]["description"] or ""), ag.get("ag-2"))
+check("mapa: o executor guarda as ultimas acoes e a contagem, e herda o modelo da delegacao",
+      ag["ag-1"]["tool_count"] == 1 and "reset.py" in ag["ag-1"]["actions"][-1]["text"] and ag["ag-1"]["model"], ag.get("ag-1"))
+t10 = next(t for t in BD["tasks"] if t["task_id"] == "T-010")
+check("mapa: a fatia aparece rodando, na onda 1, com a negacao do gateway presa pelo id do agente",
+      t10["st"] == "run" and t10["wave"] == 1 and t10["denied"] and t10["denied"]["text"] == ".env", t10)
+check("raias: uma raia da fatia e uma raia recuada do subagente",
+      [(r["key"], r["child"]) for r in BD["lanes"]][:2] == [("T-010", False), ("ag-2", True)], BD["lanes"])
+check("frase do topo resume o que roda", BD["headline"].startswith("1 rodando"), BD["headline"])
 check("Agora: proximo passo vem do next (fase execucao, esperando os agentes)",
       L["next"]["phase"] == "execute" and any(a["kind"] == "wait" for a in L["next"]["actions"]), L["next"])
 f = L["flow"][0]
@@ -97,7 +118,7 @@ try:
     check("servidor: regenera quando .aisef/ muda (novo evento aparece sem rodar nada)",
           d2["manifest"]["source"]["event_count"] == d1["manifest"]["source"]["event_count"] + 1)
     check("pagina: aba Agora e atualizacao automatica quando servida por http",
-          'SCREENS.agora' in page and 'ALIAS' in page and 'fetch("panel-data.json"' in page)
+          'var SCREENS = {' in page and 'agora: function' in page and 'ALIAS' in page and 'fetch("panel-data.json"' in page)
     check("Agora: linha do tempo das tarefas (raia de ondas) com onda, inicio, fim e estado",
           L["timeline"] and set(L["timeline"][0]) == {"task_id", "wave", "start", "end", "state"} and L["timeline"][0]["wave"] == 1, L.get("timeline"))
 finally:

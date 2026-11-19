@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""AISEF agent events: hooks SubagentStart e SubagentStop (0.8.0). Alimentam a visao "Agora" do painel.
+"""AISEF agent events: hooks SubagentStart e SubagentStop (0.8.0) e PreToolUse Agent|Task (0.10.0, quem disparou
+quem). Alimentam a visao "Agora" e o mapa de execucao do painel.
 
 Grava uma linha por evento em .aisef/runtime/agents.jsonl (efemero, fora do Git: a pasta tem o proprio .gitignore).
 Nao e o log de auditoria: a trilha assinada continua com `delegation`, `task_started` e `task_executed`. Barato,
@@ -31,6 +32,17 @@ def main():
     data = json.load(sys.stdin)
     project = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
     if not os.path.exists(os.path.join(project, ".aisef", "config.json")):
+        return
+    if data.get("hook_event_name") == "PreToolUse":
+        # Disparo de subagente (ferramenta Agent/Task): guarda quem pediu. O painel liga este registro ao
+        # SubagentStart seguinte do mesmo tipo; sem como ter certeza, a ligacao sai marcada como inferida.
+        if data.get("tool_name") not in ("Agent", "Task"):
+            return
+        inp = data.get("tool_input") or {}
+        runtime_append(project, {"event": "spawn", "parent_id": data.get("agent_id"), "parent_type": data.get("agent_type"),
+                                 "subagent_type": inp.get("subagent_type") or "general-purpose",
+                                 "description": (inp.get("description") or "")[:200], "model": inp.get("model"),
+                                 "background": bool(inp.get("run_in_background")), "session_id": data.get("session_id")})
         return
     kind = {"SubagentStart": "start", "SubagentStop": "stop"}.get(data.get("hook_event_name"))
     if not kind:

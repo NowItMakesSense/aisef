@@ -110,6 +110,8 @@ def record_attempt(project, data, decision, reason):
         detail = {"tool": data.get("tool_name", ""), "gateway": decision, "reason": reason[:400], "target": what}
         if data.get("agent_type"):
             detail["subagent"] = data["agent_type"]
+        if data.get("agent_id"):
+            detail["agent_id"] = data["agent_id"]  # o painel prende a negacao a fatia exata desse agente
         aisef_project.append(project, {"event_type": "tool_used", "actor": {"type": "system", "id": "execution-gateway"},
                                        "summary": "Gateway: %s %s" % (decision, detail["tool"]), "data": detail,
                                        "panel_visible": decision == "deny"})

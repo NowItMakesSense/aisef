@@ -14,11 +14,12 @@ python -I CORE/build_panel.py --project .aisef --out .aisef/panel --serve --open
 ```
 - Ele escuta só em `127.0.0.1:8765` (`--port` muda a porta).
 - Regenera os dados quando `.aisef/` muda, e a página se atualiza sozinha a cada 3 segundos.
-- A aba **Agora** mostra:
-  - a fase e o próximo passo (do `next`);
-  - os subagentes em execução, com a fatia, o tempo e a última ação (hooks `SubagentStart`/`SubagentStop`);
-  - o fluxo de cada feature, com a etapa atual destacada;
-  - as ondas no tempo real (Gantt), que mostram o paralelismo.
+- A tela **Agora** (a primeira de 8, no trilho de ícones à esquerda) mostra:
+  - uma frase com o que roda e o que espera, e a faixa de estados (rodando, validando, esperando outra fatia, esperando você, concluídas), que filtra o mapa e a tabela;
+  - o **mapa de execução**: orquestrador, uma coluna por onda, cada fatia com estado, tempo e última ação, e os subagentes presos a quem os disparou (hooks `SubagentStart`/`SubagentStop` e `PreToolUse` Agent|Task);
+  - as decisões que esperam você, com o comando para copiar, e o próximo passo (do `next`);
+  - as raias **Em paralelo** no tempo, com reprovações, negações do gateway e pedidos de decisão no momento exato;
+  - a tabela de fatias com agente, modelo, ciclos de TDD e tempo.
 - Para parar, encerre o processo em segundo plano.
 
 ## Estático (sem servidor)
@@ -32,4 +33,5 @@ Depois abra `.aisef/panel/index.html` (`start` no Windows, `open` no macOS, `xdg
 - Contratos inválidos ficam fora das visões e aparecem em `source_errors`: reporte e sugira **aisef-check**.
 - Banner vermelho de integridade comprometida: pare e avise o usuário antes de qualquer outra coisa.
 - O Mermaid (versão fixa, conferida por SHA-256) é baixado uma vez para `~/.aisef/vendor/`; dali em diante funciona offline.
-- O painel só mostra. Decisões são tomadas pela **aisef-approve**; a aba Aprovações traz o que está pendente.
+- As outras telas: Mapa dos agentes (mapa, raias e quem disparou quem), Features e fatias (etapas, grafo de dependências com o caminho crítico), Rastreabilidade, Governança, Histórico, Engenharia e Equipe de agentes. Clicar numa fatia abre a gaveta da fatia; clicar num agente ou subagente abre a gaveta do agente (o que pediram a ele, quem o disparou, modelo, tempo e as últimas ações). `Ctrl K` busca; `g` + letra troca de tela.
+- O painel só mostra. Decisões são tomadas pela **aisef-approve**; a tela Governança traz o que está pendente.

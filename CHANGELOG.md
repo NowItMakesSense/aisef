@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.10.0 - 2026-11-19
+- **Painel v3** (o protótipo aprovado virou o painel real; ADR 0019):
+  - **Trilho de ícones com 8 telas:** Agora, Mapa dos agentes, Features e fatias, Rastreabilidade, Governança, Histórico, Engenharia e Equipe de agentes. Os links antigos continuam valendo.
+  - **Mapa de execução** como visão principal da tela Agora: orquestrador, uma coluna por onda, cada fatia com estado, tempo e última ação. Os selos de aprovação e de negação do gateway ficam acima do nó, e os subagentes ficam presos a quem os disparou. Arestas: azul animada = dependência ativa; âmbar pontilhada = bloqueada por você.
+  - **Estados por forma, ícone e cor** (rodando, validando, esperando outra fatia, esperando você, concluída, reprovada) e uma faixa de estados que filtra o mapa e a tabela.
+  - **Raias em paralelo:** uma por fatia e por agente, com o subagente recuado. Reprovações, negações e pedidos de decisão aparecem no momento exato, e há uma linha "agora". Os ícones não cobrem mais o texto das barras, e há legenda.
+  - **Gaveta da fatia** (agentes da fatia, subagentes, decisão pendente, negação, últimas ações) e **gaveta do agente** (o que pediram a ele, quem o disparou, modelo, início, tempo, número de ações e as últimas ações). Os textos longos são cortados com "…", e o texto inteiro aparece ao passar o mouse.
+  - **Grafo de dependências nativo:** uma faixa por feature, arestas por estado e o caminho crítico destacado. O diagrama do fluxo da feature saiu, porque o stepper já mostra. Arquitetura e ER continuam no Mermaid, agora nas cores do tema.
+  - **Busca global** (`Ctrl K` ou `/`), **atalhos** (`g` + letra, `t` para o tema, `Esc`) e filtros que sobrevivem a recarregar a página.
+  - **Vidro só no que flutua** (topo, gaveta, busca, barra do celular). Claro e escuro com contraste AA nos tokens novos (3 tokens do tema claro escurecidos para passar).
+  - **Correções do uso:** o hover não desloca mais os nós (piscava), os ícones não deformam no celular, nada se sobrepõe nem vaza do painel de 375 a 1440 px, e o cursor de clique aparece em tudo o que abre algo.
+- **Quem disparou quem:** novo hook `PreToolUse` com matcher `Agent|Task` (`agent_events.py`, em segundo plano). Ele grava o agente que chamou, o tipo do subagente, o pedido e o modelo. O painel liga o registro ao `SubagentStart` seguinte e marca a ligação como inferida quando não há certeza.
+- **Gateway:** grava o `agent_id` de quem teve a ferramenta negada, e o painel prende a negação à fatia exata.
+- **Dados do painel:** `live.board` (fatias com estado visual, onda, dependências, aprovação, negação e TDD; agentes com pai, filhos, ações e modelo; raias; frase do topo).
+- **Testes:**
+  - autoteste da página no Chrome sem interface: nenhuma tela rola na horizontal em 375 px, e filtros, gaveta e rolagem sobrevivem à atualização ao vivo;
+  - checagens novas do board e do hook de disparo;
+  - contraste dos tokens v3;
+  - o `run_tests.py` tolera saída que não é UTF-8.
+- **README (EN e PT):** banner novo, GIFs do painel no lugar das capturas, seções "Novidades" e "O painel".
+
 ## 0.9.3 - 2026-11-18
 - **Ask pesquisa na internet com precisão:**
   - o agente `aisef:ask` ganhou `WebSearch` e `WebFetch` e um método de pesquisa: fonte primária primeiro, leitura da página inteira, data e versão conferidas, duas fontes para o que decide a resposta, divergências mostradas e URLs citadas;
