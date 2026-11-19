@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**154 regras** em 27 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**155 regras** em 27 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -86,7 +86,7 @@ Todo elemento aponta para requisitos aprovados.
 
 Relatório do agente coerente com a tarefa e com evidências.
 
-`REPORT-AGENT`, `REPORT-ATTEMPTS`, `REPORT-CONSULTATIONS`, `REPORT-CRITERIA-MISSING`, `REPORT-CRITERIA-REQUIRED`, `REPORT-CRITERIA-UNKNOWN`, `REPORT-EVIDENCE-UNKNOWN`, `REPORT-FILE-OUT-OF-SCOPE`, `REPORT-TASK`, `REPORT-VERSION`
+`REPORT-AGENT`, `REPORT-ATTEMPTS`, `REPORT-CONSULTATIONS`, `REPORT-CRITERIA-MISSING`, `REPORT-CRITERIA-REQUIRED`, `REPORT-CRITERIA-UNKNOWN`, `REPORT-EVIDENCE-UNKNOWN`, `REPORT-FILE-OUT-OF-SCOPE`, `REPORT-REVIEW-ROLE`, `REPORT-TASK`, `REPORT-VERSION`
 
 ## Spec (`SPEC-*`)
 

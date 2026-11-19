@@ -124,6 +124,7 @@ expect("autorizacao expirada e ativa", edit("authorizations/AUTH-1.json", lambda
 expect("concluida sem relatorio", both(lambda p: os.remove(os.path.join(p, "reports/RPT-001.json"))), "STATE-NO-REPORT")
 expect("sem evento de validacao", log_edit(lambda ev: [e.update(event_type="task_executed") for e in ev if e["event_type"] == "task_validated"]), "STATE-NO-VALIDATION")
 expect("executor valida a propria entrega", log_edit(lambda ev: [e["actor"].update(id="backend-1") for e in ev if e["event_type"] == "task_validated"]), "VAL-SELF-ATTEST")
+expect("veredito de revisao no relatorio do executor", edit("reports/RPT-001.json", lambda d: d.update(review={"verdict": "APPROVE"})), "REPORT-REVIEW-ROLE")
 expect("relatorio de versao antiga", edit("reports/RPT-001.json", lambda d: d.update(contract_version=9)), "REPORT-VERSION")
 expect("relatorio sem criterio do contrato", edit(T1, lambda d: d["acceptance_criteria"].append(dict(d["acceptance_criteria"][0], id="AC-NEW"))), "REPORT-CRITERIA-MISSING")
 expect("relatorio altera arquivo fora do escopo", edit("reports/RPT-001.json", lambda d: d["files"]["modified"].append({"path": "infra/prod.tf"})), "REPORT-FILE-OUT-OF-SCOPE")

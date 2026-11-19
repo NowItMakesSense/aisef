@@ -664,6 +664,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             rep.err("REPORT-VERSION", where, "executou a v%d, o contrato esta na v%d" % (r["contract_version"], t["contract_version"]))
         if r["agent"]["agent_id"] != t["assigned_agent"]["agent_id"] and not is_eval_report(r):
             rep.err("REPORT-AGENT", where, "entregue por %s, mas a tarefa e de %s" % (r["agent"]["agent_id"], t["assigned_agent"]["agent_id"]))
+        if r.get("review") and not is_eval_report(r):
+            rep.err("REPORT-REVIEW-ROLE", where, "veredito de revisao em relatorio que nao e de avaliador (%s)" % r["agent"]["agent_id"])
         want = {c["id"]: c["required"] for c in t["acceptance_criteria"]}
         got = {c["criterion_id"]: c["required"] for c in r["criteria_results"]}
         for cid in want:

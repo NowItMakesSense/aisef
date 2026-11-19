@@ -27,6 +27,15 @@
       "description": "Opcional. Camadas que a fatia atravessa. Decide quais especialistas revisam (data -> database, ui -> frontend, seguranca pelo risco)."
     },
     "reopen_cycle": { "type": "integer", "minimum": 1, "default": 1, "description": "Ciclo da feature (reabertura cria novo ciclo)." },
+    "review": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "reviewers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*[a-z0-9]$" },
+                       "description": "Papeis avaliadores que revisam a entrega antes do validador (aisef_review.py calcula na criacao)." },
+        "dual_review": { "type": "boolean", "description": "Risco alto: dois code-reviewers independentes precisam aprovar." }
+      },
+      "description": "Opcional. Revisao especializada antes da validacao independente; so APPROVE de todos deixa seguir."
+    },
     "complexity": { "enum": ["trivial", "normal", "complex"], "default": "normal", "description": "Opcional. Sinal para o roteador de modelo (aisef_route.py): trivial = -1 nivel, complex = +1. Ausente equivale a normal." },
 
     "title": { "type": "string", "minLength": 3, "maxLength": 140 },

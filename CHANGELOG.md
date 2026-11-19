@@ -31,6 +31,14 @@
   - `aisef_project.py practices [--apply]` (`core/aisef_practices.py`) instala em `.claude/rules/aisef/` só o que a detecção indicar; o estilo adotado prevalece; arquivo mudado no projeto é mantido sem `--force`.
   - O `pack` da tarefa traz o estilo de arquitetura e as práticas que valem para os arquivos dela. O blueprint ganhou `architecture.style` e `architecture.layers` (opcionais). O `AGENTS.aisef.md` cita o estilo adotado e as práticas.
   - Testes em `core/test_practices.py`.
+- **Revisores escolhidos em código (E5).** `core/aisef_review.py`:
+  - **Quem revisa:** sempre `code-reviewer`; o revisor da linguagem (pelas extensões dos caminhos da tarefa, ou pelas stacks do projeto) e o do framework (Django, FastAPI); `database-reviewer` para `data`/`db_schema`; `security` em risco alto; `architecture-reviewer` com estilo adotado ou `domain`; `pr-test-analyzer` com TDD.
+  - O `aisef_new` grava `review.reviewers` em cada tarefa (o brief pode fixar ou desligar). **Risco alto: revisão dupla**, com dois `code-reviewer` independentes em níveis de modelo diferentes (ideia do santa-method do ECC).
+  - O `validate-wave` devolve `reviews`, uma chamada por revisor pendente, para disparar em paralelo antes do validador. Só `APPROVE` de todos libera o validador; `WARNING`/`BLOCK` reprova e volta ao executor.
+  - Reprovação no precheck ou na revisão indica o `fixer`, o corretor de build ativo da stack.
+  - Tarefa antiga, sem o campo `review`, não muda de comportamento.
+  - Schemas: `review` no Task Contract e no Execution Report (veredito e contagem de achados). Nova regra `REPORT-REVIEW-ROLE`.
+  - A skill `aisef` traz a equipe por tipo e diz quem usar quando.
 
 ## Não lançado (0.11.0: medir)
 - **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:
