@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: 'Revisor de codigo do AISEF: revisa a entrega de uma tarefa (qualidade, seguranca, manutencao, testes e aderencia as praticas e a arquitetura do projeto) com achados provados e veredito. Use em toda tarefa antes da validacao.'
+description: 'Revisor de codigo do AISEF: qualidade, seguranca, testes e praticas da entrega, com achados provados. Toda tarefa.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

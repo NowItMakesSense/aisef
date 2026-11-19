@@ -1,6 +1,6 @@
 ---
 name: ruby-reviewer
-description: 'Revisor Ruby e Rails do AISEF: Ruby idiomatico, seguranca do Active Record e padroes do Rails. Use quando a tarefa altera codigo Ruby e Rails.'
+description: 'Revisor Ruby e Rails do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

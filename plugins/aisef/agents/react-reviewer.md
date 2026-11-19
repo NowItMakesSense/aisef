@@ -1,6 +1,6 @@
 ---
 name: react-reviewer
-description: 'Revisor React do AISEF: hooks, desempenho de renderizacao, fronteira server/client e acessibilidade, sem opinar sobre o visual. Use quando a tarefa altera codigo React (ativacao manual; nao opina sobre layout nem design).'
+description: 'Revisor React do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata. Manual; nao opina sobre o visual.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

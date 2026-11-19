@@ -1,6 +1,6 @@
 ---
 name: planner
-description: 'Planejador do AISEF: quebra feature ou refatoracao complexa em fatias e passos verificaveis, com arquivos exatos, riscos e ordem de implementacao. Use antes do Feature Contract quando o trabalho for grande ou incerto.'
+description: 'Planejador do AISEF: quebra trabalho grande ou incerto em fatias e passos verificaveis. Use antes da spec.'
 tools: Read, Grep, Glob, Bash
 model: opus
 effort: medium

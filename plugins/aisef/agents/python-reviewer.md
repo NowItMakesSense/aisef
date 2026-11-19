@@ -1,6 +1,6 @@
 ---
 name: python-reviewer
-description: 'Revisor Python do AISEF: PEP 8, type hints, idiomas, seguranca e concorrencia. Use quando a tarefa altera codigo Python.'
+description: 'Revisor Python do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

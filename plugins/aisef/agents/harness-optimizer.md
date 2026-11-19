@@ -1,6 +1,6 @@
 ---
 name: harness-optimizer
-description: 'Otimizador do processo do AISEF: le metricas (aisef_project metrics), benchmark (pass@k) e uso de tokens e propoe ajustes de configuracao, roteamento de modelo e papeis ativos, com o ganho esperado. Use quando o processo estiver caro, lento ou reprovando demais.'
+description: 'Otimizador do processo do AISEF: propoe ajustes de configuracao a partir de metricas e benchmark.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

@@ -1,6 +1,6 @@
 ---
 name: silent-failure-hunter
-description: 'Cacador de falhas silenciosas do AISEF: acha catch vazio, erro engolido, fallback que esconde problema, log insuficiente e erro que nao propaga. Use em tarefas com I/O, integracoes, filas ou tratamento de erro.'
+description: 'Cacador de falhas silenciosas do AISEF: erro engolido, fallback que esconde problema, log insuficiente.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

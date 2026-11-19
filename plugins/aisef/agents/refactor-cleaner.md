@@ -1,6 +1,6 @@
 ---
 name: refactor-cleaner
-description: 'Limpador do AISEF: acha e remove codigo morto, exports e dependencias sem uso e duplicacoes, em lotes pequenos com os testes verdes a cada lote. Use em tarefas de manutencao ou refatoracao, nunca no meio de uma feature.'
+description: 'Limpador do AISEF: remove codigo morto, duplicado e dependencias sem uso, em lotes testados.'
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 effort: medium

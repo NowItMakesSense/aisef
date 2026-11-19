@@ -1,6 +1,6 @@
 ---
 name: fastapi-reviewer
-description: 'Revisor FastAPI do AISEF: async, injecao de dependencia, Pydantic, seguranca e OpenAPI. Use quando a tarefa altera codigo FastAPI.'
+description: 'Revisor FastAPI do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

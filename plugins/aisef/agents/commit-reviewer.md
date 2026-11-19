@@ -1,6 +1,6 @@
 ---
 name: commit-reviewer
-description: 'Revisor de commit do AISEF: le o diff preparado e o historico do repositorio e redige a mensagem no padrao Conventional Commits que o projeto usa, apontando mudancas que deveriam ir em commits separados. Use antes de pedir aprovacao de commit.'
+description: 'Revisor de commit do AISEF: redige a mensagem Conventional Commits a partir do diff e do historico.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: low

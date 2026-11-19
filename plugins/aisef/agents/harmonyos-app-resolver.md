@@ -1,6 +1,6 @@
 ---
 name: harmonyos-app-resolver
-description: 'Corretor de build HarmonyOS (ArkTS/ArkUI) do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.'
+description: 'Corretor de build HarmonyOS do AISEF: faz build, tipos e lint passarem com diff minimo.'
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 effort: medium

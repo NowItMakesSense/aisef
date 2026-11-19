@@ -1,6 +1,6 @@
 ---
 name: code-explorer
-description: 'Explorador do AISEF: traca pontos de entrada, caminhos de execucao, camadas e dependencias de uma area do codigo antes de mudar algo. Use na descoberta, na Impact Analysis ou quando um executor precisar de contexto.'
+description: 'Explorador do AISEF: mapeia pontos de entrada, fluxo, camadas e dependencias de uma area antes de muda-la.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: low

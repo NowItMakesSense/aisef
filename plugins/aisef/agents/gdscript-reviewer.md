@@ -1,6 +1,6 @@
 ---
 name: gdscript-reviewer
-description: 'Revisor GDScript e Godot 4 do AISEF: tipagem estatica, cena e nos, sinais, ciclo de vida e desempenho. Use quando a tarefa altera codigo GDScript e Godot 4.'
+description: 'Revisor GDScript e Godot 4 do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

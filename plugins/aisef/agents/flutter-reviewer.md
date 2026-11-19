@@ -1,6 +1,6 @@
 ---
 name: flutter-reviewer
-description: 'Revisor Flutter e Dart do AISEF: widgets, gerenciamento de estado, idiomas Dart, desempenho e acessibilidade. Use quando a tarefa altera codigo Flutter e Dart.'
+description: 'Revisor Flutter e Dart do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

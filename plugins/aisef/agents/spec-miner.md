@@ -1,6 +1,6 @@
 ---
 name: spec-miner
-description: 'Minerador de specs do AISEF: extrai de codigo existente os comportamentos (Requirement com cenarios QUANDO/ENTAO) e invariantes, com onde sao aplicados e testados, sem inventar. Use na descoberta de projeto existente antes de mudar uma area sem documentacao.'
+description: 'Minerador de specs do AISEF: extrai do codigo legado comportamentos e invariantes (QUANDO/ENTAO), sem inventar.'
 tools: Read, Grep, Glob, Bash, Write
 model: opus
 effort: medium

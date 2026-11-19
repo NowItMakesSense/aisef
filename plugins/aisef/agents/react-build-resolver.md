@@ -1,6 +1,6 @@
 ---
 name: react-build-resolver
-description: 'Corretor de build React (Vite, webpack, Next.js, CRA, Parcel, esbuild, Bun) do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar (ativacao manual; nao mexe em UI).'
+description: 'Corretor de build React do AISEF: faz build, tipos e lint passarem com diff minimo. Manual; nao mexe em UI.'
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 effort: medium

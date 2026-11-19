@@ -1,6 +1,6 @@
 ---
 name: e2e-runner
-description: 'Especialista E2E do AISEF: escreve e roda testes ponta a ponta das jornadas criticas (Playwright, ou o framework do projeto), com Page Objects, seletores estaveis e quarentena de teste instavel. Use para criterios de aceite que atravessam UI e API.'
+description: 'Testes E2E do AISEF: escreve e roda jornadas criticas (Playwright), com quarentena de instaveis.'
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 effort: medium

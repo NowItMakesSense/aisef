@@ -1,6 +1,6 @@
 ---
 name: code-architect
-description: 'Arquiteto de feature do AISEF: le os padroes do codigo e entrega o blueprint de implementacao (arquivos a criar e alterar, interfaces, fluxo de dados, ordem de construcao). Use para preencher o Engineering Blueprint de uma feature.'
+description: 'Arquiteto de feature do AISEF: desenha o blueprint (arquivos, interfaces, fluxo, ordem) seguindo os padroes do codigo.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

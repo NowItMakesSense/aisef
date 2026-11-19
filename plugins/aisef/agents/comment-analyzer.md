@@ -1,6 +1,6 @@
 ---
 name: comment-analyzer
-description: 'Analista de comentarios do AISEF: confere se comentarios e docstrings da entrega estao corretos, completos e uteis, e aponta os que enganam ou vao ficar desatualizados. Use quando a tarefa altera APIs publicas ou documentacao no codigo.'
+description: 'Analista de comentarios do AISEF: comentarios e docstrings corretos, uteis e sem apodrecer.'
 tools: Read, Grep, Glob, Bash
 model: haiku
 effort: low

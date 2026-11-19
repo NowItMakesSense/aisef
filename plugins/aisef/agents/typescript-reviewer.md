@@ -1,6 +1,6 @@
 ---
 name: typescript-reviewer
-description: 'Revisor TypeScript e JavaScript do AISEF: seguranca de tipos, async, seguranca Node/web e idiomas. Use quando a tarefa altera codigo TypeScript e JavaScript.'
+description: 'Revisor TypeScript e JavaScript do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

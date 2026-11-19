@@ -1,6 +1,6 @@
 ---
 name: agent-evaluator
-description: 'Avaliador de agentes do AISEF: pontua o relatorio ou a saida de outro agente em 5 eixos (exatidao, completude, clareza, acionabilidade, concisao) conferindo as afirmacoes no repositorio. Use para auditar relatorios suspeitos ou medir a qualidade dos agentes.'
+description: 'Avaliador do AISEF: pontua o relatorio de outro agente em 5 eixos, conferindo no repositorio.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: low

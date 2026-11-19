@@ -1,6 +1,6 @@
 ---
 name: architecture-reviewer
-description: 'Revisor de arquitetura do AISEF: confere se a entrega respeita o estilo aprovado do projeto (camadas, regra de dependencia, fronteiras de modulo e contexto, agregados) usando .aisef/architecture.json e os ADRs. Use quando a tarefa mexe em dominio, fronteiras de modulo ou estrutura.'
+description: 'Revisor de arquitetura do AISEF: confere estilo adotado, camadas e regra de dependencia na entrega.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: high

@@ -1,6 +1,6 @@
 ---
 name: pr-test-analyzer
-description: 'Analista de testes do AISEF: avalia se os testes da entrega cobrem comportamento (nao implementacao), os criterios de aceite e as bordas, e se pegariam bugs reais. Use em toda fatia antes da validacao, junto com o qa.'
+description: 'Analista de testes do AISEF: os testes da entrega cobrem comportamento e pegariam bugs reais?'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

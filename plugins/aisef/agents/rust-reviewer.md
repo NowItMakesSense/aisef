@@ -1,6 +1,6 @@
 ---
 name: rust-reviewer
-description: 'Revisor Rust do AISEF: ownership, lifetimes, tratamento de erro, unsafe e idiomas. Use quando a tarefa altera codigo Rust.'
+description: 'Revisor Rust do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

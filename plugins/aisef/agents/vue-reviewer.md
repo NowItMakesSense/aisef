@@ -1,6 +1,6 @@
 ---
 name: vue-reviewer
-description: 'Revisor Vue do AISEF: Composition API, reatividade, arquitetura de componentes e seguranca, sem opinar sobre o visual. Use quando a tarefa altera codigo Vue (ativacao manual; nao opina sobre layout nem design).'
+description: 'Revisor Vue do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata. Manual; nao opina sobre o visual.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

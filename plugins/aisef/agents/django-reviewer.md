@@ -1,6 +1,6 @@
 ---
 name: django-reviewer
-description: 'Revisor Django do AISEF: ORM, DRF, migrations e configuracao de seguranca. Use quando a tarefa altera codigo Django.'
+description: 'Revisor Django do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

@@ -1,6 +1,6 @@
 ---
 name: database-reviewer
-description: 'Revisor de banco do AISEF: revisa queries, schema, migrations, indices, transacoes, concorrencia e seguranca de dados (incluindo RLS) a partir dos arquivos, sem nunca conectar ao banco. Use quando a tarefa toca dados (touches: data).'
+description: 'Revisor de banco do AISEF: queries, schema, migrations, indices e transacoes pelos arquivos, sem conectar.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

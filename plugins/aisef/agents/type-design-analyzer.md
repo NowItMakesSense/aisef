@@ -1,6 +1,6 @@
 ---
 name: type-design-analyzer
-description: 'Analista de tipos do AISEF: avalia encapsulamento, expressao e aplicacao de invariantes nos tipos (estados impossiveis, objetos de valor, tipos primitivos demais). Use quando a tarefa cria ou muda tipos de dominio.'
+description: 'Analista de tipos do AISEF: os tipos impedem estados invalidos e protegem invariantes?'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

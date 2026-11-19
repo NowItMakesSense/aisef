@@ -1,6 +1,6 @@
 ---
 name: go-reviewer
-description: 'Revisor Go do AISEF: Go idiomatico, concorrencia, tratamento de erro e desempenho. Use quando a tarefa altera codigo Go.'
+description: 'Revisor Go do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

@@ -354,7 +354,7 @@
       "responsibilities": [
         "Quebrar uma feature ou refatoracao complexa em passos verificaveis, com arquivos, riscos e ordem"
       ],
-      "description": "Planejador do AISEF: quebra feature ou refatoracao complexa em fatias e passos verificaveis, com arquivos exatos, riscos e ordem de implementacao. Use antes do Feature Contract quando o trabalho for grande ou incerto.",
+      "description": "Planejador do AISEF: quebra trabalho grande ou incerto em fatias e passos verificaveis. Use antes da spec.",
       "prompt": "prompts/planner.md",
       "source": "ECC agents/planner.md"
     },
@@ -386,7 +386,7 @@
       "responsibilities": [
         "Propor e avaliar decisoes de arquitetura com trade-offs, alinhadas ao estilo detectado do projeto"
       ],
-      "description": "Arquiteto do AISEF: analisa a arquitetura atual (estilo detectado, camadas, dependencias) e propoe decisoes com trade-offs e ADR. Use para decisoes estruturais, escalabilidade, adocao de DDD, Clean Architecture, hexagonal, CQRS ou modularizacao.",
+      "description": "Arquiteto do AISEF: propoe decisoes estruturais com trade-offs e ADR (DDD, Clean, hexagonal, CQRS, modulos).",
       "prompt": "prompts/architect.md",
       "source": "ECC agents/architect.md"
     },
@@ -416,7 +416,7 @@
       "responsibilities": [
         "Desenhar o blueprint de implementacao de uma feature a partir dos padroes existentes no codigo"
       ],
-      "description": "Arquiteto de feature do AISEF: le os padroes do codigo e entrega o blueprint de implementacao (arquivos a criar e alterar, interfaces, fluxo de dados, ordem de construcao). Use para preencher o Engineering Blueprint de uma feature.",
+      "description": "Arquiteto de feature do AISEF: desenha o blueprint (arquivos, interfaces, fluxo, ordem) seguindo os padroes do codigo.",
       "prompt": "prompts/code-architect.md",
       "source": "ECC agents/code-architect.md"
     },
@@ -446,7 +446,7 @@
       "responsibilities": [
         "Mapear pontos de entrada, caminhos de execucao, camadas e dependencias de uma area do codigo"
       ],
-      "description": "Explorador do AISEF: traca pontos de entrada, caminhos de execucao, camadas e dependencias de uma area do codigo antes de mudar algo. Use na descoberta, na Impact Analysis ou quando um executor precisar de contexto.",
+      "description": "Explorador do AISEF: mapeia pontos de entrada, fluxo, camadas e dependencias de uma area antes de muda-la.",
       "prompt": "prompts/code-explorer.md",
       "source": "ECC agents/code-explorer.md"
     },
@@ -477,7 +477,7 @@
       "responsibilities": [
         "Extrair do codigo legado requisitos e invariantes verificaveis, com onde sao aplicados e testados"
       ],
-      "description": "Minerador de specs do AISEF: extrai de codigo existente os comportamentos (Requirement com cenarios QUANDO/ENTAO) e invariantes, com onde sao aplicados e testados, sem inventar. Use na descoberta de projeto existente antes de mudar uma area sem documentacao.",
+      "description": "Minerador de specs do AISEF: extrai do codigo legado comportamentos e invariantes (QUANDO/ENTAO), sem inventar.",
       "prompt": "prompts/spec-miner.md",
       "source": "ECC agents/spec-miner.md"
     },
@@ -506,7 +506,7 @@
       "responsibilities": [
         "Revisar qualidade, seguranca, manutencao e aderencia as praticas do projeto em toda entrega"
       ],
-      "description": "Revisor de codigo do AISEF: revisa a entrega de uma tarefa (qualidade, seguranca, manutencao, testes e aderencia as praticas e a arquitetura do projeto) com achados provados e veredito. Use em toda tarefa antes da validacao.",
+      "description": "Revisor de codigo do AISEF: qualidade, seguranca, testes e praticas da entrega, com achados provados. Toda tarefa.",
       "prompt": "prompts/code-reviewer.md",
       "source": "ECC agents/code-reviewer.md"
     },
@@ -535,7 +535,7 @@
       "responsibilities": [
         "Conferir se a entrega respeita o estilo de arquitetura aprovado e as regras de dependencia entre camadas"
       ],
-      "description": "Revisor de arquitetura do AISEF: confere se a entrega respeita o estilo aprovado do projeto (camadas, regra de dependencia, fronteiras de modulo e contexto, agregados) usando .aisef/architecture.json e os ADRs. Use quando a tarefa mexe em dominio, fronteiras de modulo ou estrutura.",
+      "description": "Revisor de arquitetura do AISEF: confere estilo adotado, camadas e regra de dependencia na entrega.",
       "prompt": "prompts/architecture-reviewer.md",
       "source": "AISEF (novo)"
     },
@@ -564,7 +564,7 @@
       "responsibilities": [
         "Revisar queries, schema, migrations, indices, transacoes e seguranca de dados sem conectar ao banco"
       ],
-      "description": "Revisor de banco do AISEF: revisa queries, schema, migrations, indices, transacoes, concorrencia e seguranca de dados (incluindo RLS) a partir dos arquivos, sem nunca conectar ao banco. Use quando a tarefa toca dados (touches: data).",
+      "description": "Revisor de banco do AISEF: queries, schema, migrations, indices e transacoes pelos arquivos, sem conectar.",
       "prompt": "prompts/database-reviewer.md",
       "source": "ECC agents/database-reviewer.md"
     },
@@ -593,7 +593,7 @@
       "responsibilities": [
         "Achar erros engolidos, fallbacks perigosos e falhas que nao chegam a quem precisa saber"
       ],
-      "description": "Cacador de falhas silenciosas do AISEF: acha catch vazio, erro engolido, fallback que esconde problema, log insuficiente e erro que nao propaga. Use em tarefas com I/O, integracoes, filas ou tratamento de erro.",
+      "description": "Cacador de falhas silenciosas do AISEF: erro engolido, fallback que esconde problema, log insuficiente.",
       "prompt": "prompts/silent-failure-hunter.md",
       "source": "ECC agents/silent-failure-hunter.md"
     },
@@ -622,7 +622,7 @@
       "responsibilities": [
         "Avaliar se os tipos expressam e protegem as invariantes do dominio"
       ],
-      "description": "Analista de tipos do AISEF: avalia encapsulamento, expressao e aplicacao de invariantes nos tipos (estados impossiveis, objetos de valor, tipos primitivos demais). Use quando a tarefa cria ou muda tipos de dominio.",
+      "description": "Analista de tipos do AISEF: os tipos impedem estados invalidos e protegem invariantes?",
       "prompt": "prompts/type-design-analyzer.md",
       "source": "ECC agents/type-design-analyzer.md"
     },
@@ -651,7 +651,7 @@
       "responsibilities": [
         "Avaliar se os testes da entrega cobrem o comportamento e preveniriam bugs reais"
       ],
-      "description": "Analista de testes do AISEF: avalia se os testes da entrega cobrem comportamento (nao implementacao), os criterios de aceite e as bordas, e se pegariam bugs reais. Use em toda fatia antes da validacao, junto com o qa.",
+      "description": "Analista de testes do AISEF: os testes da entrega cobrem comportamento e pegariam bugs reais?",
       "prompt": "prompts/pr-test-analyzer.md",
       "source": "ECC agents/pr-test-analyzer.md"
     },
@@ -680,7 +680,7 @@
       "responsibilities": [
         "Conferir se comentarios e docstrings estao corretos, uteis e nao vao apodrecer"
       ],
-      "description": "Analista de comentarios do AISEF: confere se comentarios e docstrings da entrega estao corretos, completos e uteis, e aponta os que enganam ou vao ficar desatualizados. Use quando a tarefa altera APIs publicas ou documentacao no codigo.",
+      "description": "Analista de comentarios do AISEF: comentarios e docstrings corretos, uteis e sem apodrecer.",
       "prompt": "prompts/comment-analyzer.md",
       "source": "ECC agents/comment-analyzer.md"
     },
@@ -709,7 +709,7 @@
       "responsibilities": [
         "Pontuar a saida de um agente em exatidao, completude, clareza, acionabilidade e concisao, com evidencia"
       ],
-      "description": "Avaliador de agentes do AISEF: pontua o relatorio ou a saida de outro agente em 5 eixos (exatidao, completude, clareza, acionabilidade, concisao) conferindo as afirmacoes no repositorio. Use para auditar relatorios suspeitos ou medir a qualidade dos agentes.",
+      "description": "Avaliador do AISEF: pontua o relatorio de outro agente em 5 eixos, conferindo no repositorio.",
       "prompt": "prompts/agent-evaluator.md",
       "source": "ECC agents/agent-evaluator.md"
     },
@@ -741,7 +741,7 @@
       "responsibilities": [
         "Simplificar o codigo recem-alterado preservando exatamente o comportamento"
       ],
-      "description": "Simplificador do AISEF: simplifica o codigo recem-alterado (clareza, consistencia, menos aninhamento e duplicacao) preservando exatamente o comportamento, com os testes verdes antes e depois. Use apos a validacao de uma fatia ou quando o revisor apontar complexidade.",
+      "description": "Simplificador do AISEF: simplifica o codigo recem-alterado sem mudar comportamento, testes verdes.",
       "prompt": "prompts/code-simplifier.md",
       "source": "ECC agents/code-simplifier.md"
     },
@@ -773,7 +773,7 @@
       "responsibilities": [
         "Remover codigo morto, duplicado e dependencias sem uso, em lotes pequenos e testados"
       ],
-      "description": "Limpador do AISEF: acha e remove codigo morto, exports e dependencias sem uso e duplicacoes, em lotes pequenos com os testes verdes a cada lote. Use em tarefas de manutencao ou refatoracao, nunca no meio de uma feature.",
+      "description": "Limpador do AISEF: remove codigo morto, duplicado e dependencias sem uso, em lotes testados.",
       "prompt": "prompts/refactor-cleaner.md",
       "source": "ECC agents/refactor-cleaner.md"
     },
@@ -807,7 +807,7 @@
       "responsibilities": [
         "Achar gargalos com medicao e otimizar sem mudar comportamento"
       ],
-      "description": "Otimizador do AISEF: mede antes de mudar, acha gargalos (algoritmo, I/O, consultas, renderizacao, memoria, bundle) e otimiza sem mudar comportamento, com o numero antes e depois. Use quando um requisito nao funcional de desempenho falha ou o revisor aponta custo.",
+      "description": "Otimizador do AISEF: mede, acha o gargalo e otimiza sem mudar comportamento, com numero antes e depois.",
       "prompt": "prompts/performance-optimizer.md",
       "source": "ECC agents/performance-optimizer.md"
     },
@@ -837,7 +837,7 @@
       "responsibilities": [
         "Redigir a mensagem de commit no padrao Conventional Commits do historico do repositorio"
       ],
-      "description": "Revisor de commit do AISEF: le o diff preparado e o historico do repositorio e redige a mensagem no padrao Conventional Commits que o projeto usa, apontando mudancas que deveriam ir em commits separados. Use antes de pedir aprovacao de commit.",
+      "description": "Revisor de commit do AISEF: redige a mensagem Conventional Commits a partir do diff e do historico.",
       "prompt": "prompts/commit-reviewer.md",
       "source": "ECC agents/commit-reviewer.md"
     },
@@ -869,7 +869,7 @@
       "responsibilities": [
         "Manter README, docs e mapas de codigo em dia com o que foi entregue"
       ],
-      "description": "Documentador do AISEF: atualiza README, docs e mapas de codigo (docs/CODEMAPS) para refletir o que a feature entregou, a partir do codigo real. Use no fim de uma feature ou quando a documentacao divergir do codigo.",
+      "description": "Documentador do AISEF: atualiza README, docs e mapas de codigo a partir do que foi entregue.",
       "prompt": "prompts/doc-updater.md",
       "source": "ECC agents/doc-updater.md"
     },
@@ -900,7 +900,7 @@
       "responsibilities": [
         "Buscar a documentacao atual de bibliotecas e APIs na versao usada pelo projeto"
       ],
-      "description": "Consultor de docs do AISEF: busca a documentacao atual de uma biblioteca, framework ou API na versao que o projeto usa (Context7 quando instalado, senao a fonte oficial) e devolve o uso correto com exemplo. Use antes de implementar com API que mudou ou que o agente nao conhece bem.",
+      "description": "Consultor de docs do AISEF: busca a documentacao atual de uma biblioteca na versao do projeto.",
       "prompt": "prompts/docs-lookup.md",
       "source": "ECC agents/docs-lookup.md"
     },
@@ -933,7 +933,7 @@
       "responsibilities": [
         "Escrever e rodar testes ponta a ponta das jornadas criticas, isolando testes instaveis"
       ],
-      "description": "Especialista E2E do AISEF: escreve e roda testes ponta a ponta das jornadas criticas (Playwright, ou o framework do projeto), com Page Objects, seletores estaveis e quarentena de teste instavel. Use para criterios de aceite que atravessam UI e API.",
+      "description": "Testes E2E do AISEF: escreve e roda jornadas criticas (Playwright), com quarentena de instaveis.",
       "prompt": "prompts/e2e-runner.md",
       "source": "ECC agents/e2e-runner.md"
     },
@@ -962,7 +962,7 @@
       "responsibilities": [
         "Achar nos sinais do projeto padroes de erro que viram propostas de licao para o aprendizado continuo"
       ],
-      "description": "Analista de sessoes do AISEF: le reprovacoes, bloqueios do gateway e correcoes registrados no projeto e propoe licoes para o aprendizado continuo (aisef_learn propose), que o usuario aceita ou recusa. Use nos marcos de fim de feature.",
+      "description": "Analista do AISEF: transforma erros registrados em propostas de licao para o usuario aceitar.",
       "prompt": "prompts/conversation-analyzer.md",
       "source": "ECC agents/conversation-analyzer.md"
     },
@@ -992,7 +992,7 @@
       "responsibilities": [
         "Propor ajustes de configuracao do AISEF e do Claude Code com base em metricas e benchmark"
       ],
-      "description": "Otimizador do processo do AISEF: le metricas (aisef_project metrics), benchmark (pass@k) e uso de tokens e propoe ajustes de configuracao, roteamento de modelo e papeis ativos, com o ganho esperado. Use quando o processo estiver caro, lento ou reprovando demais.",
+      "description": "Otimizador do processo do AISEF: propoe ajustes de configuracao a partir de metricas e benchmark.",
       "prompt": "prompts/harness-optimizer.md",
       "source": "ECC agents/harness-optimizer.md"
     },
@@ -1021,7 +1021,7 @@
       "responsibilities": [
         "Revisar codigo Python: PEP 8, type hints, idiomas, seguranca e concorrencia"
       ],
-      "description": "Revisor Python do AISEF: PEP 8, type hints, idiomas, seguranca e concorrencia. Use quando a tarefa altera codigo Python.",
+      "description": "Revisor Python do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/python-reviewer.md",
       "source": "ECC agents/python-reviewer.md"
     },
@@ -1050,7 +1050,7 @@
       "responsibilities": [
         "Revisar codigo Django: ORM, DRF, migrations e configuracao de seguranca"
       ],
-      "description": "Revisor Django do AISEF: ORM, DRF, migrations e configuracao de seguranca. Use quando a tarefa altera codigo Django.",
+      "description": "Revisor Django do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/django-reviewer.md",
       "source": "ECC agents/django-reviewer.md"
     },
@@ -1079,7 +1079,7 @@
       "responsibilities": [
         "Revisar codigo FastAPI: async, injecao de dependencia, Pydantic, seguranca e OpenAPI"
       ],
-      "description": "Revisor FastAPI do AISEF: async, injecao de dependencia, Pydantic, seguranca e OpenAPI. Use quando a tarefa altera codigo FastAPI.",
+      "description": "Revisor FastAPI do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/fastapi-reviewer.md",
       "source": "ECC agents/fastapi-reviewer.md"
     },
@@ -1108,7 +1108,7 @@
       "responsibilities": [
         "Revisar codigo TypeScript e JavaScript: seguranca de tipos, async, seguranca Node/web e idiomas"
       ],
-      "description": "Revisor TypeScript e JavaScript do AISEF: seguranca de tipos, async, seguranca Node/web e idiomas. Use quando a tarefa altera codigo TypeScript e JavaScript.",
+      "description": "Revisor TypeScript e JavaScript do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/typescript-reviewer.md",
       "source": "ECC agents/typescript-reviewer.md"
     },
@@ -1137,7 +1137,7 @@
       "responsibilities": [
         "Revisar codigo Go: Go idiomatico, concorrencia, tratamento de erro e desempenho"
       ],
-      "description": "Revisor Go do AISEF: Go idiomatico, concorrencia, tratamento de erro e desempenho. Use quando a tarefa altera codigo Go.",
+      "description": "Revisor Go do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/go-reviewer.md",
       "source": "ECC agents/go-reviewer.md"
     },
@@ -1166,7 +1166,7 @@
       "responsibilities": [
         "Revisar codigo Rust: ownership, lifetimes, tratamento de erro, unsafe e idiomas"
       ],
-      "description": "Revisor Rust do AISEF: ownership, lifetimes, tratamento de erro, unsafe e idiomas. Use quando a tarefa altera codigo Rust.",
+      "description": "Revisor Rust do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/rust-reviewer.md",
       "source": "ECC agents/rust-reviewer.md"
     },
@@ -1195,7 +1195,7 @@
       "responsibilities": [
         "Revisar codigo Java (Spring Boot ou Quarkus): camadas, JPA, transacoes, seguranca e concorrencia; detecta Spring ou Quarkus"
       ],
-      "description": "Revisor Java (Spring Boot ou Quarkus) do AISEF: camadas, JPA, transacoes, seguranca e concorrencia; detecta Spring ou Quarkus. Use quando a tarefa altera codigo Java (Spring Boot ou Quarkus).",
+      "description": "Revisor Java (Spring Boot ou Quarkus) do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/java-reviewer.md",
       "source": "ECC agents/java-reviewer.md"
     },
@@ -1224,7 +1224,7 @@
       "responsibilities": [
         "Revisar codigo Kotlin e Android/KMP: idiomas, seguranca de coroutines, Compose e Clean Architecture no Android"
       ],
-      "description": "Revisor Kotlin e Android/KMP do AISEF: idiomas, seguranca de coroutines, Compose e Clean Architecture no Android. Use quando a tarefa altera codigo Kotlin e Android/KMP.",
+      "description": "Revisor Kotlin e Android/KMP do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/kotlin-reviewer.md",
       "source": "ECC agents/kotlin-reviewer.md"
     },
@@ -1253,7 +1253,7 @@
       "responsibilities": [
         "Revisar codigo Swift: protocolos, semantica de valor, ARC, concorrencia e seguranca"
       ],
-      "description": "Revisor Swift do AISEF: protocolos, semantica de valor, ARC, concorrencia e seguranca. Use quando a tarefa altera codigo Swift.",
+      "description": "Revisor Swift do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/swift-reviewer.md",
       "source": "ECC agents/swift-reviewer.md"
     },
@@ -1282,7 +1282,7 @@
       "responsibilities": [
         "Revisar codigo .NET e C#: convencoes .NET, async, nullable, seguranca e desempenho"
       ],
-      "description": "Revisor .NET e C# do AISEF: convencoes .NET, async, nullable, seguranca e desempenho. Use quando a tarefa altera codigo .NET e C#.",
+      "description": "Revisor .NET e C# do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/csharp-reviewer.md",
       "source": "ECC agents/csharp-reviewer.md"
     },
@@ -1311,7 +1311,7 @@
       "responsibilities": [
         "Revisar codigo F#: idiomas funcionais, tipos, pattern matching e computation expressions"
       ],
-      "description": "Revisor F# do AISEF: idiomas funcionais, tipos, pattern matching e computation expressions. Use quando a tarefa altera codigo F#.",
+      "description": "Revisor F# do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/fsharp-reviewer.md",
       "source": "ECC agents/fsharp-reviewer.md"
     },
@@ -1340,7 +1340,7 @@
       "responsibilities": [
         "Revisar codigo C++: seguranca de memoria, C++ moderno, concorrencia e desempenho"
       ],
-      "description": "Revisor C++ do AISEF: seguranca de memoria, C++ moderno, concorrencia e desempenho. Use quando a tarefa altera codigo C++.",
+      "description": "Revisor C++ do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/cpp-reviewer.md",
       "source": "ECC agents/cpp-reviewer.md"
     },
@@ -1369,7 +1369,7 @@
       "responsibilities": [
         "Revisar codigo PHP e Laravel: PSR-12, tipos, Eloquent, seguranca e desempenho"
       ],
-      "description": "Revisor PHP e Laravel do AISEF: PSR-12, tipos, Eloquent, seguranca e desempenho. Use quando a tarefa altera codigo PHP e Laravel.",
+      "description": "Revisor PHP e Laravel do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/php-reviewer.md",
       "source": "ECC agents/php-reviewer.md"
     },
@@ -1398,7 +1398,7 @@
       "responsibilities": [
         "Revisar codigo Ruby e Rails: Ruby idiomatico, seguranca do Active Record e padroes do Rails"
       ],
-      "description": "Revisor Ruby e Rails do AISEF: Ruby idiomatico, seguranca do Active Record e padroes do Rails. Use quando a tarefa altera codigo Ruby e Rails.",
+      "description": "Revisor Ruby e Rails do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/ruby-reviewer.md",
       "source": "ECC agents/ruby-reviewer.md"
     },
@@ -1427,7 +1427,7 @@
       "responsibilities": [
         "Revisar codigo Flutter e Dart: widgets, gerenciamento de estado, idiomas Dart, desempenho e acessibilidade"
       ],
-      "description": "Revisor Flutter e Dart do AISEF: widgets, gerenciamento de estado, idiomas Dart, desempenho e acessibilidade. Use quando a tarefa altera codigo Flutter e Dart.",
+      "description": "Revisor Flutter e Dart do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/flutter-reviewer.md",
       "source": "ECC agents/flutter-reviewer.md"
     },
@@ -1456,7 +1456,7 @@
       "responsibilities": [
         "Revisar codigo GDScript e Godot 4: tipagem estatica, cena e nos, sinais, ciclo de vida e desempenho"
       ],
-      "description": "Revisor GDScript e Godot 4 do AISEF: tipagem estatica, cena e nos, sinais, ciclo de vida e desempenho. Use quando a tarefa altera codigo GDScript e Godot 4.",
+      "description": "Revisor GDScript e Godot 4 do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.",
       "prompt": "prompts/gdscript-reviewer.md",
       "source": "ECC agents/gdscript-reviewer.md"
     },
@@ -1485,7 +1485,7 @@
       "responsibilities": [
         "Revisar codigo React: hooks, desempenho de renderizacao, fronteira server/client e acessibilidade, sem opinar sobre o visual"
       ],
-      "description": "Revisor React do AISEF: hooks, desempenho de renderizacao, fronteira server/client e acessibilidade, sem opinar sobre o visual. Use quando a tarefa altera codigo React (ativacao manual; nao opina sobre layout nem design).",
+      "description": "Revisor React do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata. Manual; nao opina sobre o visual.",
       "prompt": "prompts/react-reviewer.md",
       "source": "ECC agents/react-reviewer.md"
     },
@@ -1514,7 +1514,7 @@
       "responsibilities": [
         "Revisar codigo Vue: Composition API, reatividade, arquitetura de componentes e seguranca, sem opinar sobre o visual"
       ],
-      "description": "Revisor Vue do AISEF: Composition API, reatividade, arquitetura de componentes e seguranca, sem opinar sobre o visual. Use quando a tarefa altera codigo Vue (ativacao manual; nao opina sobre layout nem design).",
+      "description": "Revisor Vue do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata. Manual; nao opina sobre o visual.",
       "prompt": "prompts/vue-reviewer.md",
       "source": "ECC agents/vue-reviewer.md"
     },
@@ -1548,7 +1548,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos TypeScript/JavaScript passarem com diff minimo"
       ],
-      "description": "Corretor de build TypeScript/JavaScript do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build TypeScript/JavaScript do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/build-error-resolver.md",
       "source": "ECC agents/build-error-resolver.md"
     },
@@ -1582,7 +1582,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos Python passarem com diff minimo"
       ],
-      "description": "Corretor de build Python do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build Python do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/python-build-resolver.md",
       "source": "ECC agents/build-error-resolver.md"
     },
@@ -1616,7 +1616,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos Django passarem com diff minimo"
       ],
-      "description": "Corretor de build Django do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build Django do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/django-build-resolver.md",
       "source": "ECC agents/django-build-resolver.md"
     },
@@ -1650,7 +1650,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos Go passarem com diff minimo"
       ],
-      "description": "Corretor de build Go do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build Go do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/go-build-resolver.md",
       "source": "ECC agents/go-build-resolver.md"
     },
@@ -1684,7 +1684,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos Rust passarem com diff minimo"
       ],
-      "description": "Corretor de build Rust do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build Rust do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/rust-build-resolver.md",
       "source": "ECC agents/rust-build-resolver.md"
     },
@@ -1718,7 +1718,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos Java (Maven/Gradle) passarem com diff minimo"
       ],
-      "description": "Corretor de build Java (Maven/Gradle) do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build Java do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/java-build-resolver.md",
       "source": "ECC agents/java-build-resolver.md"
     },
@@ -1752,7 +1752,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos Kotlin/Gradle passarem com diff minimo"
       ],
-      "description": "Corretor de build Kotlin/Gradle do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build Kotlin/Gradle do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/kotlin-build-resolver.md",
       "source": "ECC agents/kotlin-build-resolver.md"
     },
@@ -1786,7 +1786,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos Swift/Xcode passarem com diff minimo"
       ],
-      "description": "Corretor de build Swift/Xcode do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build Swift/Xcode do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/swift-build-resolver.md",
       "source": "ECC agents/swift-build-resolver.md"
     },
@@ -1820,7 +1820,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos Dart/Flutter passarem com diff minimo"
       ],
-      "description": "Corretor de build Dart/Flutter do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build Dart/Flutter do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/dart-build-resolver.md",
       "source": "ECC agents/dart-build-resolver.md"
     },
@@ -1854,7 +1854,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos C++/CMake passarem com diff minimo"
       ],
-      "description": "Corretor de build C++/CMake do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build C++/CMake do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/cpp-build-resolver.md",
       "source": "ECC agents/cpp-build-resolver.md"
     },
@@ -1888,7 +1888,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos PyTorch passarem com diff minimo"
       ],
-      "description": "Corretor de build PyTorch do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build PyTorch do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/pytorch-build-resolver.md",
       "source": "ECC agents/pytorch-build-resolver.md"
     },
@@ -1922,7 +1922,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos HarmonyOS (ArkTS/ArkUI) passarem com diff minimo"
       ],
-      "description": "Corretor de build HarmonyOS (ArkTS/ArkUI) do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "description": "Corretor de build HarmonyOS do AISEF: faz build, tipos e lint passarem com diff minimo.",
       "prompt": "prompts/harmonyos-app-resolver.md",
       "source": "ECC agents/harmonyos-app-resolver.md"
     },
@@ -1956,7 +1956,7 @@
       "responsibilities": [
         "Fazer o build e a checagem de tipos React (Vite, webpack, Next.js, CRA, Parcel, esbuild, Bun) passarem com diff minimo"
       ],
-      "description": "Corretor de build React (Vite, webpack, Next.js, CRA, Parcel, esbuild, Bun) do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar (ativacao manual; nao mexe em UI).",
+      "description": "Corretor de build React do AISEF: faz build, tipos e lint passarem com diff minimo. Manual; nao mexe em UI.",
       "prompt": "prompts/react-build-resolver.md",
       "source": "ECC agents/react-build-resolver.md"
     },
@@ -1985,7 +1985,7 @@
       "responsibilities": [
         "Revisar recuperacao, chunking, embeddings, avaliacao e seguranca de pipelines RAG"
       ],
-      "description": "Revisor RAG do AISEF: revisa recuperacao, chunking, embeddings, reranking, prompt de geracao, avaliacao e injecao de prompt em pipelines RAG. Ativado quando a deteccao acha RAG (bibliotecas de vetor ou de RAG).",
+      "description": "Revisor RAG do AISEF: recuperacao, chunking, embeddings, avaliacao e injecao de prompt.",
       "prompt": "prompts/rag-pipeline-reviewer.md",
       "source": "ECC agents/rag-pipeline-reviewer.md"
     },
@@ -2014,7 +2014,7 @@
       "responsibilities": [
         "Revisar contratos de dados, pipelines de features, reprodutibilidade, avaliacao e entrega de modelos"
       ],
-      "description": "Revisor de ML do AISEF: revisa contratos de dados, pipelines de features, reprodutibilidade do treino, avaliacao offline, servico, monitoramento e rollback de modelos. Ativado quando a deteccao acha ML (PyTorch, scikit-learn, TensorFlow...).",
+      "description": "Revisor de ML do AISEF: dados, features, reprodutibilidade, avaliacao e entrega de modelos.",
       "prompt": "prompts/mle-reviewer.md",
       "source": "ECC agents/mle-reviewer.md"
     },
@@ -2043,7 +2043,7 @@
       "responsibilities": [
         "Revisar seguranca clinica, apoio a decisao clinica, protecao de dados de saude e integridade de dados medicos"
       ],
-      "description": "Revisor de saude do AISEF: revisa seguranca clinica, apoio a decisao clinica, protecao de dados de saude (LGPD, HIPAA) e integridade de dados medicos. Ativacao manual, para projetos de saude.",
+      "description": "Revisor de saude do AISEF: seguranca clinica, dados de saude (LGPD, HIPAA) e integridade. Manual.",
       "prompt": "prompts/healthcare-reviewer.md",
       "source": "ECC agents/healthcare-reviewer.md"
     },
@@ -2072,7 +2072,7 @@
       "responsibilities": [
         "Revisar conformidade com WCAG 2.2 em web e apps nativos, sem alterar design"
       ],
-      "description": "Revisor de acessibilidade do AISEF: revisa conformidade WCAG 2.2 (teclado, leitor de tela, contraste, foco, rotulos, movimento) em web e apps nativos e relata achados, sem alterar o design. Ativacao manual.",
+      "description": "Revisor de acessibilidade do AISEF: WCAG 2.2, so relata; nao altera o design. Manual.",
       "prompt": "prompts/a11y-architect.md",
       "source": "ECC agents/a11y-architect.md"
     }

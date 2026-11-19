@@ -1,6 +1,6 @@
 ---
 name: java-reviewer
-description: 'Revisor Java (Spring Boot ou Quarkus) do AISEF: camadas, JPA, transacoes, seguranca e concorrencia; detecta Spring ou Quarkus. Use quando a tarefa altera codigo Java (Spring Boot ou Quarkus).'
+description: 'Revisor Java (Spring Boot ou Quarkus) do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

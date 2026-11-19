@@ -1,6 +1,6 @@
 ---
 name: swift-reviewer
-description: 'Revisor Swift do AISEF: protocolos, semantica de valor, ARC, concorrencia e seguranca. Use quando a tarefa altera codigo Swift.'
+description: 'Revisor Swift do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

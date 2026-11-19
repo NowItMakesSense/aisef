@@ -1,6 +1,6 @@
 ---
 name: docs-lookup
-description: 'Consultor de docs do AISEF: busca a documentacao atual de uma biblioteca, framework ou API na versao que o projeto usa (Context7 quando instalado, senao a fonte oficial) e devolve o uso correto com exemplo. Use antes de implementar com API que mudou ou que o agente nao conhece bem.'
+description: 'Consultor de docs do AISEF: busca a documentacao atual de uma biblioteca na versao do projeto.'
 tools: Read, Grep, Glob, WebSearch, WebFetch
 model: haiku
 effort: low

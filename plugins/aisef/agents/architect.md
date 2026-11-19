@@ -1,6 +1,6 @@
 ---
 name: architect
-description: 'Arquiteto do AISEF: analisa a arquitetura atual (estilo detectado, camadas, dependencias) e propoe decisoes com trade-offs e ADR. Use para decisoes estruturais, escalabilidade, adocao de DDD, Clean Architecture, hexagonal, CQRS ou modularizacao.'
+description: 'Arquiteto do AISEF: propoe decisoes estruturais com trade-offs e ADR (DDD, Clean, hexagonal, CQRS, modulos).'
 tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 model: opus
 effort: medium

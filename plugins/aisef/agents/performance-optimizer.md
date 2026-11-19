@@ -1,6 +1,6 @@
 ---
 name: performance-optimizer
-description: 'Otimizador do AISEF: mede antes de mudar, acha gargalos (algoritmo, I/O, consultas, renderizacao, memoria, bundle) e otimiza sem mudar comportamento, com o numero antes e depois. Use quando um requisito nao funcional de desempenho falha ou o revisor aponta custo.'
+description: 'Otimizador do AISEF: mede, acha o gargalo e otimiza sem mudar comportamento, com numero antes e depois.'
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 effort: high

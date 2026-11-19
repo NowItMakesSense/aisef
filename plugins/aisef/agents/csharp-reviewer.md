@@ -1,6 +1,6 @@
 ---
 name: csharp-reviewer
-description: 'Revisor .NET e C# do AISEF: convencoes .NET, async, nullable, seguranca e desempenho. Use quando a tarefa altera codigo .NET e C#.'
+description: 'Revisor .NET e C# do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

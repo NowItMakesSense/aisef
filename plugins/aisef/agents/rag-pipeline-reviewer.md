@@ -1,6 +1,6 @@
 ---
 name: rag-pipeline-reviewer
-description: 'Revisor RAG do AISEF: revisa recuperacao, chunking, embeddings, reranking, prompt de geracao, avaliacao e injecao de prompt em pipelines RAG. Ativado quando a deteccao acha RAG (bibliotecas de vetor ou de RAG).'
+description: 'Revisor RAG do AISEF: recuperacao, chunking, embeddings, avaliacao e injecao de prompt.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

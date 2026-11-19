@@ -1,6 +1,6 @@
 ---
 name: php-reviewer
-description: 'Revisor PHP e Laravel do AISEF: PSR-12, tipos, Eloquent, seguranca e desempenho. Use quando a tarefa altera codigo PHP e Laravel.'
+description: 'Revisor PHP e Laravel do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

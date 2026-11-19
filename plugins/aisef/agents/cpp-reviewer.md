@@ -1,6 +1,6 @@
 ---
 name: cpp-reviewer
-description: 'Revisor C++ do AISEF: seguranca de memoria, C++ moderno, concorrencia e desempenho. Use quando a tarefa altera codigo C++.'
+description: 'Revisor C++ do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

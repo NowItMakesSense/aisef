@@ -1,6 +1,6 @@
 ---
 name: kotlin-reviewer
-description: 'Revisor Kotlin e Android/KMP do AISEF: idiomas, seguranca de coroutines, Compose e Clean Architecture no Android. Use quando a tarefa altera codigo Kotlin e Android/KMP.'
+description: 'Revisor Kotlin e Android/KMP do AISEF: idiomas, seguranca e armadilhas da linguagem; so relata.'
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

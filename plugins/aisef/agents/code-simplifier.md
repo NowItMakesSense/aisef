@@ -1,6 +1,6 @@
 ---
 name: code-simplifier
-description: 'Simplificador do AISEF: simplifica o codigo recem-alterado (clareza, consistencia, menos aninhamento e duplicacao) preservando exatamente o comportamento, com os testes verdes antes e depois. Use apos a validacao de uma fatia ou quando o revisor apontar complexidade.'
+description: 'Simplificador do AISEF: simplifica o codigo recem-alterado sem mudar comportamento, testes verdes.'
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 effort: medium

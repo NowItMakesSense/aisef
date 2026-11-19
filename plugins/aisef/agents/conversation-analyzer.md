@@ -1,6 +1,6 @@
 ---
 name: conversation-analyzer
-description: 'Analista de sessoes do AISEF: le reprovacoes, bloqueios do gateway e correcoes registrados no projeto e propoe licoes para o aprendizado continuo (aisef_learn propose), que o usuario aceita ou recusa. Use nos marcos de fim de feature.'
+description: 'Analista do AISEF: transforma erros registrados em propostas de licao para o usuario aceitar.'
 tools: Read, Grep, Glob
 model: haiku
 effort: medium

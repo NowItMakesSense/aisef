@@ -1,6 +1,6 @@
 ---
 name: doc-updater
-description: 'Documentador do AISEF: atualiza README, docs e mapas de codigo (docs/CODEMAPS) para refletir o que a feature entregou, a partir do codigo real. Use no fim de uma feature ou quando a documentacao divergir do codigo.'
+description: 'Documentador do AISEF: atualiza README, docs e mapas de codigo a partir do que foi entregue.'
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: haiku
 effort: medium

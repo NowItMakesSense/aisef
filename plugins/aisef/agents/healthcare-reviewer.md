@@ -1,6 +1,6 @@
 ---
 name: healthcare-reviewer
-description: 'Revisor de saude do AISEF: revisa seguranca clinica, apoio a decisao clinica, protecao de dados de saude (LGPD, HIPAA) e integridade de dados medicos. Ativacao manual, para projetos de saude.'
+description: 'Revisor de saude do AISEF: seguranca clinica, dados de saude (LGPD, HIPAA) e integridade. Manual.'
 tools: Read, Grep, Glob, Bash
 model: opus
 effort: medium
