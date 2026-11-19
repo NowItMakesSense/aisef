@@ -63,15 +63,22 @@ claude plugin install mattpocock-skills@claude-plugins-official --scope project
 ```
 O gateway abre o prompt nativo. Nao rode o `/setup-matt-pocock-skills` (tracker e labels): no AISEF, spec e fatias ficam em `.aisef/`, nao no issue tracker.
 
-### Grafo de codigo (recomendacao padrao, pergunte antes)
-O AISEF recomenda dois grafos que se complementam: **codebase-memory-mcp** (codigo: chamadas, rotas, raio de impacto) e
-**Graphify** (docs e decisoes: ADRs, specs, `.aisef/`). Ofereca os dois (em projeto novo ou pequeno, diga que o ganho e
-baixo agora; a **aisef-tooling**, secao 6, os oferece de novo quando o codigo crescer). AskUserQuestion (multiSelect): codebase-memory-mcp, Graphify, nenhum agora. Para cada um escolhido
-mostre o que faz, o risco (a checagem de versao em segundo plano do codebase-memory-mcp e o envio de docs ao modelo no
-Graphify) e o comando de instalacao no escopo do projeto, tudo em `<skill-dir>/../aisef-tooling/SKILL.md` secao 6 e
-`references/grafo-de-codigo.md`. **Nao instale sem o OK**; sem resposta, trate como "nenhum agora". Depois de instalar,
-proponha liberar em `.aisef/config.json` -> `mcp_allow` so as ferramentas de leitura listadas la (a edicao pede
-aprovacao). Nao e requisito para seguir: sem grafo, o AISEF funciona como antes.
+### Grafos: Graphify e padrao, codebase-memory-mcp e opcional (pergunte antes de instalar)
+- **Graphify (docs e decisoes: ADRs, specs, `docs/`, `.aisef/`) e padrao desde a 0.11.0.** O `init` ja grava
+  `"graphify": {"enabled": true, "backend": "none", "paths": ["docs", ".aisef"]}` no `.aisef/config.json`.
+  - `backend: none`: so o passo estrutural, nada enviado a provedor de modelo.
+  - Pergunte uma vez (AskUserQuestion), com o Graphify como primeira opcao, marcada "(Recomendado, padrao)":
+    instalar e gerar agora, ou desligar.
+  - Com o OK: instalacao e geracao da **aisef-tooling, secao 6**, com `GRAPHIFY_BACKEND=none`.
+  - Se recusar: grave `"enabled": false` (a edicao do config pede aprovacao); o doctor para de lembrar.
+  - Sem resposta, deixe ligado: o doctor lembra no inicio de cada sessao ate o grafo existir ou o usuario desligar.
+- **codebase-memory-mcp (codigo: chamadas, rotas, raio de impacto)** continua opcional e em avaliacao (o `metrics`
+  compara as tarefas com e sem ele).
+  - Ofereca so se o projeto ja tem codigo de tamanho razoavel; em projeto novo ou pequeno, diga que o ganho e baixo agora.
+  - Mostre o risco (checagem de versao em segundo plano) e o comando, ambos da aisef-tooling, secao 6.
+- **Para os dois:** nao instale sem o OK. Depois de instalar um servidor MCP, proponha liberar em
+  `.aisef/config.json` -> `mcp_allow` so as ferramentas de leitura listadas na secao 6 (a edicao pede aprovacao).
+  Nenhum dos dois e requisito para seguir.
 
 ## 8. Proximo passo
 - Projeto existente: rode **aisef-discovery** no modo "projeto existente".

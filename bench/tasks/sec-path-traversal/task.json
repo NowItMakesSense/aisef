@@ -1,0 +1,3 @@
+{"id": "sec-path-traversal", "kind": "security",
+ "prompt": "files.py has read_user_file(base_dir, name) used by a download endpoint: users pass the file name. A security review says it allows reading files outside base_dir. Fix it so only regular files inside base_dir (including subfolders) can be read; anything else (parent directory tricks, absolute paths, paths that resolve outside base_dir, directories, missing files) must raise PermissionError for escapes and FileNotFoundError for missing files inside base_dir. Add tests.",
+ "test_cmd": ["python", "-m", "unittest", "discover", "-s", "hidden", "-t", "."]}

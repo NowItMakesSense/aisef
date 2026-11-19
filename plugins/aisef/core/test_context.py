@@ -152,6 +152,71 @@ with open(os.path.join(g, ".mcp.json"), "w", encoding="utf-8") as fh:
     fh.write("{quebrado")
 check("pack/grafo: .mcp.json quebrado = nenhum grafo, sem excecao", ctx.detect_graph_servers(g) == [])
 
+# ------------------------------------------------------------------ pack: Graphify lido do graph.json (0.11.0)
+gf = mkproject("gf")
+put(gf, "src/auth/token.py")
+put(gf, "src/api/routes.py")
+check("pack/graphify: config sem a chave (projeto antigo) = sem grafo, modo none",
+      ctx.build_pack(gf, "T-001")["on_demand"]["graph"]["related"] is None and ctx.build_pack(gf, "T-001")["context_mode"] == "none")
+with open(os.path.join(gf, ".aisef", "config.json"), "w", encoding="utf-8") as fh:
+    json.dump({"project_id": "PRJ-T", "schema_version": "0.1.0", "graphify": {"enabled": True, "backend": "none"}}, fh)
+check("pack/graphify: ligado mas sem graph.json = sem bloco", ctx.build_pack(gf, "T-001")["on_demand"]["graph"]["related"] is None)
+os.makedirs(os.path.join(gf, "graphify-out"))
+nodes = [
+    {"id": "tok_issue", "label": "issue_token()", "source_file": "src/auth/token.py", "source_location": "L10", "file_type": "code"},
+    {"id": "route", "label": "login_route()", "source_file": "src/api/routes.py", "source_location": "L5", "file_type": "code"},
+    {"id": "jwt", "label": "jwt.encode", "source_file": "", "file_type": "code", "external": True},
+    {"id": "hasher", "label": "hash_key()", "source_file": "src/crypto/keys.py", "source_location": "L2", "file_type": "code"},
+    {"id": "adr", "label": "ADR 0003: tokens curtos", "source_file": "docs/adr/0003.md", "file_type": "document"},
+    {"id": "why", "label": "Por que 15 min (REQ-001)", "source_file": "docs/adr/0003.md", "source_location": "L8", "file_type": "rationale"},
+    {"id": "other", "label": "nada a ver", "source_file": "docs/outro.md", "file_type": "document"},
+]
+links = [
+    {"source": "route", "target": "tok_issue", "relation": "calls"},
+    {"source": "tok_issue", "target": "jwt", "relation": "calls"},
+    {"source": "tok_issue", "target": "hasher", "relation": "imports"},
+    {"source": "adr", "target": "tok_issue", "relation": "references"},
+    {"source": "why", "target": "tok_issue", "relation": "rationale_for"},
+    {"source": "other", "target": "route", "relation": "references"},
+]
+gpath = os.path.join(gf, "graphify-out", "graph.json")
+with open(gpath, "w", encoding="utf-8") as fh:
+    json.dump({"directed": True, "nodes": nodes, "links": links}, fh)
+gk = ctx.build_pack(gf, "T-001")
+rel = gk["on_demand"]["graph"]["related"]
+kinds = [(i["kind"], i["label"]) for i in rel["items"]]
+check("pack/graphify: decisao primeiro, depois doc, impacto e dependencia",
+      kinds == [("decision", "Por que 15 min (REQ-001)"), ("doc", "ADR 0003: tokens curtos"),
+                ("impact", "login_route()"), ("dependency", "hash_key()")], kinds)
+check("pack/graphify: dependencia externa (biblioteca) e no sem ligacao com a tarefa ficam de fora",
+      "jwt.encode" not in str(kinds) and "nada a ver" not in str(kinds), kinds)
+check("pack/graphify: modo de contexto graphify e data do grafo", gk["context_mode"] == "graphify"
+      and rel["path"] == "graphify-out/graph.json" and rel["built_at"], rel)
+txt = ctx.render_pack(gk)
+check("pack/graphify: render mostra os itens e o arquivo:linha", "[decisao] Por que 15 min" in txt
+      and "src/api/routes.py:L5" in txt, txt[-800:])
+check("pack/graphify: --no-graph desliga tudo", ctx.build_pack(gf, "T-001", graph=False)["context_mode"] == "none"
+      and ctx.build_pack(gf, "T-001", graph=False)["on_demand"]["graph"]["related"] is None)
+os.makedirs(os.path.join(gf, "docs"), exist_ok=True)
+put(gf, "docs/nova-decisao.md", "# nova\n")
+os.utime(gpath, (os.path.getmtime(gpath) - 3600,) * 2)
+gs = ctx.build_pack(gf, "T-001")
+check("pack/graphify: grafo velho vira aviso com a fonte que mudou",
+      gs["on_demand"]["graph"]["related"]["stale"] and any("docs/nova-decisao.md" in w for w in gs["warnings"]), gs["warnings"])
+big = {"directed": True, "nodes": [nodes[0]] + [{"id": "c%d" % i, "label": "caller_%d()" % i, "source_file": "src/x%d.py" % i,
+                                                 "file_type": "code"} for i in range(60)],
+       "links": [{"source": "c%d" % i, "target": "tok_issue", "relation": "calls"} for i in range(60)]}
+with open(gpath, "w", encoding="utf-8") as fh:
+    json.dump(big, fh)
+rb = ctx.build_pack(gf, "T-001")["on_demand"]["graph"]["related"]
+check("pack/graphify: teto de itens e de caracteres, com o resto contado", len(rb["items"]) <= 15
+      and rb["truncated"] == 60 - len(rb["items"]) and len(json.dumps(rb["items"])) <= 2600, (len(rb["items"]), rb["truncated"]))
+with open(gpath, "w", encoding="utf-8") as fh:
+    fh.write("{quebrado")
+gq = ctx.build_pack(gf, "T-001")
+check("pack/graphify: graph.json quebrado nao derruba o pack", gq["on_demand"]["graph"]["related"].get("error")
+      and gq["context_mode"] == "none", gq["on_demand"]["graph"]["related"])
+
 # ------------------------------------------------------------------ pack: CLI
 cli = run(CTX, "pack", "--project", p, "--task", "T-001", "--json")
 check("pack/CLI --json: JSON valido e exit 0", cli.returncode == 0 and json.loads(cli.stdout)["task_id"] == "T-001", cli.stderr)

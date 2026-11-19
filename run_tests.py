@@ -35,10 +35,13 @@ SUITES = [
     ("ondas automaticas (waves)", [os.path.join(CORE, "test_waves.py")]),
     ("modo continuo (next) e branch por feature", [os.path.join(CORE, "test_next.py")]),
     ("despacho e validacao em lote (dispatch, precheck)", [os.path.join(CORE, "test_dispatch.py")]),
+    ("metricas (metrics)", [os.path.join(CORE, "test_metrics.py")]),
+    ("hook de subagentes (tarefa, tokens, duracao)", [os.path.join(HOOKS, "test_agent_events.py")]),
     ("Approval Center: request e decide reforcado", [os.path.join(CORE, "test_request_decide.py")]),
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),
     ("hook consultivo graph_nudge", [os.path.join(HOOKS, "test_graph_nudge.py")]),
+    ("benchmark: fixtures validos (sem modelo)", [os.path.join(ROOT, "tools", "bench_outcomes.py"), "--check-fixtures"]),
     ("agentes gerados da fonte unica", [os.path.join(ROOT, "tools", "gen_agents.py"), "--check"]),
     ("referencia de regras do check (docs)", [os.path.join(ROOT, "tools", "gen_docs.py"), "--check"]),
 ]

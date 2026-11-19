@@ -186,6 +186,13 @@ claude plugin validate plugins/aisef
 claude plugin eval plugins/aisef --tag trigger --no-publish
 ```
 
+The repository uses Graphify on itself (code, docs, ADRs and skills; structural pass only, nothing leaves the machine). Rebuild the graph after changing code or docs; `graphify-out/` is not versioned:
+
+```
+GRAPHIFY_BACKEND=none python -m graphify update .
+python -m graphify query "how does the gateway decide on git push"
+```
+
 ## License
 
 MIT

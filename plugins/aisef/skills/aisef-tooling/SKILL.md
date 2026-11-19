@@ -79,7 +79,14 @@ O grafo de codigo tem tratamento proprio: secao 6.
 
 ## 6. Grafo de codigo (recomendacao padrao do AISEF)
 Um grafo responde "o que chama isto? o que muda se eu mexer aqui?" com poucas dezenas de linhas, em vez de o agente
-ler arquivos inteiros. O AISEF recomenda **dois**, que se complementam (ofereca sempre, instale so com OK):
+ler arquivos inteiros. O AISEF trabalha com **dois**, que se complementam (instale so com OK):
+- **Graphify e padrao desde a 0.11.0.**
+  - Projeto novo ja nasce com `"graphify": {"enabled": true, "backend": "none"}` no config.
+  - O doctor lembra enquanto falta o grafo e avisa quando ele fica velho (uma fonte em `paths` mais nova que o
+    `graph.json`).
+  - Gere sempre com `GRAPHIFY_BACKEND=<backend do config>`. `none` e o padrao: so estrutura, nada sai da maquina.
+  - Regenere depois de mudar contrato, blueprint ou ADR.
+- **codebase-memory-mcp** e opcional e esta em avaliacao.
 
 | Camada | Ferramenta | Fonte oficial | Papel |
 |---|---|---|---|
@@ -98,8 +105,21 @@ configura todos os agentes da maquina):
   `claude mcp add` e composicao do AISEF a partir da configuracao manual do README. Alternativa oficial por plugin:
   `claude plugin marketplace add DeusData/codebase-memory-mcp` + `claude plugin install codebase-memory@codebase-memory --scope project`
   (as ferramentas ganham outro prefixo e o `aisef_context.py` nao as enxerga).
-- Graphify: `uv tool install graphifyy` (pacote com dois "y") e `graphify install --project`; depois `/graphify .` sobre
-  `docs/` e `.aisef/`. O servidor MCP e opcional (`graphifyy[mcp]`) e o README nao documenta o comando para inicia-lo
+- Graphify: `uv tool install graphifyy` (pacote com dois "y") e `graphify install --project`.
+  - **Gerar e regenerar sem modelo:** `GRAPHIFY_BACKEND=none graphify update .`. Testado na 0.9.103: o passo
+    estrutural cobre codigo **e** documentos (paginas `.md` com frontmatter, `references`, `rationale_for`, `calls`,
+    `imports`) e grava `graphify-out/graph.json`.
+  - `/graphify .` no Claude Code acrescenta o passo semantico, que envia docs ao provedor: so com `backend` diferente
+    de `none` e com o OK do usuario.
+  - Se o comando `graphify` nao estiver no PATH, mas o pacote estiver no Python do usuario, use
+    `python -m graphify` (fora do `-I`, que esconde o site-packages do usuario).
+  - Ponha `graphify-out/` no `.gitignore` do projeto.
+  - **O `pack` le o `graph.json` direto (sem MCP).** Ele traz para o pacote da tarefa:
+    - decisoes e docs que citam os ids da tarefa ou os arquivos dela;
+    - quem de fora depende do codigo dela (raio de impacto);
+    - do que ela depende.
+
+    O resultado tem teto de itens e de caracteres. `pack --no-graph` desliga. O servidor MCP e opcional (`graphifyy[mcp]`) e o README nao documenta o comando para inicia-lo
   (so o codigo-fonte: `python -m graphify.serve`): se o usuario quiser MCP, siga a secao "Servidor MCP" da referencia e
   diga que essa parte nao esta confirmada pela documentacao.
 

@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.11.0: medir
+- **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:
+  - pedidos de aprovação por tarefa e por tipo, e a fatia Git;
+  - taxa de aprovação na 1ª validação e reprovações (precheck × validador);
+  - despachos por tarefa;
+  - lead time e espera pela validação;
+  - fração do log que é `tool_used`;
+  - negações e perguntas do gateway;
+  - erros do check por regra.
+  
+  Aceita `--feature`, `--since`, `--json` e `--no-check`. Testes em `core/test_metrics.py`.
+- **Benchmark de resultado (M-03).** `tools/bench_outcomes.py` com 6 tarefas em `bench/tasks/` (2 features, 2 bugs, 1 refatoração, 1 segurança), cada uma com testes escondidos e uma solução de referência.
+  - `--check-fixtures` (no `run_tests.py`) garante que cada tarefa falha no repositório inicial e passa com a referência.
+  - `--prepare-only` monta os dois braços sem modelo.
+  - `--run` roda `claude -p` nos braços puro e AISEF (`--plugin-dir`), com o harness no papel do usuário (feature gerada e plano aprovado). Grava `docs/benchmarks/outcomes-<data>.md`.
+- **Tokens e duração por subagente (M-02).** O hook `SubagentStop` soma o uso do transcript do próprio subagente (`agent_transcript_path`; o hook não traz `usage`, segundo a documentação do Claude Code).
+  - Conta cada mensagem uma vez, mesmo com streaming.
+  - Grava `.aisef/runtime/usage.jsonl`, um histórico local que não é truncado, com tarefa, modelo e duração.
+  - O `metrics` ganha a seção "Custo": tokens faturáveis, leitura de cache à parte, por tarefa concluída e por modelo. Sem dado, mostra "não disponível", nunca zero.
+- **Ligação exata subagente → tarefa.** O disparo de um agente `aisef:*` cuja descrição começa com `T-xxx:` (como o `dispatch` escreve) grava a tarefa, e o `SubagentStart` a herda.
+  - O painel usa essa ligação antes da heurística por papel.
+  - A lógica de "quem disparou quem" saiu do `panel_live.py` para `core/aisef_runtime.py`, compartilhada com o hook.
+  - Testes em `hooks/test_agent_events.py`.
+- **Graphify padrão (G-01).**
+  - Projeto novo nasce com `"graphify": {"enabled": true, "backend": "none", "paths": ["docs", ".aisef"]}`: só o passo estrutural, nada enviado a provedor de modelo.
+  - A `aisef-init` oferece o Graphify como primeira opção (recusar grava `enabled: false`). O codebase-memory-mcp continua opcional e em avaliação.
+  - **Doctor:** lembra quando o grafo falta e avisa quando ele está velho (uma fonte mais nova que o `graph.json`, dizendo qual).
+  - **Nova regra `CONFIG-GRAPHIFY`** (backend `none|ollama|auto`, caminhos relativos sem `..`).
+  - Projetos antigos, sem a chave, ficam como antes.
+- **O `pack` usa o grafo do Graphify (G-02).**
+  - Lê o `graph.json` direto, só com a biblioteca padrão, em `core/aisef_graph.py`. O pacote do Graphify fica no Python do usuário, que o `python -I` não enxerga.
+  - O pacote da tarefa ganha, com teto de 15 itens e 2.500 caracteres:
+    - decisões e docs que citam os ids ou os arquivos da tarefa;
+    - quem de fora depende do código dela;
+    - do que ela depende.
+  - Grafo velho vira aviso. `pack --no-graph` desliga, e o `dispatch` registra `context_mode` (`graphify`, `mcp` ou `none`) em cada `delegation`, para o `metrics` comparar depois (G-05).
+  - Leva 10 ms num grafo de 1.262 nós.
+- **Regenerar o grafo nos marcos (G-03).** O `next` traz `guide.graph_refresh` (com o comando `GRAPHIFY_BACKEND=<backend> python -m graphify update .`) quando o grafo falta ou está velho.
+  - Só antes de despachar uma onda ou num marco de fase, nunca enquanto apenas espera agentes.
+  - Sem hook de git.
+- **Com e sem grafo, medido (G-05).** O `metrics` agrupa as tarefas pelo `context_mode` da 1ª delegação e compara, por modo: 1ª validação, despachos, lead time e tokens.
+  - Com menos de 20 tarefas, avisa que a amostra é pequena para decidir.
+- **Graphify neste repositório (G-04).** `graphify update .` roda sem modelo e cobre código e docs. O comando está no README de desenvolvimento, e `graphify-out/` fica fora do Git.
+
 ## 0.10.0 - 2026-11-19
 - **Painel v3** (o protótipo aprovado virou o painel real; ADR 0019):
   - **Trilho de ícones com 8 telas:** Agora, Mapa dos agentes, Features e fatias, Rastreabilidade, Governança, Histórico, Engenharia e Equipe de agentes. Os links antigos continuam valendo.

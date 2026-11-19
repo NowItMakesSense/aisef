@@ -428,12 +428,32 @@ def compute_next(project, feature=None, now=None, git_state=None):
         actions = [{"kind": "idle"}]
     guide = project_phase(project, feats, tasks, approvals, actions)
     guide["tooling_review_due"] = tooling_review_due(cfg, approvals, log)
+    guide["graph_refresh"] = graph_refresh(project, cfg, guide["phase"], actions)
     return {"feature": feature, "actions": actions, "stop_reason": stop, "stop_detail": detail, "guide": guide,
             "deferred": deferred, "wave_error": wave_error, "warnings": warnings,
             "states": {tid: state[tid] for tid in sorted(state) if in_scope(tasks[tid].get("feature_id"))}}
 
 
 git_state_fn = git_state
+
+GRAPH_MILESTONES = ("approve_plan", "review", "decide", "done")
+
+
+def graph_refresh(project, cfg, phase, actions):
+    """Sugere regenerar o grafo do Graphify (sem modelo) quando ele falta ou esta velho, nos marcos: antes de despachar
+    uma onda (o pack le o grafo) e nos marcos de fase (plano, revisao, decisao, fim). None quando nao ha o que fazer."""
+    try:
+        st = ap.graphify_status(project, cfg)
+    except Exception:
+        return None
+    if not st["enabled"] or (st["exists"] and not st["stale"]):
+        return None
+    dispatching = any(a["kind"] == "dispatch" for a in actions)
+    if not dispatching and phase not in GRAPH_MILESTONES:
+        return None
+    why = "o grafo ainda nao foi gerado" if not st["exists"] else "%s mudou depois do grafo" % st["newer_source"]
+    return {"reason": why, "before_dispatch": dispatching,
+            "cmd": "GRAPHIFY_BACKEND=%s python -m graphify update ." % st["backend"]}
 
 
 def format_next(res):
@@ -481,4 +501,8 @@ def format_next(res):
             lines.append("Revisao das ferramentas devida (aisef-tooling, secao 8): /skill-doctor, custo e uso das skills")
         if res["guide"].get("compact_hint"):
             lines.append(res["guide"]["compact_hint"])
+        gr = res["guide"].get("graph_refresh")
+        if gr:
+            lines.append("Grafo do Graphify: %s. Regenere%s (sem modelo): %s" % (
+                gr["reason"], " antes do dispatch" if gr["before_dispatch"] else "", gr["cmd"]))
     return "\n".join(lines)

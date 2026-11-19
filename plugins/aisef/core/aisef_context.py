@@ -10,7 +10,9 @@
 O pacote tem as tres camadas do Task Contract:
   mandatory   caminho do contrato, requisitos ligados (texto), criterios de aceite e decisoes aprovadas que afetam a tarefa;
   referenced  arquivos existentes que casam com scope.paths_allowed (com limite) e docs citados;
-  on_demand   entradas de conhecimento relevantes e, se houver graph MCP no .mcp.json, consultas sugeridas ao grafo.
+  on_demand   entradas de conhecimento relevantes; com o Graphify ligado e o grafo gerado, o que o grafo liga a tarefa
+              (decisoes, docs, quem depende do codigo dela), lido direto do graph.json; e, se houver graph MCP no
+              .mcp.json, consultas sugeridas. `pack --no-graph` desliga o grafo (para medir o efeito, G-05).
 Somente leitura: o pack nao altera nada. `remember` e o unico comando que grava (em .aisef/knowledge/).
 Somente stdlib; jsonschema so e importado quando `remember` precisa validar.
 """
@@ -24,6 +26,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import aisef_graph  # noqa: E402
 PLUGIN = os.path.dirname(HERE)
 PATTERNS_PATH = os.path.join(PLUGIN, "hooks", "sensitive_patterns.json")
 KNOWLEDGE_SCHEMA = os.path.join(HERE, "knowledge-entry.schema.v0.1.json")
@@ -303,8 +306,28 @@ def _doc_refs(project, task, bp):
     return docs
 
 
-def build_pack(project, task_id, limit=DEFAULT_LIMIT):
-    """Pacote de contexto da tarefa. Levanta SystemExit se a tarefa nao existe."""
+def _graphify_related(project, files, ids):
+    """Bloco do Graphify para o pacote, ou None quando desligado ou sem grafo. Nunca levanta excecao."""
+    try:
+        import aisef_project
+        cfg = aisef_project.load_config(project)
+        st = aisef_project.graphify_status(project, cfg)
+    except Exception:
+        return None
+    if not (st["enabled"] and st["exists"]):
+        return None
+    g = aisef_graph.load(os.path.join(project, st["graph"]))
+    if g is None:
+        return {"graph": st["graph"], "error": "graph.json ilegivel ou grande demais", "items": [], "seeds": 0, "truncated": 0}
+    out = aisef_graph.related(g, files, ids)
+    out.update(aisef_graph.graph_info(project, st["graph"]) or {"path": st["graph"]})
+    out["stale"] = st["stale"]
+    out["newer_source"] = st["newer_source"]
+    return out
+
+
+def build_pack(project, task_id, limit=DEFAULT_LIMIT, graph=True):
+    """Pacote de contexto da tarefa. Levanta SystemExit se a tarefa nao existe. graph=False desliga o grafo."""
     project = os.path.abspath(project)
     adir = os.path.join(project, ".aisef")
     tpath = os.path.join(adir, "contracts", "tasks", task_id + ".json")
@@ -369,8 +392,15 @@ def build_pack(project, task_id, limit=DEFAULT_LIMIT):
     tokens.add(fid.lower())
     tokens.add(task.get("assigned_agent", {}).get("role", "-"))
     know, know_cut = _relevant_knowledge(load_knowledge(adir), task, fid, files, tokens)
-    servers = detect_graph_servers(project)
+    servers = detect_graph_servers(project) if graph else []
     queries, gnotes = graph_queries(project, servers, shown, task)
+    graph_ids = set(req_ids) | {r["id"] for r in rules} | {d.get("id") for d in decisions if isinstance(d, dict)} | {task_id, fid}
+    related = _graphify_related(project, files, graph_ids) if graph else None
+    if related and related.get("stale"):
+        warnings.append("grafo do Graphify velho (%s mudou depois dele): regenere com `graphify update .`"
+                        % related.get("newer_source"))
+    context_mode = "graphify" if related and related.get("items") is not None and not related.get("error") else (
+        "mcp" if servers else "none")
 
     design = _design_for(project, task)
     if design and design["status"] != "approved":
@@ -390,7 +420,8 @@ def build_pack(project, task_id, limit=DEFAULT_LIMIT):
         "on_demand": {"knowledge": know, "knowledge_truncated": know_cut,
                       "context_refs": task.get("context", {}).get("on_demand", []),
                       "graph": {"configured": [{"server": s["server"], "profile": s["profile"], "label": s["label"]} for s in servers],
-                                "queries": queries, "notes": gnotes}},
+                                "queries": queries, "notes": gnotes, "related": related}},
+        "context_mode": context_mode,
         "warnings": warnings}
 
 
@@ -463,6 +494,18 @@ def render_pack(p):
     for c in o["context_refs"]:
         L.append("- contexto do contrato: %s (%s)" % (c.get("ref"), c.get("origin")))
     g = o["graph"]
+    rel = g.get("related")
+    if rel:
+        L.append("- grafo do Graphify (%s, gerado em %s%s): %d no(s) da tarefa" % (
+            rel.get("path"), (rel.get("built_at") or "?")[:16], ", VELHO" if rel.get("stale") else "", rel.get("seeds", 0)))
+        names = {"decision": "decisao", "doc": "doc", "impact": "depende da tarefa", "dependency": "a tarefa depende"}
+        for it in rel.get("items", []):
+            L.append("    - [%s] %s (%s%s) via %s" % (names.get(it["kind"], it["kind"]), it["label"], it.get("file") or "?",
+                                                    ":" + it["location"] if it.get("location") else "", it.get("via")))
+        if rel.get("truncated"):
+            L.append("    - ... mais %d ligacao(oes) cortada(s) pelo limite" % rel["truncated"])
+        if not rel.get("items"):
+            L.append("    - nada do grafo liga a tarefa a arquivos de fora dela")
     if g["configured"]:
         L.append("- grafo configurado: " + ", ".join("%s (%s)" % (s["label"], s["server"]) for s in g["configured"]))
         for q in g["queries"]:
@@ -592,6 +635,7 @@ def main(argv=None):
     p.add_argument("--task", required=True)
     p.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help="maximo de arquivos listados em 'referenciado'")
     p.add_argument("--json", action="store_true")
+    p.add_argument("--no-graph", action="store_true", help="sem grafo (Graphify e graph MCP), para comparar o efeito")
     r = sub.add_parser("remember", help="grava uma entrada de conhecimento do projeto")
     r.add_argument("--project", default=".")
     r.add_argument("--summary", required=True)
@@ -607,7 +651,7 @@ def main(argv=None):
     g.add_argument("--project", default=".")
     a = ap.parse_args(argv)
     if a.cmd == "pack":
-        pack = build_pack(a.project, a.task, a.limit)
+        pack = build_pack(a.project, a.task, a.limit, graph=not a.no_graph)
         print(json.dumps(pack, ensure_ascii=False, indent=2) if a.json else render_pack(pack))
     elif a.cmd == "remember":
         path = remember(a.project, a.summary, a.source_kind, a.source_ref, a.detail, a.tags.split(","), a.task, a.feature,

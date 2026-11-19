@@ -6,3 +6,6 @@ __pycache__/
 *.lock
 *.tmp
 .claude/worktrees/
+
+# Graphify (grafo local de docs e decisoes; regenerado, nao versionado)
+graphify-out/
