@@ -45,7 +45,7 @@
   - **`aisef_project.py verify-loop`** (`core/aisef_verify.py`): build → tipos → lint → testes por stack (de `architecture.json`, sobrescrevíveis em `config.json` → `verify`) → segredos nas linhas adicionadas do diff (o valor nunca é impresso) → resumo do diff. Ferramenta ausente vira SKIP; veredito PASS/FAIL/INCOMPLETE. `--task` grava `.aisef/evidence/VERIFY-<T>.json`. O prompt do executor manda rodar antes de entregar.
   - Testes em `core/test_verify.py` e em `hooks/test_gateway.py`.
 
-## Não lançado (0.11.0: medir)
+## 0.11.0: medir
 - **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:
   - pedidos de aprovação por tarefa e por tipo, e a fatia Git;
   - taxa de aprovação na 1ª validação e reprovações (precheck × validador);
