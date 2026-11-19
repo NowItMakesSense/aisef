@@ -246,6 +246,10 @@ case("kubectl delete -> deny (ambiente desconhecido)", "Bash", "deny", command="
 case("terraform destroy -> deny", "Bash", "deny", command="terraform destroy")
 
 print("--- teto do Agent Contract nos subagentes")
+case("agente do catalogo sem contrato no projeto edita -> deny", "Edit", "deny", _agent="aisef:go-build-resolver",
+     file_path=os.path.join(proj, "src", "app.py"))
+case("agente sem contrato le codigo -> allow", "Read", "allow", _agent="aisef:go-reviewer", file_path=os.path.join(proj, "src", "app.py"))
+case("agente fora do plugin sem contrato edita -> allow", "Edit", "allow", _agent="outro:ajudante", file_path=os.path.join(proj, "src", "app.py"))
 case("agente em draft -> deny", "Edit", "deny", _agent="aisef:backend", file_path=os.path.join(proj, "src", "app.py"))
 aisef_project.activate_agents(proj)
 case("backend ativo edita codigo -> allow", "Edit", "allow", _agent="aisef:backend", file_path=os.path.join(proj, "src", "app.py"))

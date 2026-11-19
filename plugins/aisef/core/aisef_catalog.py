@@ -15,10 +15,10 @@ Tipos (`kind`):
   fixer         corrige com diff minimo (build, simplificacao, performance); tambem e executor
   evaluator     revisa e relata, nunca corrige o codigo do executor
   validator     validacao independente dos criterios de aceite
-  advisor       investiga, planeja ou explica; nao edita codigo de producao
+  advisor       investiga, planeja ou explica; nao edita codigo de producao (pode escrever o artefato pedido)
 
 Ativacao (`activation`), usada para decidir quais Agent Contracts viram rascunho num projeto:
-  always | manual | stack:<id> | arch:<id> | domain:<id>
+  always | manual | stack:<id>[|<id>...] | arch:<id>[|...] | domain:<id>[|...]  (qualquer um dos ids ativa)
 
 Uso:
     python3 -I aisef_catalog.py list [--kind evaluator] [--activation always]
@@ -35,7 +35,7 @@ CATALOG_PATH = os.path.join(HERE, "agents", "catalog.v0.1.json")
 SCHEMA_PATH = os.path.join(HERE, "agent-catalog.schema.v0.1.json")
 KINDS = ("orchestrator", "executor", "fixer", "evaluator", "validator", "advisor")
 ROLE_RE = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$")
-ACTIVATION_RE = re.compile(r"^(always|manual|(stack|arch|domain):[a-z0-9][a-z0-9_.+-]*)$")
+ACTIVATION_RE = re.compile(r"^(always|manual|(stack|arch|domain):[a-z0-9][a-z0-9_.+-]*([|][a-z0-9][a-z0-9_.+-]*)*)$")
 
 _cache = {}
 
@@ -100,8 +100,9 @@ def applicable(role, stacks=(), styles=(), domains=()):
         return True
     if act == "manual":
         return False
-    kind, _, value = act.partition(":")
-    return value in {"stack": stacks, "arch": styles, "domain": domains}[kind]
+    kind, _, values = act.partition(":")
+    have = set({"stack": stacks, "arch": styles, "domain": domains}[kind])
+    return any(v in have for v in values.split("|"))
 
 
 def check(path=CATALOG_PATH):
@@ -140,7 +141,7 @@ def check(path=CATALOG_PATH):
         if kind not in ("orchestrator", "validator") and r.get("level") is None:
             p.append("%s: papel roteavel sem level" % rid)
         tools = set(r.get("tools", []))
-        if kind in ("evaluator", "validator", "advisor") and tools & {"Edit", "Write", "NotebookEdit"}:
+        if kind in ("evaluator", "validator") and tools & {"Edit", "Write", "NotebookEdit"}:
             p.append("%s: %s nao edita codigo (tirar Edit/Write)" % (rid, kind))
     return p
 

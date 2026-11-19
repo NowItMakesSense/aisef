@@ -327,6 +327,1754 @@
       ],
       "description": "Validador independente do AISEF: verifica se uma entrega cumpre os criterios de aceite do Task Contract, com evidencias, e nunca valida o proprio trabalho. Use quando o orquestrador AISEF precisar mover uma tarefa de executed para validated.",
       "prompt": "prompts/validator.md"
+    },
+    {
+      "id": "planner",
+      "name": "Planejador",
+      "kind": "advisor",
+      "group": "planning",
+      "activation": "always",
+      "level": 5,
+      "task_types": [
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Quebrar uma feature ou refatoracao complexa em passos verificaveis, com arquivos, riscos e ordem"
+      ],
+      "description": "Planejador do AISEF: quebra feature ou refatoracao complexa em fatias e passos verificaveis, com arquivos exatos, riscos e ordem de implementacao. Use antes do Feature Contract quando o trabalho for grande ou incerto.",
+      "prompt": "prompts/planner.md",
+      "source": "ECC agents/planner.md"
+    },
+    {
+      "id": "architect",
+      "name": "Arquiteto de software",
+      "kind": "advisor",
+      "group": "planning",
+      "activation": "always",
+      "level": 5,
+      "task_types": [
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "WebSearch",
+        "WebFetch"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Propor e avaliar decisoes de arquitetura com trade-offs, alinhadas ao estilo detectado do projeto"
+      ],
+      "description": "Arquiteto do AISEF: analisa a arquitetura atual (estilo detectado, camadas, dependencias) e propoe decisoes com trade-offs e ADR. Use para decisoes estruturais, escalabilidade, adocao de DDD, Clean Architecture, hexagonal, CQRS ou modularizacao.",
+      "prompt": "prompts/architect.md",
+      "source": "ECC agents/architect.md"
+    },
+    {
+      "id": "code-architect",
+      "name": "Arquiteto de feature",
+      "kind": "advisor",
+      "group": "planning",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Desenhar o blueprint de implementacao de uma feature a partir dos padroes existentes no codigo"
+      ],
+      "description": "Arquiteto de feature do AISEF: le os padroes do codigo e entrega o blueprint de implementacao (arquivos a criar e alterar, interfaces, fluxo de dados, ordem de construcao). Use para preencher o Engineering Blueprint de uma feature.",
+      "prompt": "prompts/code-architect.md",
+      "source": "ECC agents/code-architect.md"
+    },
+    {
+      "id": "code-explorer",
+      "name": "Explorador de codigo",
+      "kind": "advisor",
+      "group": "planning",
+      "activation": "always",
+      "level": 2,
+      "task_types": [
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Mapear pontos de entrada, caminhos de execucao, camadas e dependencias de uma area do codigo"
+      ],
+      "description": "Explorador do AISEF: traca pontos de entrada, caminhos de execucao, camadas e dependencias de uma area do codigo antes de mudar algo. Use na descoberta, na Impact Analysis ou quando um executor precisar de contexto.",
+      "prompt": "prompts/code-explorer.md",
+      "source": "ECC agents/code-explorer.md"
+    },
+    {
+      "id": "spec-miner",
+      "name": "Minerador de specs",
+      "kind": "advisor",
+      "group": "planning",
+      "activation": "always",
+      "level": 5,
+      "task_types": [
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "Write"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Extrair do codigo legado requisitos e invariantes verificaveis, com onde sao aplicados e testados"
+      ],
+      "description": "Minerador de specs do AISEF: extrai de codigo existente os comportamentos (Requirement com cenarios QUANDO/ENTAO) e invariantes, com onde sao aplicados e testados, sem inventar. Use na descoberta de projeto existente antes de mudar uma area sem documentacao.",
+      "prompt": "prompts/spec-miner.md",
+      "source": "ECC agents/spec-miner.md"
+    },
+    {
+      "id": "code-reviewer",
+      "name": "Revisor de codigo",
+      "kind": "evaluator",
+      "group": "quality",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar qualidade, seguranca, manutencao e aderencia as praticas do projeto em toda entrega"
+      ],
+      "description": "Revisor de codigo do AISEF: revisa a entrega de uma tarefa (qualidade, seguranca, manutencao, testes e aderencia as praticas e a arquitetura do projeto) com achados provados e veredito. Use em toda tarefa antes da validacao.",
+      "prompt": "prompts/code-reviewer.md",
+      "source": "ECC agents/code-reviewer.md"
+    },
+    {
+      "id": "architecture-reviewer",
+      "name": "Revisor de arquitetura",
+      "kind": "evaluator",
+      "group": "quality",
+      "activation": "always",
+      "level": 4,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Conferir se a entrega respeita o estilo de arquitetura aprovado e as regras de dependencia entre camadas"
+      ],
+      "description": "Revisor de arquitetura do AISEF: confere se a entrega respeita o estilo aprovado do projeto (camadas, regra de dependencia, fronteiras de modulo e contexto, agregados) usando .aisef/architecture.json e os ADRs. Use quando a tarefa mexe em dominio, fronteiras de modulo ou estrutura.",
+      "prompt": "prompts/architecture-reviewer.md",
+      "source": "AISEF (novo)"
+    },
+    {
+      "id": "database-reviewer",
+      "name": "Revisor de banco de dados",
+      "kind": "evaluator",
+      "group": "quality",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar queries, schema, migrations, indices, transacoes e seguranca de dados sem conectar ao banco"
+      ],
+      "description": "Revisor de banco do AISEF: revisa queries, schema, migrations, indices, transacoes, concorrencia e seguranca de dados (incluindo RLS) a partir dos arquivos, sem nunca conectar ao banco. Use quando a tarefa toca dados (touches: data).",
+      "prompt": "prompts/database-reviewer.md",
+      "source": "ECC agents/database-reviewer.md"
+    },
+    {
+      "id": "silent-failure-hunter",
+      "name": "Cacador de falhas silenciosas",
+      "kind": "evaluator",
+      "group": "quality",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Achar erros engolidos, fallbacks perigosos e falhas que nao chegam a quem precisa saber"
+      ],
+      "description": "Cacador de falhas silenciosas do AISEF: acha catch vazio, erro engolido, fallback que esconde problema, log insuficiente e erro que nao propaga. Use em tarefas com I/O, integracoes, filas ou tratamento de erro.",
+      "prompt": "prompts/silent-failure-hunter.md",
+      "source": "ECC agents/silent-failure-hunter.md"
+    },
+    {
+      "id": "type-design-analyzer",
+      "name": "Analista de design de tipos",
+      "kind": "evaluator",
+      "group": "quality",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Avaliar se os tipos expressam e protegem as invariantes do dominio"
+      ],
+      "description": "Analista de tipos do AISEF: avalia encapsulamento, expressao e aplicacao de invariantes nos tipos (estados impossiveis, objetos de valor, tipos primitivos demais). Use quando a tarefa cria ou muda tipos de dominio.",
+      "prompt": "prompts/type-design-analyzer.md",
+      "source": "ECC agents/type-design-analyzer.md"
+    },
+    {
+      "id": "pr-test-analyzer",
+      "name": "Analista de testes da entrega",
+      "kind": "evaluator",
+      "group": "quality",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Avaliar se os testes da entrega cobrem o comportamento e preveniriam bugs reais"
+      ],
+      "description": "Analista de testes do AISEF: avalia se os testes da entrega cobrem comportamento (nao implementacao), os criterios de aceite e as bordas, e se pegariam bugs reais. Use em toda fatia antes da validacao, junto com o qa.",
+      "prompt": "prompts/pr-test-analyzer.md",
+      "source": "ECC agents/pr-test-analyzer.md"
+    },
+    {
+      "id": "comment-analyzer",
+      "name": "Analista de comentarios",
+      "kind": "evaluator",
+      "group": "quality",
+      "activation": "always",
+      "level": 0,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Conferir se comentarios e docstrings estao corretos, uteis e nao vao apodrecer"
+      ],
+      "description": "Analista de comentarios do AISEF: confere se comentarios e docstrings da entrega estao corretos, completos e uteis, e aponta os que enganam ou vao ficar desatualizados. Use quando a tarefa altera APIs publicas ou documentacao no codigo.",
+      "prompt": "prompts/comment-analyzer.md",
+      "source": "ECC agents/comment-analyzer.md"
+    },
+    {
+      "id": "agent-evaluator",
+      "name": "Avaliador de saida de agentes",
+      "kind": "evaluator",
+      "group": "quality",
+      "activation": "always",
+      "level": 2,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Pontuar a saida de um agente em exatidao, completude, clareza, acionabilidade e concisao, com evidencia"
+      ],
+      "description": "Avaliador de agentes do AISEF: pontua o relatorio ou a saida de outro agente em 5 eixos (exatidao, completude, clareza, acionabilidade, concisao) conferindo as afirmacoes no repositorio. Use para auditar relatorios suspeitos ou medir a qualidade dos agentes.",
+      "prompt": "prompts/agent-evaluator.md",
+      "source": "ECC agents/agent-evaluator.md"
+    },
+    {
+      "id": "code-simplifier",
+      "name": "Simplificador de codigo",
+      "kind": "fixer",
+      "group": "quality",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "refactoring"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Simplificar o codigo recem-alterado preservando exatamente o comportamento"
+      ],
+      "description": "Simplificador do AISEF: simplifica o codigo recem-alterado (clareza, consistencia, menos aninhamento e duplicacao) preservando exatamente o comportamento, com os testes verdes antes e depois. Use apos a validacao de uma fatia ou quando o revisor apontar complexidade.",
+      "prompt": "prompts/code-simplifier.md",
+      "source": "ECC agents/code-simplifier.md"
+    },
+    {
+      "id": "refactor-cleaner",
+      "name": "Limpador de codigo morto",
+      "kind": "fixer",
+      "group": "quality",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "refactoring"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Remover codigo morto, duplicado e dependencias sem uso, em lotes pequenos e testados"
+      ],
+      "description": "Limpador do AISEF: acha e remove codigo morto, exports e dependencias sem uso e duplicacoes, em lotes pequenos com os testes verdes a cada lote. Use em tarefas de manutencao ou refatoracao, nunca no meio de uma feature.",
+      "prompt": "prompts/refactor-cleaner.md",
+      "source": "ECC agents/refactor-cleaner.md"
+    },
+    {
+      "id": "performance-optimizer",
+      "name": "Otimizador de desempenho",
+      "kind": "fixer",
+      "group": "quality",
+      "activation": "always",
+      "level": 4,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Achar gargalos com medicao e otimizar sem mudar comportamento"
+      ],
+      "description": "Otimizador do AISEF: mede antes de mudar, acha gargalos (algoritmo, I/O, consultas, renderizacao, memoria, bundle) e otimiza sem mudar comportamento, com o numero antes e depois. Use quando um requisito nao funcional de desempenho falha ou o revisor aponta custo.",
+      "prompt": "prompts/performance-optimizer.md",
+      "source": "ECC agents/performance-optimizer.md"
+    },
+    {
+      "id": "commit-reviewer",
+      "name": "Revisor de commit",
+      "kind": "advisor",
+      "group": "delivery",
+      "activation": "always",
+      "level": 2,
+      "task_types": [
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Redigir a mensagem de commit no padrao Conventional Commits do historico do repositorio"
+      ],
+      "description": "Revisor de commit do AISEF: le o diff preparado e o historico do repositorio e redige a mensagem no padrao Conventional Commits que o projeto usa, apontando mudancas que deveriam ir em commits separados. Use antes de pedir aprovacao de commit.",
+      "prompt": "prompts/commit-reviewer.md",
+      "source": "ECC agents/commit-reviewer.md"
+    },
+    {
+      "id": "doc-updater",
+      "name": "Atualizador de documentacao",
+      "kind": "executor",
+      "group": "delivery",
+      "activation": "always",
+      "level": 1,
+      "task_types": [
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Manter README, docs e mapas de codigo em dia com o que foi entregue"
+      ],
+      "description": "Documentador do AISEF: atualiza README, docs e mapas de codigo (docs/CODEMAPS) para refletir o que a feature entregou, a partir do codigo real. Use no fim de uma feature ou quando a documentacao divergir do codigo.",
+      "prompt": "prompts/doc-updater.md",
+      "source": "ECC agents/doc-updater.md"
+    },
+    {
+      "id": "docs-lookup",
+      "name": "Consultor de documentacao de bibliotecas",
+      "kind": "advisor",
+      "group": "delivery",
+      "activation": "always",
+      "level": 0,
+      "task_types": [
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "WebSearch",
+        "WebFetch"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Buscar a documentacao atual de bibliotecas e APIs na versao usada pelo projeto"
+      ],
+      "description": "Consultor de docs do AISEF: busca a documentacao atual de uma biblioteca, framework ou API na versao que o projeto usa (Context7 quando instalado, senao a fonte oficial) e devolve o uso correto com exemplo. Use antes de implementar com API que mudou ou que o agente nao conhece bem.",
+      "prompt": "prompts/docs-lookup.md",
+      "source": "ECC agents/docs-lookup.md"
+    },
+    {
+      "id": "e2e-runner",
+      "name": "Testes ponta a ponta",
+      "kind": "executor",
+      "group": "quality",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Escrever e rodar testes ponta a ponta das jornadas criticas, isolando testes instaveis"
+      ],
+      "description": "Especialista E2E do AISEF: escreve e roda testes ponta a ponta das jornadas criticas (Playwright, ou o framework do projeto), com Page Objects, seletores estaveis e quarentena de teste instavel. Use para criterios de aceite que atravessam UI e API.",
+      "prompt": "prompts/e2e-runner.md",
+      "source": "ECC agents/e2e-runner.md"
+    },
+    {
+      "id": "conversation-analyzer",
+      "name": "Analista de sessoes",
+      "kind": "advisor",
+      "group": "process",
+      "activation": "always",
+      "level": 1,
+      "task_types": [
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Achar nos sinais do projeto padroes de erro que viram propostas de licao para o aprendizado continuo"
+      ],
+      "description": "Analista de sessoes do AISEF: le reprovacoes, bloqueios do gateway e correcoes registrados no projeto e propoe licoes para o aprendizado continuo (aisef_learn propose), que o usuario aceita ou recusa. Use nos marcos de fim de feature.",
+      "prompt": "prompts/conversation-analyzer.md",
+      "source": "ECC agents/conversation-analyzer.md"
+    },
+    {
+      "id": "harness-optimizer",
+      "name": "Otimizador do processo",
+      "kind": "advisor",
+      "group": "process",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Propor ajustes de configuracao do AISEF e do Claude Code com base em metricas e benchmark"
+      ],
+      "description": "Otimizador do processo do AISEF: le metricas (aisef_project metrics), benchmark (pass@k) e uso de tokens e propoe ajustes de configuracao, roteamento de modelo e papeis ativos, com o ganho esperado. Use quando o processo estiver caro, lento ou reprovando demais.",
+      "prompt": "prompts/harness-optimizer.md",
+      "source": "ECC agents/harness-optimizer.md"
+    },
+    {
+      "id": "python-reviewer",
+      "name": "Revisor Python",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:python",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo Python: PEP 8, type hints, idiomas, seguranca e concorrencia"
+      ],
+      "description": "Revisor Python do AISEF: PEP 8, type hints, idiomas, seguranca e concorrencia. Use quando a tarefa altera codigo Python.",
+      "prompt": "prompts/python-reviewer.md",
+      "source": "ECC agents/python-reviewer.md"
+    },
+    {
+      "id": "django-reviewer",
+      "name": "Revisor Django",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:django",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo Django: ORM, DRF, migrations e configuracao de seguranca"
+      ],
+      "description": "Revisor Django do AISEF: ORM, DRF, migrations e configuracao de seguranca. Use quando a tarefa altera codigo Django.",
+      "prompt": "prompts/django-reviewer.md",
+      "source": "ECC agents/django-reviewer.md"
+    },
+    {
+      "id": "fastapi-reviewer",
+      "name": "Revisor FastAPI",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:fastapi",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo FastAPI: async, injecao de dependencia, Pydantic, seguranca e OpenAPI"
+      ],
+      "description": "Revisor FastAPI do AISEF: async, injecao de dependencia, Pydantic, seguranca e OpenAPI. Use quando a tarefa altera codigo FastAPI.",
+      "prompt": "prompts/fastapi-reviewer.md",
+      "source": "ECC agents/fastapi-reviewer.md"
+    },
+    {
+      "id": "typescript-reviewer",
+      "name": "Revisor TypeScript e JavaScript",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:typescript|javascript",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo TypeScript e JavaScript: seguranca de tipos, async, seguranca Node/web e idiomas"
+      ],
+      "description": "Revisor TypeScript e JavaScript do AISEF: seguranca de tipos, async, seguranca Node/web e idiomas. Use quando a tarefa altera codigo TypeScript e JavaScript.",
+      "prompt": "prompts/typescript-reviewer.md",
+      "source": "ECC agents/typescript-reviewer.md"
+    },
+    {
+      "id": "go-reviewer",
+      "name": "Revisor Go",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:go",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo Go: Go idiomatico, concorrencia, tratamento de erro e desempenho"
+      ],
+      "description": "Revisor Go do AISEF: Go idiomatico, concorrencia, tratamento de erro e desempenho. Use quando a tarefa altera codigo Go.",
+      "prompt": "prompts/go-reviewer.md",
+      "source": "ECC agents/go-reviewer.md"
+    },
+    {
+      "id": "rust-reviewer",
+      "name": "Revisor Rust",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:rust",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo Rust: ownership, lifetimes, tratamento de erro, unsafe e idiomas"
+      ],
+      "description": "Revisor Rust do AISEF: ownership, lifetimes, tratamento de erro, unsafe e idiomas. Use quando a tarefa altera codigo Rust.",
+      "prompt": "prompts/rust-reviewer.md",
+      "source": "ECC agents/rust-reviewer.md"
+    },
+    {
+      "id": "java-reviewer",
+      "name": "Revisor Java (Spring Boot ou Quarkus)",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:java",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo Java (Spring Boot ou Quarkus): camadas, JPA, transacoes, seguranca e concorrencia; detecta Spring ou Quarkus"
+      ],
+      "description": "Revisor Java (Spring Boot ou Quarkus) do AISEF: camadas, JPA, transacoes, seguranca e concorrencia; detecta Spring ou Quarkus. Use quando a tarefa altera codigo Java (Spring Boot ou Quarkus).",
+      "prompt": "prompts/java-reviewer.md",
+      "source": "ECC agents/java-reviewer.md"
+    },
+    {
+      "id": "kotlin-reviewer",
+      "name": "Revisor Kotlin e Android/KMP",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:kotlin",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo Kotlin e Android/KMP: idiomas, seguranca de coroutines, Compose e Clean Architecture no Android"
+      ],
+      "description": "Revisor Kotlin e Android/KMP do AISEF: idiomas, seguranca de coroutines, Compose e Clean Architecture no Android. Use quando a tarefa altera codigo Kotlin e Android/KMP.",
+      "prompt": "prompts/kotlin-reviewer.md",
+      "source": "ECC agents/kotlin-reviewer.md"
+    },
+    {
+      "id": "swift-reviewer",
+      "name": "Revisor Swift",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:swift",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo Swift: protocolos, semantica de valor, ARC, concorrencia e seguranca"
+      ],
+      "description": "Revisor Swift do AISEF: protocolos, semantica de valor, ARC, concorrencia e seguranca. Use quando a tarefa altera codigo Swift.",
+      "prompt": "prompts/swift-reviewer.md",
+      "source": "ECC agents/swift-reviewer.md"
+    },
+    {
+      "id": "csharp-reviewer",
+      "name": "Revisor .NET e C#",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:csharp",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo .NET e C#: convencoes .NET, async, nullable, seguranca e desempenho"
+      ],
+      "description": "Revisor .NET e C# do AISEF: convencoes .NET, async, nullable, seguranca e desempenho. Use quando a tarefa altera codigo .NET e C#.",
+      "prompt": "prompts/csharp-reviewer.md",
+      "source": "ECC agents/csharp-reviewer.md"
+    },
+    {
+      "id": "fsharp-reviewer",
+      "name": "Revisor F#",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:fsharp",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo F#: idiomas funcionais, tipos, pattern matching e computation expressions"
+      ],
+      "description": "Revisor F# do AISEF: idiomas funcionais, tipos, pattern matching e computation expressions. Use quando a tarefa altera codigo F#.",
+      "prompt": "prompts/fsharp-reviewer.md",
+      "source": "ECC agents/fsharp-reviewer.md"
+    },
+    {
+      "id": "cpp-reviewer",
+      "name": "Revisor C++",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:cpp",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo C++: seguranca de memoria, C++ moderno, concorrencia e desempenho"
+      ],
+      "description": "Revisor C++ do AISEF: seguranca de memoria, C++ moderno, concorrencia e desempenho. Use quando a tarefa altera codigo C++.",
+      "prompt": "prompts/cpp-reviewer.md",
+      "source": "ECC agents/cpp-reviewer.md"
+    },
+    {
+      "id": "php-reviewer",
+      "name": "Revisor PHP e Laravel",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:php",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo PHP e Laravel: PSR-12, tipos, Eloquent, seguranca e desempenho"
+      ],
+      "description": "Revisor PHP e Laravel do AISEF: PSR-12, tipos, Eloquent, seguranca e desempenho. Use quando a tarefa altera codigo PHP e Laravel.",
+      "prompt": "prompts/php-reviewer.md",
+      "source": "ECC agents/php-reviewer.md"
+    },
+    {
+      "id": "ruby-reviewer",
+      "name": "Revisor Ruby e Rails",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:ruby",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo Ruby e Rails: Ruby idiomatico, seguranca do Active Record e padroes do Rails"
+      ],
+      "description": "Revisor Ruby e Rails do AISEF: Ruby idiomatico, seguranca do Active Record e padroes do Rails. Use quando a tarefa altera codigo Ruby e Rails.",
+      "prompt": "prompts/ruby-reviewer.md",
+      "source": "ECC agents/ruby-reviewer.md"
+    },
+    {
+      "id": "flutter-reviewer",
+      "name": "Revisor Flutter e Dart",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:flutter",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo Flutter e Dart: widgets, gerenciamento de estado, idiomas Dart, desempenho e acessibilidade"
+      ],
+      "description": "Revisor Flutter e Dart do AISEF: widgets, gerenciamento de estado, idiomas Dart, desempenho e acessibilidade. Use quando a tarefa altera codigo Flutter e Dart.",
+      "prompt": "prompts/flutter-reviewer.md",
+      "source": "ECC agents/flutter-reviewer.md"
+    },
+    {
+      "id": "gdscript-reviewer",
+      "name": "Revisor GDScript e Godot 4",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "stack:godot",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo GDScript e Godot 4: tipagem estatica, cena e nos, sinais, ciclo de vida e desempenho"
+      ],
+      "description": "Revisor GDScript e Godot 4 do AISEF: tipagem estatica, cena e nos, sinais, ciclo de vida e desempenho. Use quando a tarefa altera codigo GDScript e Godot 4.",
+      "prompt": "prompts/gdscript-reviewer.md",
+      "source": "ECC agents/gdscript-reviewer.md"
+    },
+    {
+      "id": "react-reviewer",
+      "name": "Revisor React",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "manual",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo React: hooks, desempenho de renderizacao, fronteira server/client e acessibilidade, sem opinar sobre o visual"
+      ],
+      "description": "Revisor React do AISEF: hooks, desempenho de renderizacao, fronteira server/client e acessibilidade, sem opinar sobre o visual. Use quando a tarefa altera codigo React (ativacao manual; nao opina sobre layout nem design).",
+      "prompt": "prompts/react-reviewer.md",
+      "source": "ECC agents/react-reviewer.md"
+    },
+    {
+      "id": "vue-reviewer",
+      "name": "Revisor Vue",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "manual",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar codigo Vue: Composition API, reatividade, arquitetura de componentes e seguranca, sem opinar sobre o visual"
+      ],
+      "description": "Revisor Vue do AISEF: Composition API, reatividade, arquitetura de componentes e seguranca, sem opinar sobre o visual. Use quando a tarefa altera codigo Vue (ativacao manual; nao opina sobre layout nem design).",
+      "prompt": "prompts/vue-reviewer.md",
+      "source": "ECC agents/vue-reviewer.md"
+    },
+    {
+      "id": "build-error-resolver",
+      "name": "Corretor de build TypeScript/JavaScript",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:typescript|javascript",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos TypeScript/JavaScript passarem com diff minimo"
+      ],
+      "description": "Corretor de build TypeScript/JavaScript do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/build-error-resolver.md",
+      "source": "ECC agents/build-error-resolver.md"
+    },
+    {
+      "id": "python-build-resolver",
+      "name": "Corretor de build Python",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:python",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos Python passarem com diff minimo"
+      ],
+      "description": "Corretor de build Python do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/python-build-resolver.md",
+      "source": "ECC agents/build-error-resolver.md"
+    },
+    {
+      "id": "django-build-resolver",
+      "name": "Corretor de build Django",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:django",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos Django passarem com diff minimo"
+      ],
+      "description": "Corretor de build Django do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/django-build-resolver.md",
+      "source": "ECC agents/django-build-resolver.md"
+    },
+    {
+      "id": "go-build-resolver",
+      "name": "Corretor de build Go",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:go",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos Go passarem com diff minimo"
+      ],
+      "description": "Corretor de build Go do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/go-build-resolver.md",
+      "source": "ECC agents/go-build-resolver.md"
+    },
+    {
+      "id": "rust-build-resolver",
+      "name": "Corretor de build Rust",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:rust",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos Rust passarem com diff minimo"
+      ],
+      "description": "Corretor de build Rust do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/rust-build-resolver.md",
+      "source": "ECC agents/rust-build-resolver.md"
+    },
+    {
+      "id": "java-build-resolver",
+      "name": "Corretor de build Java",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:java",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos Java (Maven/Gradle) passarem com diff minimo"
+      ],
+      "description": "Corretor de build Java (Maven/Gradle) do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/java-build-resolver.md",
+      "source": "ECC agents/java-build-resolver.md"
+    },
+    {
+      "id": "kotlin-build-resolver",
+      "name": "Corretor de build Kotlin/Gradle",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:kotlin",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos Kotlin/Gradle passarem com diff minimo"
+      ],
+      "description": "Corretor de build Kotlin/Gradle do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/kotlin-build-resolver.md",
+      "source": "ECC agents/kotlin-build-resolver.md"
+    },
+    {
+      "id": "swift-build-resolver",
+      "name": "Corretor de build Swift/Xcode",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:swift",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos Swift/Xcode passarem com diff minimo"
+      ],
+      "description": "Corretor de build Swift/Xcode do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/swift-build-resolver.md",
+      "source": "ECC agents/swift-build-resolver.md"
+    },
+    {
+      "id": "dart-build-resolver",
+      "name": "Corretor de build Dart/Flutter",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:dart|flutter",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos Dart/Flutter passarem com diff minimo"
+      ],
+      "description": "Corretor de build Dart/Flutter do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/dart-build-resolver.md",
+      "source": "ECC agents/dart-build-resolver.md"
+    },
+    {
+      "id": "cpp-build-resolver",
+      "name": "Corretor de build C++/CMake",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:cpp",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos C++/CMake passarem com diff minimo"
+      ],
+      "description": "Corretor de build C++/CMake do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/cpp-build-resolver.md",
+      "source": "ECC agents/cpp-build-resolver.md"
+    },
+    {
+      "id": "pytorch-build-resolver",
+      "name": "Corretor de build PyTorch",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:pytorch",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos PyTorch passarem com diff minimo"
+      ],
+      "description": "Corretor de build PyTorch do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/pytorch-build-resolver.md",
+      "source": "ECC agents/pytorch-build-resolver.md"
+    },
+    {
+      "id": "harmonyos-app-resolver",
+      "name": "Corretor de build HarmonyOS",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "stack:harmonyos",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos HarmonyOS (ArkTS/ArkUI) passarem com diff minimo"
+      ],
+      "description": "Corretor de build HarmonyOS (ArkTS/ArkUI) do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar.",
+      "prompt": "prompts/harmonyos-app-resolver.md",
+      "source": "ECC agents/harmonyos-app-resolver.md"
+    },
+    {
+      "id": "react-build-resolver",
+      "name": "Corretor de build React",
+      "kind": "fixer",
+      "group": "stack-build",
+      "activation": "manual",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Fazer o build e a checagem de tipos React (Vite, webpack, Next.js, CRA, Parcel, esbuild, Bun) passarem com diff minimo"
+      ],
+      "description": "Corretor de build React (Vite, webpack, Next.js, CRA, Parcel, esbuild, Bun) do AISEF: faz build, checagem de tipos e lint voltarem a passar com diff minimo, sem refatorar nem afrouxar regras. Use quando o precheck ou o build falhar (ativacao manual; nao mexe em UI).",
+      "prompt": "prompts/react-build-resolver.md",
+      "source": "ECC agents/react-build-resolver.md"
+    },
+    {
+      "id": "rag-pipeline-reviewer",
+      "name": "Revisor de pipeline RAG",
+      "kind": "evaluator",
+      "group": "domain-review",
+      "activation": "manual",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar recuperacao, chunking, embeddings, avaliacao e seguranca de pipelines RAG"
+      ],
+      "description": "Revisor RAG do AISEF: revisa recuperacao, chunking, embeddings, reranking, prompt de geracao, avaliacao e injecao de prompt em pipelines RAG. Ativacao manual, para projetos com RAG.",
+      "prompt": "prompts/rag-pipeline-reviewer.md",
+      "source": "ECC agents/rag-pipeline-reviewer.md"
+    },
+    {
+      "id": "mle-reviewer",
+      "name": "Revisor de engenharia de ML",
+      "kind": "evaluator",
+      "group": "domain-review",
+      "activation": "manual",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar contratos de dados, pipelines de features, reprodutibilidade, avaliacao e entrega de modelos"
+      ],
+      "description": "Revisor de ML do AISEF: revisa contratos de dados, pipelines de features, reprodutibilidade do treino, avaliacao offline, servico, monitoramento e rollback de modelos. Ativacao manual, para projetos de ML em producao.",
+      "prompt": "prompts/mle-reviewer.md",
+      "source": "ECC agents/mle-reviewer.md"
+    },
+    {
+      "id": "healthcare-reviewer",
+      "name": "Revisor de software de saude",
+      "kind": "evaluator",
+      "group": "domain-review",
+      "activation": "manual",
+      "level": 5,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar seguranca clinica, apoio a decisao clinica, protecao de dados de saude e integridade de dados medicos"
+      ],
+      "description": "Revisor de saude do AISEF: revisa seguranca clinica, apoio a decisao clinica, protecao de dados de saude (LGPD, HIPAA) e integridade de dados medicos. Ativacao manual, para projetos de saude.",
+      "prompt": "prompts/healthcare-reviewer.md",
+      "source": "ECC agents/healthcare-reviewer.md"
+    },
+    {
+      "id": "a11y-architect",
+      "name": "Revisor de acessibilidade",
+      "kind": "evaluator",
+      "group": "stack-review",
+      "activation": "manual",
+      "level": 3,
+      "task_types": [
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Revisar conformidade com WCAG 2.2 em web e apps nativos, sem alterar design"
+      ],
+      "description": "Revisor de acessibilidade do AISEF: revisa conformidade WCAG 2.2 (teclado, leitor de tela, contraste, foco, rotulos, movimento) em web e apps nativos e relata achados, sem alterar o design. Ativacao manual.",
+      "prompt": "prompts/a11y-architect.md",
+      "source": "ECC agents/a11y-architect.md"
     }
   ]
 }

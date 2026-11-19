@@ -372,6 +372,20 @@ def agent_contract(project, data):
     return load_json(path) if os.path.exists(path) else None
 
 
+def catalog_agent_without_contract(data):
+    """Subagente do plugin (aisef:<papel do catalogo>) chamado sem Agent Contract no projeto: sem teto, ele nao age.
+    Le o catalogo so neste caminho raro, para nao pesar no hook."""
+    name = data.get("agent_type") or ""
+    if not name.startswith("aisef:"):
+        return False
+    try:
+        with open(os.path.join(CORE, "agents", "catalog.v0.1.json"), encoding="utf-8") as fh:
+            ids = {r["id"] for r in json.load(fh)["roles"] if r.get("generate_agent", True)}
+    except (OSError, ValueError, KeyError):
+        return False
+    return name.split(":")[-1] in ids
+
+
 def enforce_ceiling(contract, tool, items, env):
     """O Agent Contract e um TETO: nunca concede nada, so restringe (o resto segue a politica)."""
     aid = contract.get("agent_id", "?")
@@ -496,6 +510,10 @@ def decide(data, project, policy, patterns, config, now):
     contract = agent_contract(project, data)
     if contract is not None:
         enforce_ceiling(contract, tool, items, env)
+    elif (tool in EDIT_TOOLS or items) and catalog_agent_without_contract(data):
+        raise Decision("deny", "agente %s sem Agent Contract neste projeto: o orquestrador cria o draft "
+                               "(`aisef_project.py agents --roles %s`) e o usuario o ativa antes de delegar"
+                       % (data.get("agent_type"), data.get("agent_type", "").split(":")[-1]))
 
     worst, why, scoped = "allow", [], []
     for resource, action, item_env, destructive, label in items:

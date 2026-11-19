@@ -53,6 +53,35 @@ EVALUATORS = {r for r in CATALOG if CATALOG[r]["kind"] in ("evaluator", "validat
 AGENTS = {rid: (r["description"], aisef_catalog.prompt(r)) for rid, r in CATALOG.items()}
 
 
+# Blocos por tipo de papel (kind), somados ao COMMON. Inspirados no ECC (affaan-m/everything-claude-code, MIT):
+# filtro de confianca e prova para achados graves (code-reviewer), diff minimo (build resolvers).
+KIND_BLOCKS = {
+    "evaluator": """
+## Como revisar (avaliador)
+- Leia o diff da tarefa (`git diff`, `git log`), o arquivo inteiro e quem chama o codigo antes de concluir. Nao revise trecho isolado.
+- As boas praticas do projeto valem como regra: `.claude/rules/aisef/` (quando existir), `.aisef/architecture.json` e os ADRs aprovados. Achado contra uma delas cita a regra.
+- Relate so o que tiver mais de 80% de certeza. Antes de cada achado: cite `arquivo:linha`; descreva a falha concreta (entrada, estado, resultado); confira que tipos, validacao ou framework ja nao cobrem; mantenha a severidade defensavel.
+- **CRITICAL e HIGH exigem prova**: o trecho, o cenario de falha e por que as protecoes existentes nao pegam. Sem os tres, rebaixe ou descarte.
+- **Zero achados e um resultado valido.** Nao fabrique achado, nao sugira trocar de stack, nao aponte estilo fora das convencoes do projeto. Codigo nao alterado so entra se for CRITICAL de seguranca.
+- Falsos positivos comuns, ignore: erro ja tratado por quem chama ou pelo framework; validacao ja feita na borda; numeros conhecidos (status HTTP, 1000 ms); funcao longa que e switch, tabela ou configuracao; null ja estreitado; N+1 em laco de cardinalidade fixa; await ausente em disparo intencional sem espera; valores fixos em teste.
+- Severidade: **CRITICAL** (seguranca, perda de dados; bloqueia o aceite), **HIGH** (bug provavel; corrigir antes do aceite), **MEDIUM** (manutencao), **LOW** (sugestao). Veredito: `APPROVE` sem CRITICAL nem HIGH, `WARNING` com HIGH, `BLOCK` com CRITICAL.
+- Voce nao corrige o codigo: relata ao orquestrador, e a correcao volta ao executor. Saida: tabela severidade | `arquivo:linha` | problema | cenario | correcao sugerida, e o veredito.
+""",
+    "fixer": """
+## Como corrigir (corretor)
+- **Diff minimo**: corrija a causa do erro, sem refatorar, renomear, mudar arquitetura nem "melhorar" o que nao foi pedido.
+- **Nunca afrouxe a regra para passar**: nao desligue lint nem checagem de tipos, nao acrescente `ignore`, `any`, `@ts-ignore`, `# noqa`, `skip` ou `xfail`, nao apague nem enfraqueca teste, nao rebaixe dependencia sem registrar. Se a regra estiver errada, reporte em vez de mudar.
+- Reproduza antes de corrigir (rode o comando que falha), corrija um erro por vez e rode de novo. Registre comandos, exit codes e trechos curtos da saida como evidencia.
+- Mudar dependencia, configuracao de build ou CI passa pelo Execution Gateway. Pare no limite de tentativas do contrato (padrao 3) e escale com o diagnostico.
+""",
+    "advisor": """
+## Como aconselhar (consultor)
+- Voce investiga e propoe; nao edita codigo de producao. So escreve o artefato pedido (plano, spec, mapa, proposta de ADR), no caminho que o Task Contract permitir.
+- Cite a fonte de cada afirmacao (`arquivo:linha`, contrato, ADR, URL). Separe **confirmado** de **inferido**; o que nao achou, diga que nao achou.
+- Decisao arquitetural, de escopo ou de requisito e do usuario: entregue opcoes com pros, contras e uma recomendacao. O orquestrador leva ao Approval Center.
+""",
+}
+
 def static_profile(name):
     """model/effort estaticos do frontmatter: padrao do papel na Model Policy (o roteador refina por tarefa).
     O validador tem padrao estatico proprio, porque a escolha real depende do nivel do executor."""
@@ -112,7 +141,12 @@ def render(name):
     model, effort = static_profile(name)
     skills = "".join("\n  - " + s for s in PRELOAD.get(name, []))
     effort = effort + ("\nskills:" + skills if skills else "")
+    kind = CATALOG[name]["kind"]
     common = COMMON
+    if kind in ("evaluator", "advisor"):  # nao implementam: o bloco de TDD do executor nao se aplica
+        a = common.index("## TDD (")
+        common = common[:a] + common[common.index("## Entrega"):]
+    common += KIND_BLOCKS.get(kind, "")
     if name in EVALUATORS:
         common = common.replace("## Entrega (duplo formato",
                                 "## Entrega (duplo formato; para voce, o relatorio e de avaliacao, nao de execucao")

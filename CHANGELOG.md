@@ -6,6 +6,15 @@
   - Os enums de papel nos schemas viraram `pattern`; a nova regra **`AGENT-ROLE-UNKNOWN`** confere o papel contra o catálogo.
   - `init` e `agents` criam rascunhos só dos papéis que se aplicam ao projeto; `agents --roles x,y` cria os pedidos, inclusive os `manual`.
   - `aisef_catalog.py check|list`; testes em `core/test_catalog.py`. Os 10 agentes atuais geram os mesmos `.md`, byte a byte.
+- **Equipe de agentes do ECC (E3 e E4): 56 papéis novos, 66 subagentes no total.** Texto adaptado do ECC (MIT, `THIRD_PARTY_NOTICES.md`), com blocos comuns por tipo gerados pelo `gen_agents`:
+  - **avaliador**: filtro de confiança acima de 80%, prova obrigatória para CRITICAL e HIGH, zero achados é válido, lista de falsos positivos, veredito APPROVE/WARNING/BLOCK;
+  - **corretor**: diff mínimo e nunca afrouxar lint, tipos ou testes para passar;
+  - **consultor**: investiga e propõe, decisão é do usuário.
+  - **Sempre ativos (22):** planner, architect, code-architect, code-explorer, spec-miner, code-reviewer, architecture-reviewer (novo, confere o estilo aprovado e a regra de dependência), database-reviewer, silent-failure-hunter, type-design-analyzer, pr-test-analyzer, comment-analyzer, agent-evaluator, code-simplifier, refactor-cleaner, performance-optimizer, commit-reviewer, doc-updater, docs-lookup, e2e-runner, conversation-analyzer (só propõe lições ao `aisef_learn`), harness-optimizer.
+  - **Por stack detectada:** revisores Python, Django, FastAPI, TypeScript/JavaScript, Go, Rust, Java, Kotlin, Swift, C#, F#, C++, PHP, Ruby, Flutter e Godot; corretores de build TS/JS, Python, Django, Go, Rust, Java, Kotlin, Swift, Dart/Flutter, C++, PyTorch e HarmonyOS.
+  - **Manuais:** RAG, ML, saúde; e os ligados a UI (React, Vue, acessibilidade, build React), que só relatam e não mexem em layout nem em tokens.
+  - `security` e `database` ganharam os checklists do ECC. **`frontend`, `implementer` e `validator` não mudaram.**
+- **Gateway:** subagente `aisef:<papel>` sem Agent Contract no projeto não edita nem faz operação sensível. Antes ele ficava sem teto.
 
 ## Não lançado (0.11.0: medir)
 - **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:
