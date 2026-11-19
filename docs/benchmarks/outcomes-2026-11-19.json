@@ -1,0 +1,80 @@
+{
+  "model": "sonnet",
+  "reps": 1,
+  "results": [
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "aisef",
+      "rep": 1,
+      "claude": {
+        "seconds": 328.6,
+        "cost_usd": 1.481756,
+        "turns": 46,
+        "is_error": false,
+        "input_tokens": 80,
+        "output_tokens": 12179,
+        "cache_read_tokens": 1592476,
+        "cache_write_tokens": 85921,
+        "stderr": "",
+        "rounds": 2
+      },
+      "visible": {
+        "ok": true,
+        "ran": 12,
+        "passed": 12
+      },
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      },
+      "aisef": {
+        "gateway_asked": 0,
+        "gateway_denied": 3,
+        "approval_requests": 2,
+        "review_reports": 3,
+        "task_states": {
+          "T-001": "completed"
+        }
+      }
+    },
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "aisef-norev",
+      "rep": 1,
+      "claude": {
+        "seconds": 532.5,
+        "cost_usd": 1.911991,
+        "turns": 35,
+        "is_error": false,
+        "input_tokens": 58,
+        "output_tokens": 11190,
+        "cache_read_tokens": 1121681,
+        "cache_write_tokens": 78730,
+        "stderr": "",
+        "rounds": 2
+      },
+      "visible": {
+        "ok": true,
+        "ran": 4,
+        "passed": 4
+      },
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      },
+      "aisef": {
+        "gateway_asked": 0,
+        "gateway_denied": 4,
+        "approval_requests": 2,
+        "review_reports": 0,
+        "task_states": {
+          "T-001": "completed"
+        }
+      }
+    }
+  ]
+}

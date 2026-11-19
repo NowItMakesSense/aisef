@@ -24,11 +24,15 @@ Regras (codigo -> o que verifica):
     TASK-*          referencias da tarefa (requisitos, criterios, ciclo)
     DEP-*           dependencias inexistentes, ciclos, entre features
     PAR-*           paralelismo: conflito de arquivos entre tarefas simultaneas
-    AGENT-*         agente da tarefa (existe, versao, papel, ativo, ambiente, recursos); AGENT-PATH-CEILING:
+    AGENT-*         agente da tarefa (existe, versao, papel, ativo, ambiente, recursos); AGENT-ROLE-UNKNOWN: papel fora
+                    do catalogo de agentes (core/agents/catalog.v0.1.json); AGENT-PATH-CEILING:
                     path do escopo que exige recurso fora do teto do agente (mesma classificacao do gateway)
+    ARCH-*          .aisef/architecture.json (aisef_detect): schema, estilo adotado aprovado como decisao
+                    arquitetural, estilo pendente de decisao, violacoes da regra de dependencia
     CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
     CONFIG-GRAPHIFY opcoes do Graphify no config.json (enabled, backend none|ollama|auto, paths e graph relativos)
-    VAL-*           validacao independente (existe validador, validador diferente do executor)
+    VAL-*           validacao independente (existe validador, validador diferente do executor); VAL-REVIEW-MISSING: validada sem o
+                    APPROVE de todos os revisores ativos de review.reviewers
     PERM-* / AUTH-* permissoes da tarefa x politica e autorizacoes (existe, escopo, ambiente, validade)
     BP-*            blueprint x feature (versao, requisitos, componentes, endpoints, entidades, decisoes aprovadas, cobertura)
     STATE-*         estado da tarefa/feature x relatorios e eventos de auditoria
@@ -53,6 +57,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import aisef_catalog  # noqa: E402
 import audit_chain  # noqa: E402
 import check_policy_consistency as pol  # noqa: E402
 
@@ -205,6 +210,14 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
     feats = {i: d for i, (_, d) in by["features"].items()}
     tasks = {i: d for i, (_, d) in by["tasks"].items()}
     agents = {i: d for i, (_, d) in by["agents"].items()}
+    # papeis vem do catalogo de agentes (fonte unica); arena_* sao papeis reservados do schema antigo
+    known_roles = aisef_catalog.role_ids() | {"arena_challenger", "arena_reviewer"}
+    for aid, ag in sorted(agents.items()):
+        if ag["role"] not in known_roles:
+            rep.err("AGENT-ROLE-UNKNOWN", "agente " + aid, "papel %s nao existe no catalogo de agentes do plugin" % ag["role"])
+        for v in (ag.get("validation_role") or {}).get("validates", []):
+            if v not in known_roles:
+                rep.err("AGENT-ROLE-UNKNOWN", "agente " + aid, "valida o papel %s, que nao existe no catalogo" % v)
     approvals = {i: d for i, (_, d) in by["approvals"].items()}
     auths = {i: d for i, (_, d) in by["authorizations"].items()}
     reports = [d for _, d in docs["reports"]]
@@ -552,6 +565,11 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                         "%s exige %s (%s), fora do teto do agente %s %s: o gateway negaria a escrita no meio da execucao"
                         % (p, resource, label, ag["agent_id"], sorted(ceiling)))
 
+        vrole = t["validation"].get("validator_role")
+        if vrole and vrole != "orchestrator" and vrole not in aisef_catalog.evaluator_roles():
+            rep.err("AGENT-ROLE-UNKNOWN", where, "validator_role %s nao e papel avaliador do catalogo" % vrole)
+        if t["assigned_agent"].get("role") and t["assigned_agent"]["role"] not in known_roles:
+            rep.err("AGENT-ROLE-UNKNOWN", where, "papel %s nao existe no catalogo de agentes" % t["assigned_agent"]["role"])
         if t["validation"]["independent_validator_required"]:
             role = t["assigned_agent"].get("role") or (ag or {}).get("role")
             ok = [v for v in validators if role in v["validation_role"].get("validates", []) and v["agent_id"] != t["assigned_agent"]["agent_id"]]
@@ -624,6 +642,14 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         if st in ("validated", "completed") and t["validation"]["independent_validator_required"]:
             if "task_validated" not in types:
                 rep.err("STATE-NO-VALIDATION", where, "estado '%s' exige validacao independente, sem evento task_validated" % st)
+        if st in ("validated", "completed") and (t.get("review") or {}).get("reviewers"):
+            import aisef_review
+            root = os.path.dirname(project) if os.path.basename(project) == ".aisef" else project
+            rv = aisef_review.status(root, t, [r for r in reports if r["task_id"] == t["task_id"]])
+            missing = [x["role"] for x in rv["pending"]] + [x["role"] for x in rv["rejected"]]
+            if missing:
+                rep.err("VAL-REVIEW-MISSING", where, "estado '%s' sem APPROVE dos revisores ativos: %s (aisef_review.py record)"
+                        % (st, ", ".join(missing)))
         if st == "completed" and "task_completed" not in types:
             rep.err("STATE-NO-COMPLETE-EVENT", where, "concluida sem evento task_completed")
 
@@ -635,7 +661,7 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         if t_ is None or r["agent"]["agent_id"] == t_["assigned_agent"]["agent_id"]:
             return False
         ag_ = agents.get(r["agent"]["agent_id"])
-        return (ag_["role"] if ag_ else r["agent"].get("role")) in ("validator", "qa", "security")
+        return (ag_["role"] if ag_ else r["agent"].get("role")) in aisef_catalog.evaluator_roles()
 
     for r in reports:
         where = "relatorio " + r["report_id"]
@@ -647,6 +673,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             rep.err("REPORT-VERSION", where, "executou a v%d, o contrato esta na v%d" % (r["contract_version"], t["contract_version"]))
         if r["agent"]["agent_id"] != t["assigned_agent"]["agent_id"] and not is_eval_report(r):
             rep.err("REPORT-AGENT", where, "entregue por %s, mas a tarefa e de %s" % (r["agent"]["agent_id"], t["assigned_agent"]["agent_id"]))
+        if r.get("review") and not is_eval_report(r):
+            rep.err("REPORT-REVIEW-ROLE", where, "veredito de revisao em relatorio que nao e de avaliador (%s)" % r["agent"]["agent_id"])
         want = {c["id"]: c["required"] for c in t["acceptance_criteria"]}
         got = {c["criterion_id"]: c["required"] for c in r["criteria_results"]}
         for cid in want:
@@ -719,6 +747,38 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                     rep.err("SPEC-SEAM-UNKNOWN", where, "seams fora da spec da feature: %s" % ", ".join(sorted(unknown)))
 
     # ------------------------------------------------------------------ autoridade de design (0.6.1)
+    # ------------------------------------------------------------------ arquitetura detectada (aisef_detect)
+    arch_file = os.path.join(project, "architecture.json")
+    if os.path.exists(arch_file):
+        try:
+            with open(arch_file, encoding="utf-8") as fh:
+                arch = json.load(fh)
+            try:
+                import jsonschema as _js
+            except ImportError:
+                _js = None
+            with open(os.path.join(HERE, "architecture.schema.v0.1.json"), encoding="utf-8") as fh:
+                for e in (_js.Draft202012Validator(json.load(fh)).iter_errors(arch) if _js else []):
+                    rep.err("ARCH-SCHEMA", "architecture.json", "%s: %s" % ("/".join(map(str, e.path)) or "(raiz)", e.message))
+            ok_ = arch.get("approved")
+            if ok_:
+                a = approvals.get(ok_.get("request_id"))
+                if a is None or a.get("status") != "approved" or a.get("request_type") != "architecture_decision":
+                    rep.err("ARCH-UNAPPROVED", "architecture.json",
+                            "estilo adotado sem pedido architecture_decision aprovado (%s)" % ok_.get("request_id"))
+            elif arch.get("styles") or arch.get("recommendations"):
+                rep.warn("ARCH-PENDING", "architecture.json",
+                         "estilo de arquitetura detectado mas nao adotado: confirme com o usuario e registre como ADR "
+                         "(skill aisef-discovery). Recomendacoes abertas: %s"
+                         % (", ".join(r["id"] for r in arch.get("recommendations", [])) or "nenhuma"))
+            high = [v for v in arch.get("violations", []) if v.get("severity") == "high"]
+            if high:
+                rep.warn("ARCH-DEPENDENCY", "architecture.json",
+                         "%d violacao(oes) da regra de dependencia (ex.: %s:%d importa %s); rode aisef_detect.py deps"
+                         % (len(high), high[0]["file"], high[0]["line"], high[0]["import"]))
+        except ValueError as exc:
+            rep.err("ARCH-SCHEMA", "architecture.json", "JSON invalido: %s" % exc)
+
     tokens_file = os.path.join(project, "design", "tokens.json")
     tokens = None
     if os.path.exists(tokens_file):

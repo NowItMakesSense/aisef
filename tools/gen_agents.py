@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Fonte unica dos agentes do plugin: gera plugins/aisef/agents/*.md.
+"""Gera plugins/aisef/agents/*.md a partir do catalogo de agentes (core/agents/catalog.v0.1.json, fonte unica).
 
-As regras comuns do Agent Contract ficam num lugar so (COMMON) e as ferramentas de cada agente vem de
+Descricao, prompt do papel (core/agents/prompts/<id>.md), tipo e skills pre-carregadas vem do catalogo. As regras comuns do Agent Contract ficam num lugar so (COMMON) e as ferramentas de cada agente vem de
 aisef_project.AGENT_PROFILES, as mesmas que entram no Agent Contract (o teto que o gateway aplica).
 Assim o .md do subagente e o contrato nunca divergem.
 Os campos model/effort do frontmatter vem dos padroes por papel da Model Policy (core/model-policy.v0.1.json);
@@ -17,6 +17,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLUGIN = os.path.join(ROOT, "plugins", "aisef")
 sys.path.insert(0, os.path.join(PLUGIN, "core"))
+import aisef_catalog  # noqa: E402
 import aisef_project  # noqa: E402
 import aisef_route  # noqa: E402
 
@@ -46,29 +47,40 @@ COMMON = """
 Sem segredos e sem raciocinio interno em nenhum dos dois.
 """
 
-EVALUATORS = {"qa", "security", "validator"}
+# Papeis e prompts vem do catalogo de agentes (core/agents/catalog.v0.1.json + core/agents/prompts/*.md).
+CATALOG = {r["id"]: r for r in aisef_catalog.agents_to_generate()}
+EVALUATORS = {r for r in CATALOG if CATALOG[r]["kind"] in ("evaluator", "validator")}
+AGENTS = {rid: (r["description"], aisef_catalog.prompt(r)) for rid, r in CATALOG.items()}
 
-AGENTS = {
-    "implementer": ("Implementador de fatias verticais do AISEF: implementa uma fatia inteira (todas as camadas que ela atravessa) a partir de um Task Contract, sempre com TDD vermelho-verde nos seams aprovados. Use quando o orquestrador AISEF delegar uma fatia (kind: slice).",
-                    "Voce implementa uma **fatia vertical**: um caminho completo e demonstravel pelas camadas listadas em `touches` (ex.: tela, API, dominio, dados), seguindo a spec e o blueprint aprovados. Comece pelo teste no seam mais alto aprovado e desca so o necessario. Se a fatia exigir mudar arquivos fora de `paths_allowed`, ou um seam que nao esta na spec, pare e reporte: isso e decisao do usuario. Migrations so como arquivos, com rollback; nunca conecte ao banco."),
-    "backend": ("Especialista backend do AISEF: implementa APIs, servicos, regras de dominio e integracoes a partir de um Task Contract, com testes. Use quando o orquestrador AISEF delegar tarefa de backend.",
-                "Voce implementa backend: endpoints, servicos, casos de uso e integracoes, seguindo a arquitetura e o Engineering Blueprint aprovados. Escreva os testes antes do codigo quando o contrato pedir TDD (sempre nas fatias). Endpoint autenticado trata 401/403 conforme o blueprint."),
-    "frontend": ("Especialista frontend do AISEF: implementa e revisa telas, componentes e fluxos de UX dentro da autoridade de design do projeto (tipografia, cores, espacamento, componentes), com testes e evidencia visual. Use quando o orquestrador AISEF delegar ou pedir revisao de interface.",
-                 "Voce implementa e revisa frontend: telas, componentes, estados e fluxos descritos no blueprint. **A autoridade de design do projeto manda** (`.aisef/design/tokens.json` e `DESIGN.md`, que chegam no pacote de contexto): so as familias, a escala, as cores, os espacos e o nivel de movimento de la; reuse os componentes do inventario antes de criar outro. Use as skills de design instaladas pela ferramenta Skill (Impeccable: `typeset`, `layout`, `audit`, `polish`; UI/UX Pro Max para consultar padroes de UX; Taste so em site ou landing page, quando o `kind` dos tokens for marketing_site ou mixed), sempre DENTRO dos tokens: se uma skill sugerir valor fora deles, nao aplique, reporte como proposta de mudanca do design (decisao do usuario). Nunca rode o modo live do Impeccable. Trate estados vazios, de erro e de carregamento, teclado e leitor de tela. Evidencia de toda tela entregue: `design_check.py scan` sem violacao, `npx impeccable detect` sem erro quando instalado, capturas em 375, 768 e 1440 px (`design_check.py shots`) e checagem de acessibilidade."),
-    "database": ("Especialista de banco de dados do AISEF: modela entidades, escreve migrations com rollback e revisa schema, sem nunca conectar ao banco. Use quando o orquestrador AISEF delegar tarefa de dados ou migracao.",
-                 "Voce trabalha o schema por arquivos: entidades, migrations (sempre com rollback; destrutiva tambem reversivel), indices e constraints. Acesso ao schema nao implica acesso a dados (T4). Voce nunca executa migration nem consulta banco: prepara os arquivos e o plano, e a execucao fica com humano ou pipeline aprovado."),
-    "qa": ("QA do AISEF: avalia testes, cobertura dos criterios de aceite, regressoes e qualidade de uma entrega. Use quando o orquestrador AISEF pedir avaliacao de qualidade ou testes de integracao e regressao.",
-           "Voce avalia qualidade: roda as suites de teste, confere se cada criterio de aceite tem teste e evidencia, procura regressoes nas areas da Impact Analysis e aponta lacunas. Nao corrige o codigo do executor: reporta achados com evidencia."),
-    "security": ("Especialista de seguranca do AISEF: revisa ameacas, autenticacao, autorizacao, segredos e exposicao de dados de uma feature ou entrega. Use quando o orquestrador AISEF pedir revisao de seguranca ou o blueprint tiver ameacas a mitigar.",
-                 "Voce revisa seguranca: ameacas do blueprint e suas mitigacoes, controle de acesso, validacao de entrada, segredos fora do codigo e dos logs, dados pessoais e dependencias vulneraveis. Classifique achados por severidade e evidencie cada um. Nunca leia o conteudo de segredos para provar um ponto."),
-    "devops": ("Especialista DevOps do AISEF: prepara CI/CD, infraestrutura como codigo, estrategia de deploy e rollback, sem executar deploy. Use quando o orquestrador AISEF delegar tarefa de pipeline, ambiente ou entrega.",
-               "Voce prepara pipelines, IaC e runbooks com estrategia de deploy e plano de rollback. Editar config/CI/IaC exige autorizacao de escopo; aplicar infra ou fazer deploy exige aprovacao (reforcada em producao). Voce prepara, o humano ou o pipeline aprovado executa."),
-    "domain": ("Especialista de dominio de negocio do AISEF: esclarece regras de negocio, glossario e casos de excecao a partir do que esta documentado, sem inventar. Use quando o orquestrador AISEF precisar interpretar requisitos ou regras de negocio.",
-               "Voce interpreta o dominio: regras de negocio, termos, excecoes e cenarios alternativos, sempre citando a fonte (discovery, contratos, docs, codigo). O que nao estiver documentado vira pergunta para o usuario via orquestrador, nunca suposicao."),
-    "validator": ("Validador independente do AISEF: verifica se uma entrega cumpre os criterios de aceite do Task Contract, com evidencias, e nunca valida o proprio trabalho. Use quando o orquestrador AISEF precisar mover uma tarefa de executed para validated.",
-                  "Voce verifica, nao implementa. Para cada criterio de aceite: reproduza a evidencia (rode os testes, leia o diff, confira o comportamento) e marque atendido, nao atendido ou nao verificavel, com a prova. Git so de leitura (status, log, diff). Reprovacao volta ao executor com os criterios nao atendidos e as evidencias. Se a tarefa exige TDD, confira tambem a `tdd_evidence`: cada comportamento com teste que falhou antes e passou depois, nos seams aprovados; rode o teste de novo para confirmar o verde. Voce nunca foi o executor desta tarefa; se foi, recuse e avise o orquestrador."),
+
+# Blocos por tipo de papel (kind), somados ao COMMON. Inspirados no ECC (affaan-m/everything-claude-code, MIT):
+# filtro de confianca e prova para achados graves (code-reviewer), diff minimo (build resolvers).
+KIND_BLOCKS = {
+    "evaluator": """
+## Como revisar (avaliador)
+- Leia o diff da tarefa (`git diff`, `git log`), o arquivo inteiro e quem chama o codigo antes de concluir. Nao revise trecho isolado.
+- As boas praticas do projeto valem como regra: `.claude/rules/aisef/` (quando existir), `.aisef/architecture.json` e os ADRs aprovados. Achado contra uma delas cita a regra.
+- Relate so o que tiver mais de 80% de certeza. Antes de cada achado: cite `arquivo:linha`; descreva a falha concreta (entrada, estado, resultado); confira que tipos, validacao ou framework ja nao cobrem; mantenha a severidade defensavel.
+- **CRITICAL e HIGH exigem prova**: o trecho, o cenario de falha e por que as protecoes existentes nao pegam. Sem os tres, rebaixe ou descarte.
+- **Zero achados e um resultado valido.** Nao fabrique achado, nao sugira trocar de stack, nao aponte estilo fora das convencoes do projeto. Codigo nao alterado so entra se for CRITICAL de seguranca.
+- Falsos positivos comuns, ignore: erro ja tratado por quem chama ou pelo framework; validacao ja feita na borda; numeros conhecidos (status HTTP, 1000 ms); funcao longa que e switch, tabela ou configuracao; null ja estreitado; N+1 em laco de cardinalidade fixa; await ausente em disparo intencional sem espera; valores fixos em teste.
+- Severidade: **CRITICAL** (seguranca, perda de dados; bloqueia o aceite), **HIGH** (bug provavel; corrigir antes do aceite), **MEDIUM** (manutencao), **LOW** (sugestao). Veredito: `APPROVE` sem CRITICAL nem HIGH, `WARNING` com HIGH, `BLOCK` com CRITICAL.
+- Voce nao corrige o codigo: relata ao orquestrador, e a correcao volta ao executor. Saida: tabela severidade | `arquivo:linha` | problema | cenario | correcao sugerida, e o veredito.
+""",
+    "fixer": """
+## Como corrigir (corretor)
+- **Diff minimo**: corrija a causa do erro, sem refatorar, renomear, mudar arquitetura nem "melhorar" o que nao foi pedido.
+- **Nunca afrouxe a regra para passar**: nao desligue lint nem checagem de tipos, nao acrescente `ignore`, `any`, `@ts-ignore`, `# noqa`, `skip` ou `xfail`, nao apague nem enfraqueca teste, nao rebaixe dependencia sem registrar. Se a regra estiver errada, reporte em vez de mudar.
+- Reproduza antes de corrigir (rode o comando que falha), corrija um erro por vez e rode de novo. Registre comandos, exit codes e trechos curtos da saida como evidencia.
+- Mudar dependencia, configuracao de build ou CI passa pelo Execution Gateway. Pare no limite de tentativas do contrato (padrao 3) e escale com o diagnostico.
+""",
+    "advisor": """
+## Como aconselhar (consultor)
+- Voce investiga e propoe; nao edita codigo de producao. So escreve o artefato pedido (plano, spec, mapa, proposta de ADR), no caminho que o Task Contract permitir.
+- Cite a fonte de cada afirmacao (`arquivo:linha`, contrato, ADR, URL). Separe **confirmado** de **inferido**; o que nao achou, diga que nao achou.
+- Decisao arquitetural, de escopo ou de requisito e do usuario: entregue opcoes com pros, contras e uma recomendacao. O orquestrador leva ao Approval Center.
+""",
 }
-
 
 def static_profile(name):
     """model/effort estaticos do frontmatter: padrao do papel na Model Policy (o roteador refina por tarefa).
@@ -120,7 +132,7 @@ def render_special(name):
 
 # Skills pre-carregadas no subagente (campo `skills:` do Claude Code). Sem o plugin instalado, o Claude Code pula
 # o nome (aviso no log de debug) e o agente segue as regras de TDD do bloco COMMON.
-PRELOAD = {"implementer": ["mattpocock-skills:tdd"]}
+PRELOAD = {rid: r["preload_skills"] for rid, r in CATALOG.items() if r.get("preload_skills")}
 
 
 def render(name):
@@ -129,7 +141,12 @@ def render(name):
     model, effort = static_profile(name)
     skills = "".join("\n  - " + s for s in PRELOAD.get(name, []))
     effort = effort + ("\nskills:" + skills if skills else "")
+    kind = CATALOG[name]["kind"]
     common = COMMON
+    if kind in ("evaluator", "advisor"):  # nao implementam: o bloco de TDD do executor nao se aplica
+        a = common.index("## TDD (")
+        common = common[:a] + common[common.index("## Entrega"):]
+    common += KIND_BLOCKS.get(kind, "")
     if name in EVALUATORS:
         common = common.replace("## Entrega (duplo formato",
                                 "## Entrega (duplo formato; para voce, o relatorio e de avaliacao, nao de execucao")

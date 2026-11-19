@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**149 regras** em 26 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**156 regras** em 27 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -32,7 +32,7 @@ Recursos e escopos das tarefas respeitam a política.
 
 Agent Contracts ativos, papel, teto de recursos e de ambiente.
 
-`AGENT-ENV`, `AGENT-INACTIVE`, `AGENT-PATH-CEILING`, `AGENT-RESOURCE`, `AGENT-ROLE`, `AGENT-UNKNOWN`, `AGENT-VERSION`
+`AGENT-ENV`, `AGENT-INACTIVE`, `AGENT-PATH-CEILING`, `AGENT-RESOURCE`, `AGENT-ROLE`, `AGENT-ROLE-UNKNOWN`, `AGENT-UNKNOWN`, `AGENT-VERSION`
 
 ## Feature Contract (`FEAT-*`)
 
@@ -86,7 +86,7 @@ Todo elemento aponta para requisitos aprovados.
 
 Relatório do agente coerente com a tarefa e com evidências.
 
-`REPORT-AGENT`, `REPORT-ATTEMPTS`, `REPORT-CONSULTATIONS`, `REPORT-CRITERIA-MISSING`, `REPORT-CRITERIA-REQUIRED`, `REPORT-CRITERIA-UNKNOWN`, `REPORT-EVIDENCE-UNKNOWN`, `REPORT-FILE-OUT-OF-SCOPE`, `REPORT-TASK`, `REPORT-VERSION`
+`REPORT-AGENT`, `REPORT-ATTEMPTS`, `REPORT-CONSULTATIONS`, `REPORT-CRITERIA-MISSING`, `REPORT-CRITERIA-REQUIRED`, `REPORT-CRITERIA-UNKNOWN`, `REPORT-EVIDENCE-UNKNOWN`, `REPORT-FILE-OUT-OF-SCOPE`, `REPORT-REVIEW-ROLE`, `REPORT-TASK`, `REPORT-VERSION`
 
 ## Spec (`SPEC-*`)
 
@@ -106,6 +106,12 @@ Evidencia de teste vermelho antes do verde, no relatorio do executor.
 
 `TDD-EVIDENCE-MISSING`, `TDD-GREEN-FAILING`, `TDD-RED-BEFORE-GREEN`, `TDD-RED-NOT-FAILING`
 
+## Arquitetura (`ARCH-*`)
+
+Deteccao valida, estilo adotado aprovado como decisao arquitetural e regra de dependencia.
+
+`ARCH-DEPENDENCY`, `ARCH-PENDING`, `ARCH-SCHEMA`, `ARCH-UNAPPROVED`
+
 ## Autoridade de design (`DESIGN-*`)
 
 Tokens de design validos, aprovados como decisao arquitetural, e UI coberta por eles.
@@ -116,7 +122,7 @@ Tokens de design validos, aprovados como decisao arquitetural, e UI coberta por 
 
 Validação independente, nunca do próprio executor.
 
-`VAL-NO-VALIDATOR`, `VAL-SELF-ATTEST`
+`VAL-NO-VALIDATOR`, `VAL-REVIEW-MISSING`, `VAL-SELF-ATTEST`
 
 ## Roteamento (`ROUTE-*`)
 

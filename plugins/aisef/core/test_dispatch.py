@@ -96,11 +96,75 @@ check("precheck: relatorio bom passa", dsp.precheck(proj, "T-012") == [], dsp.pr
 vw = dsp.validation_wave(proj)
 check("validate-wave: quem falha no precheck volta ao executor (task_rejected do orquestrador)",
       [x["task_id"] for x in vw["rejected_by_precheck"]] == ["T-010"] and nx.compute_next(proj)["states"]["T-010"] == "rejected", vw)
+t12 = json.load(open(os.path.join(proj, ".aisef", "contracts", "tasks", "T-012.json"), encoding="utf-8"))
+check("aisef_new: revisores calculados na criacao (geral, dados, arquitetura, testes)",
+      t12["review"]["reviewers"] == ["code-reviewer", "database-reviewer", "architecture-reviewer", "pr-test-analyzer"], t12.get("review"))
+roles = sorted(x["role"] for x in vw["reviews"])
+check("validate-wave: revisores em paralelo antes do validador",
+      vw["validator"] is None and roles == sorted(t12["review"]["reviewers"]) and all(x["task_id"] == "T-012" for x in vw["reviews"]), vw)
+check("validate-wave: prompt do revisor pede o veredito e o relatorio de avaliacao",
+      all("verdict" in x["prompt"] and x["subagent_type"] == "aisef:" + x["role"] for x in vw["reviews"]))
+
+
+def review(tid, role, verdict, suffix=""):
+    rid = "RPT-%s-REV-%s%s" % (tid, role, suffix)
+    src = json.load(open(os.path.join(proj, ".aisef", "reports", "RPT-%s-1.json" % tid), encoding="utf-8"))
+    src.update(report_id=rid, agent={"agent_id": role, "agent_contract_version": 1, "role": role},
+               review={"verdict": verdict, "findings": {"critical": 0, "high": 0 if verdict == "APPROVE" else 1}})
+    src.pop("tdd_evidence", None)
+    ap.write_json(os.path.join(proj, ".aisef", "reports", rid + ".json"), src)
+
+
+for role_ in t12["review"]["reviewers"][:-1]:
+    review("T-012", role_, "APPROVE")
+vw = dsp.validation_wave(proj)
+check("validate-wave: so o revisor que falta e despachado de novo",
+      [x["role"] for x in vw["reviews"]] == ["pr-test-analyzer"] and vw["validator"] is None, vw["reviews"])
+review("T-012", "pr-test-analyzer", "APPROVE")
+vw = dsp.validation_wave(proj)
 check("validate-wave: um validador so para o resto da onda, em nivel >= executor e outro modelo",
       vw["validator"]["task_ids"] == ["T-012"] and vw["validator"]["subagent_type"] == "aisef:validator"
       and vw["validator"]["level"] >= 3 and vw["validator"]["model"] != "sonnet", vw["validator"])
 check("validate-wave: o prompt manda registrar o veredito como validador, por tarefa",
       "--actor validator --actor-id validator" in vw["validator"]["prompt"] and "AC-12" in vw["validator"]["prompt"])
+import aisef_review  # noqa: E402
+review("T-012", "database-reviewer", "BLOCK")
+st = aisef_review.status(proj, t12, dsp._reports(proj, "T-012"))
+check("revisao: BLOCK de um revisor reprova a tarefa", [x["role"] for x in st["rejected"]] == ["database-reviewer"], st)
+review("T-012", "database-reviewer", "APPROVE")
+hi = dict(t12, review=dict(t12["review"], dual_review=True))
+st = aisef_review.status(proj, hi, dsp._reports(proj, "T-012"))
+check("revisao dupla: um code-reviewer so nao basta", {"role": "code-reviewer", "missing": 1} in st["pending"], st)
+d2 = dsp.review_dispatch(proj, hi, st, dsp.rt.load_policy())
+check("revisao dupla: o segundo revisor vira B, sem sobrescrever o primeiro",
+      [x["report_id"] for x in d2] == ["RPT-T-012-REV-code-reviewer-B"], d2)
+check("revisao: tarefa antiga sem campo review nao ganha revisao",
+      aisef_review.plan(proj, {k: v for k, v in t12.items() if k != "review"})["reviewers"] == [])
+check("revisao: risco alto pede security e revisao dupla",
+      "security" in aisef_review.reviewers_for(proj, dict(t12, risk={"level": "high"})) and aisef_review.dual_review(dict(t12, risk={"level": "high"})))
+check("revisao: arquivo .py pede o revisor python", "python-reviewer" in aisef_review.reviewers_for(
+    proj, dict(t12, scope=dict(t12["scope"], paths_allowed=["src/a.py"]))))
+rid = aisef_review.record(proj, "T-012", "comment-analyzer", "APPROVE", {"medium": 1}, "ok")
+rep = json.load(open(os.path.join(proj, ".aisef", "reports", rid + ".json"), encoding="utf-8"))
+check("record: grava relatorio de avaliacao com veredito e relatorio legivel",
+      rep["review"]["verdict"] == "APPROVE" and os.path.exists(os.path.join(proj, ".aisef", rep["technical_report"]["ref"])), rep.get("review"))
+for bad_ in (lambda: aisef_review.record(proj, "T-012", "code-reviewer", "APPROVE", {"high": 1}, "x"),
+             lambda: aisef_review.record(proj, "T-012", "implementer", "APPROVE", {}, "x")):
+    try:
+        bad_()
+        check("record recusa APPROVE com HIGH e papel que nao e avaliador", False)
+    except SystemExit:
+        check("record recusa APPROVE com HIGH e papel que nao e avaliador", True)
+check("prompt do revisor manda gravar com o record (com sufixo na revisao dupla)", "record --project . --task T-012 --role code-reviewer" in d2[0]["prompt"] and "--suffix -B" in d2[0]["prompt"], d2[0]["prompt"])
+arch_p = os.path.join(proj, ".aisef", "architecture.json")
+json.dump({"stacks": [{"id": "typescript"}, {"id": "react"}]}, open(arch_p, "w", encoding="utf-8"))
+ui = dict(t12, touches=["ui"], scope=dict(t12["scope"], paths_allowed=["web/src/Login.tsx"]))
+rv_ui = aisef_review.reviewers_for(proj, ui)
+check("A-04: tarefa de UI em projeto React pede react-reviewer e a11y-architect",
+      "react-reviewer" in rv_ui and "a11y-architect" in rv_ui and "typescript-reviewer" in rv_ui, rv_ui)
+check("A-04: tarefa sem UI nao pede revisores de UI",
+      "a11y-architect" not in aisef_review.reviewers_for(proj, dict(t12, scope=dict(t12["scope"], paths_allowed=["src/a.py"]))))
+os.remove(arch_p)
 redo = dsp.dispatch_wave(proj, dry_run=True)
 check("fatia reprovada no precheck volta no proximo dispatch como tentativa 2 (sobe um nivel)",
       any(a["task_id"] == "T-010" and a["attempt"] == 2 for a in redo["agents"]), redo["agents"])

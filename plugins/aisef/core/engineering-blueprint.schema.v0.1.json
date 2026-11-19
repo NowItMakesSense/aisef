@@ -22,6 +22,22 @@
       "additionalProperties": false,
       "required": ["components", "interactions", "decisions"],
       "properties": {
+        "style": {
+          "type": "array", "items": { "type": "string" },
+          "description": "Estilo(s) de arquitetura que este desenho segue (ids do aisef_detect: clean, hexagonal, ddd-tactical...), normalmente o adotado em .aisef/architecture.json."
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["name", "paths"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "paths": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "may_depend_on": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "description": "Camadas e onde ficam no repositorio, com as dependencias permitidas (regra de dependencia)."
+        },
         "components": {
           "type": "array", "minItems": 1,
           "items": {
@@ -32,7 +48,7 @@
               "name": { "type": "string", "minLength": 1 },
               "kind": { "enum": ["service", "module", "library", "ui", "job", "datastore", "external"] },
               "responsibility": { "type": "string", "minLength": 1 },
-              "owner_role": { "enum": ["backend", "frontend", "database", "devops", "security", "qa", null] },
+              "owner_role": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9_-]*[a-z0-9]$" },
               "requirement_ids": { "$ref": "#/$defs/idList" }
             }
           }

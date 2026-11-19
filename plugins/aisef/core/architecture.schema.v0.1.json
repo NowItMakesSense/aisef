@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.dev/schemas/architecture/0.1.0",
+  "title": "AISEF Architecture Detection",
+  "description": "Saida do aisef_detect.py (.aisef/architecture.json): stacks, estilos de arquitetura com confianca e evidencia, violacoes da regra de dependencia, praticas aplicaveis e recomendacoes. Heuristica: o estilo adotado so vale depois de aprovado pelo usuario (campo approved, com ADR).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "generated_by", "scan", "stacks", "styles", "violations", "practices", "recommendations"],
+  "$defs": {
+    "evidence": { "type": "array", "items": { "type": "string" }, "maxItems": 10 },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.+-]*$" }
+  },
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "generated_by": { "const": "aisef_detect" },
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "source_files", "test_files", "import_files_scanned", "truncated"],
+      "properties": {
+        "files": { "type": "integer", "minimum": 0 },
+        "source_files": { "type": "integer", "minimum": 0 },
+        "test_files": { "type": "integer", "minimum": 0 },
+        "import_files_scanned": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "boolean" }
+      }
+    },
+    "stacks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "kind", "evidence"],
+        "properties": {
+          "id": { "$ref": "#/$defs/slug" },
+          "name": { "type": "string" },
+          "kind": { "enum": ["language", "framework"] },
+          "evidence": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "package_manager": { "type": ["string", "null"] },
+    "commands": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "build": { "type": "string" }, "test": { "type": "string" }, "lint": { "type": "string" }, "typecheck": { "type": "string" }
+        }
+      }
+    },
+    "styles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "confidence", "evidence"],
+        "properties": {
+          "id": { "enum": ["clean", "hexagonal", "ddd-tactical", "ddd-strategic", "cqrs", "event-sourcing", "layered-mvc", "vertical-slices",
+                           "event-driven", "modular-monolith", "microservices"] },
+          "name": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "evidence": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "layers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domain": { "type": "array", "items": { "type": "string" } },
+        "application": { "type": "array", "items": { "type": "string" } },
+        "infrastructure": { "type": "array", "items": { "type": "string" } },
+        "presentation": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule", "file", "line", "import", "from_layer", "to_layer", "severity"],
+        "properties": {
+          "rule": { "enum": ["inner-imports-outer", "domain-imports-framework"] },
+          "file": { "type": "string" },
+          "line": { "type": "integer", "minimum": 1 },
+          "import": { "type": "string" },
+          "from_layer": { "enum": ["domain", "application", "infrastructure", "presentation"] },
+          "to_layer": { "enum": ["application", "infrastructure", "presentation", "framework"] },
+          "severity": { "enum": ["high", "medium"] }
+        }
+      }
+    },
+    "domains": { "type": "array", "items": { "$ref": "#/$defs/slug" } },
+    "practices": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9-]+(/[a-z0-9-]+)?$" } },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "why", "impact", "effort", "suggested"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^REC-[A-Z0-9-]+$" },
+          "title": { "type": "string" },
+          "why": { "type": "string" },
+          "impact": { "enum": ["low", "medium", "high"] },
+          "effort": { "enum": ["low", "medium", "high"] },
+          "suggested": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "approved": {
+      "type": "object",
+      "description": "Estilo adotado pelo usuario (decisao arquitetural aprovada). Sobrevive a novas deteccoes.",
+      "additionalProperties": false,
+      "required": ["styles", "request_id", "approved_at"],
+      "properties": {
+        "styles": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "adr": { "type": "string" },
+        "request_id": { "type": "string" },
+        "approved_at": { "type": "string", "format": "date-time" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

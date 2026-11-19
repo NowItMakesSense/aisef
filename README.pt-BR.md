@@ -13,6 +13,11 @@ O AISEF é um plugin do Claude Code que transforma um pedido em linguagem natura
 
 ## Novidades
 
+- **0.12.0, a equipe, as boas práticas e a arquitetura (ideias do everything-claude-code).**
+  - **66 agentes num catálogo único**, por tipo: executores, avaliadores (código, arquitetura, banco, segurança, testes, falhas silenciosas, tipos, comentários e 16 revisores por linguagem), corretores (simplificador, limpador de código morto, desempenho e 13 corretores de build) e consultores (planejador, arquiteto, minerador de specs, explorador, documentação). Os de linguagem só entram quando a stack é detectada. O agente `frontend` não mudou.
+  - **Detecção de arquitetura.** `aisef_project.py detect` acha a stack e o estilo (Clean, hexagonal, DDD, CQRS, MVC, monólito modular, microsserviços...), confere a regra de dependência pelos imports e recomenda melhorias. Adotar um estilo é decisão sua e vira ADR.
+  - **Boas práticas** (comuns, por arquitetura com "quando não usar", por linguagem) instaladas em `.claude/rules/aisef/`.
+  - **Revisores escolhidos em código**, todos precisam aprovar antes do validador, com revisão dupla em risco alto. E mais `verify-loop`, nada de `--no-verify` e configs de lint que os agentes não podem afrouxar.
 - **0.10.0, painel v3.** O **mapa de execução** virou a visão principal: uma coluna por onda, cada fatia com estado, tempo e última ação, e os subagentes presos ao agente que os disparou. Um hook novo registra **quem disparou quem**; quando não há como ter certeza, a ligação aparece como "inferida".
   - Clicar numa fatia abre a gaveta dela. Clicar num agente ou subagente abre a gaveta dele: o que pediram a ele, quem o disparou, modelo, tempo e as últimas ações.
   - As **raias em paralelo** marcam reprovações, negações do gateway e pedidos de decisão no momento exato.
@@ -164,9 +169,9 @@ Para explorar sem gastar tokens, siga o [passo a passo com o projeto de demonstr
 | Componente | Papel |
 |---|---|
 | Skills | `aisef` (orquestrador), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel`, `ask`, `modo` |
-| Agentes | `implementer` (fatias verticais com TDD), `backend`, `frontend`, `database`, `qa`, `security`, `devops`, `domain`, `validator`, `ask`, cada um com teto de permissão e gerado de uma fonte única |
+| Agentes | 66 papéis num catálogo único (`core/agents/catalog.v0.1.json`): executores (`implementer`, `backend`, `frontend`...), avaliadores, corretores, consultores e o `validator`; os de stack entram com a detecção. Cada um com teto de permissão |
 | Hooks | gateway (`PreToolUse`), auditoria (`PostToolUse`), doctor (`SessionStart`), eventos dos subagentes e quem disparou quem (`PreToolUse` Agent), lembrete do modo Ask |
-| Núcleo | JSON Schemas, políticas de permissão e de modelo, verificador de consistência, log assinado, geradores por brief, despacho em lote, pacotes de contexto, aprendizado revisado e painel ao vivo |
+| Núcleo | JSON Schemas, políticas de permissão e de modelo, verificador de consistência, log assinado, geradores por brief, despacho em lote, pacotes de contexto, aprendizado revisado, painel ao vivo, detecção de stack e arquitetura, boas práticas, roteamento de revisores e verify-loop |
 
 ## Documentação
 

@@ -19,6 +19,13 @@ Uso:
                                        [--option OPT-X] [--note TEXTO] [--ack impact_read,rollback_read,diff_reviewed]
                                        [--authorization rascunho.json]
     python3 -I aisef_project.py agents --project REPO [--activate] [--roles backend,qa]
+        (sem --activate: cria os drafts dos papeis que se aplicam ao projeto pelo catalogo, ou os de --roles)
+    python3 -I aisef_project.py verify-loop --project REPO [--task T-010]
+        (aisef_verify: build, tipos, lint, testes por stack, segredos no diff e resumo; PASS/FAIL; --task grava a evidencia)
+    python3 -I aisef_project.py practices --project REPO [--apply]
+        (boas praticas aplicaveis ao projeto: common + linguagens + estilo de arquitetura; --apply grava em .claude/rules/aisef/)
+    python3 -I aisef_project.py detect --project REPO
+        (aisef_detect: grava .aisef/architecture.json, registra no log e cria os drafts dos papeis da stack detectada)
     python3 -I aisef_project.py waves --project REPO [--feature FEAT-x] [--json]
     python3 -I aisef_project.py next --project REPO [--feature FEAT-x] [--json]
     python3 -I aisef_project.py dispatch --project REPO [--feature FEAT-x] [--dry-run]   (onda: prompts + delegation)
@@ -41,6 +48,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import aisef_catalog  # noqa: E402
 import audit_chain  # noqa: E402
 
 try:
@@ -432,31 +440,7 @@ def init(project, project_id, name=None, environment="dev"):
 # Agentes do plugin (plugins/aisef/agents/*.md). O contrato e o TETO; o gateway o aplica aos subagentes.
 EDIT_TOOLS = ["Read", "Grep", "Glob", "Edit", "Write", "Bash"]
 READ_TOOLS = ["Read", "Grep", "Glob", "Bash"]
-AGENT_PROFILES = {
-    "orchestrator": ("Orquestrador AISEF", ["implementation", "review", "investigation", "documentation"], EDIT_TOOLS,
-                     ["repo_code", "config_ci_iac"], ["status_log_diff", "commit", "push", "pull_request", "merge"],
-                     ["Coordenar o trabalho, executar tarefas pequenas e integrar resultados (sessao principal)"]),
-    "implementer": ("Implementador de fatias", ["implementation", "refactoring", "testing"], EDIT_TOOLS + ["Skill"],
-                    ["repo_code", "db_schema"], ["status_log_diff", "commit"],
-                    ["Implementar uma fatia vertical inteira com TDD (vermelho antes do verde), dentro dos seams aprovados"]),
-    "backend": ("Agente Backend", ["implementation", "refactoring", "testing"], EDIT_TOOLS, ["repo_code", "db_schema"], ["status_log_diff", "commit"],
-                ["APIs, servicos, regras de dominio e integracoes, com testes"]),
-    "frontend": ("Agente Frontend", ["implementation", "refactoring", "testing", "review"], EDIT_TOOLS + ["Skill"], ["repo_code"],
-                 ["status_log_diff", "commit"],
-                 ["Telas, componentes e fluxos de UX dentro da autoridade de design do projeto, com testes e evidencia visual"]),
-    "database": ("Agente de Banco de Dados", ["migration", "implementation", "review"], ["Read", "Grep", "Glob", "Edit", "Write"], ["repo_code", "db_schema"],
-                 ["status_log_diff"], ["Entidades e migrations com rollback, sem conectar ao banco"]),
-    "qa": ("Agente de QA", ["testing", "review"], READ_TOOLS, ["repo_code"], ["status_log_diff"],
-           ["Testes, cobertura dos criterios de aceite e regressoes"]),
-    "security": ("Agente de Seguranca", ["security_review", "review"], READ_TOOLS, ["repo_code"], ["status_log_diff"],
-                 ["Ameacas, controle de acesso, segredos e exposicao de dados"]),
-    "devops": ("Agente DevOps", ["implementation", "documentation"], EDIT_TOOLS, ["repo_code", "config_ci_iac", "deploy_infra"], ["status_log_diff", "commit"],
-               ["CI/CD, IaC, estrategia de deploy e rollback, sem executar deploy"]),
-    "domain": ("Agente de Dominio", ["investigation", "documentation"], ["Read", "Grep", "Glob", "WebSearch", "WebFetch"], ["repo_code"], ["status_log_diff"],
-               ["Regras de negocio, glossario e excecoes, sempre com fonte"]),
-    "validator": ("Agente Validador", ["validation"], READ_TOOLS, ["repo_code"], ["status_log_diff"],
-                  ["Verificar criterios de aceite com evidencias, sem nunca validar o proprio trabalho"]),
-}
+AGENT_PROFILES = aisef_catalog.profiles()  # fonte unica: core/agents/catalog.v0.1.json
 
 
 def agent_contract(role, created_at):
@@ -484,14 +468,58 @@ def agent_contract(role, created_at):
         "audit": {"created_by": "aisef-init", "created_at": created_at},
     }
     if role == "validator":
-        doc["validation_role"]["validates"] = ["implementer", "backend", "frontend", "database", "devops"]
+        doc["validation_role"]["validates"] = aisef_catalog.validatable_roles()
     return doc
 
 
-def write_agent_drafts(project):
-    """Cria os Agent Contracts dos agentes do plugin como 'draft' (nao sobrescreve existentes)."""
+def project_traits(project):
+    """Stacks, estilos de arquitetura e dominios do projeto, lidos de .aisef/architecture.json (aisef_detect).
+    Sem o arquivo, so os papeis `always` se aplicam."""
+    path = os.path.join(aisef_dir(project), "architecture.json")
+    if not os.path.exists(path):
+        return (), (), ()
+    with open(path, encoding="utf-8") as fh:
+        doc = json.load(fh)
+    styles = (doc.get("approved") or {}).get("styles") or [s["id"] for s in doc.get("styles", []) if s.get("confidence", 0) >= 0.5]
+    return tuple(s["id"] for s in doc.get("stacks", [])), tuple(styles), tuple(doc.get("domains", []))
+
+
+def adopt_styles(project, styles, request_id):
+    """Registra em architecture.json o estilo que o USUARIO adotou, so com architecture_decision aprovado."""
+    import aisef_detect
+    if not styles or not request_id:
+        raise SystemExit("--adopt exige os estilos e --request (architecture_decision aprovado)")
+    path = os.path.join(aisef_dir(project), "approvals", request_id + ".json")
+    if not os.path.exists(path):
+        raise SystemExit("pedido %s nao existe" % request_id)
+    with open(path, encoding="utf-8") as fh:
+        req = json.load(fh)
+    if req.get("status") != "approved" or req.get("request_type") != "architecture_decision":
+        raise SystemExit("pedido %s precisa ser architecture_decision aprovado pelo usuario" % request_id)
+    known = set(aisef_detect.STYLES) | {"modular-monolith", "microservices"}
+    unknown = [s for s in styles if s not in known]
+    if unknown:
+        raise SystemExit("estilo desconhecido: %s (validos: %s)" % (", ".join(unknown), ", ".join(sorted(known))))
+    doc = aisef_detect.detect(project)
+    doc["approved"] = {"styles": styles, "request_id": request_id, "approved_at": now_iso()}
+    aisef_detect.write(project, doc)
+    append(project, {"event_type": "decision_recorded", "actor": {"type": "system", "id": "aisef_detect"},
+                     "summary": "Estilo de arquitetura adotado: %s (%s)" % (", ".join(styles), request_id)})
+    return doc["approved"]
+
+
+def write_agent_drafts(project, roles=None):
+    """Cria os Agent Contracts como 'draft' (nao sobrescreve existentes). Sem `roles`, cria os papeis que se aplicam
+    ao projeto pelo catalogo (activation always, ou stack/arch/domain detectados); com `roles`, cria esses
+    (inclusive os de ativacao manual, que o usuario pediu)."""
+    if roles is None:
+        stacks, styles, domains = project_traits(project)
+        roles = [r["id"] for r in aisef_catalog.roles() if aisef_catalog.applicable(r, stacks, styles, domains)]
+    unknown = [r for r in roles if r not in AGENT_PROFILES]
+    if unknown:
+        raise SystemExit("papel fora do catalogo de agentes: %s" % ", ".join(unknown))
     created = []
-    for role in AGENT_PROFILES:
+    for role in roles:
         path = os.path.join(aisef_dir(project), "contracts", "agents", role + ".json")
         if not os.path.exists(path):
             write_json(path, agent_contract(role, now_iso()))
@@ -1055,14 +1083,15 @@ def main(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["init", "append", "decide", "agents", "settings", "rotate-key", "anchor",
                                         "verify", "status", "waves", "next", "request", "dispatch", "validate-wave",
-                                        "precheck", "mode", "metrics"])
+                                        "precheck", "mode", "metrics", "detect", "practices", "verify-loop"])
     ap.add_argument("--since", help="metrics: so eventos e pedidos a partir desta data (ISO 8601)")
     ap.add_argument("--no-check", action="store_true", help="metrics: nao roda o aisef-check")
     ap.add_argument("--set", choices=["ask", "exec"], help="mode: troca o modo da sessao (decisao do usuario)")
     ap.add_argument("--dry-run", action="store_true", help="dispatch/validate-wave: mostra sem registrar nada no log")
     ap.add_argument("--json", action="store_true", help="waves/next: saida em JSON")
     ap.add_argument("--file", help="request: rascunho JSON do pedido (status pending)")
-    ap.add_argument("--apply", action="store_true", help="settings: grava as regras em .claude/settings.json")
+    ap.add_argument("--apply", action="store_true", help="settings: grava as regras em .claude/settings.json; "
+                                                         "practices: grava as boas praticas em .claude/rules/aisef/")
     ap.add_argument("--project", default=os.getcwd())
     ap.add_argument("--project-id")
     ap.add_argument("--name")
@@ -1082,6 +1111,8 @@ def main(argv):
     ap.add_argument("--ack", default="", help="impact_read,rollback_read,diff_reviewed")
     ap.add_argument("--authorization", help="rascunho JSON da autorizacao gerada (escopo ou reforcada)")
     ap.add_argument("--activate", action="store_true", help="agents: ativa os Agent Contracts em draft (decisao do usuario)")
+    ap.add_argument("--adopt", default="", help="detect: estilos adotados (ids separados por virgula), com --request de "
+                                                "architecture_decision ja aprovado pelo usuario")
     ap.add_argument("--roles", default="", help="agents: lista separada por virgula (padrao: todos)")
     a = ap.parse_args(argv)
     project = os.path.abspath(a.project)
@@ -1178,13 +1209,50 @@ def main(argv):
         a_ = anchor(project)
         print("ancora gravada: sequencia %d em %s" % (a_["sequence"], anchors_path(load_config(project)["project_id"])))
         return 0
+    if a.command == "verify-loop":
+        import aisef_verify
+        return aisef_verify.main(["--project", project] + (["--task", a.task] if a.task else []))
+    if a.command == "practices":
+        import aisef_practices
+        if a.apply:
+            done, kept = aisef_practices.apply(project)
+            print("gravados: %s" % (", ".join(done) or "nada mudou"))
+            if kept:
+                print("mantidos (modificados no projeto): %s" % ", ".join(kept))
+            if done:
+                append(project, {"event_type": "evidence_recorded", "actor": {"type": "system", "id": "aisef_practices"},
+                                 "summary": "Boas praticas instaladas em .claude/rules/aisef/: %d arquivo(s)" % len(done)})
+        else:
+            for r in aisef_practices.plan(project):
+                print("%-24s %s" % (r["state"], r["target"]))
+            print("(--apply grava em .claude/rules/aisef/; o gateway pede aprovacao)")
+        return 0
+    if a.command == "detect":
+        import aisef_detect
+        if a.adopt:
+            adopted = adopt_styles(project, [x for x in a.adopt.split(",") if x], a.request)
+            print("estilo adotado: %s (%s)" % (", ".join(adopted["styles"]), adopted["request_id"]))
+            created = write_agent_drafts(project)
+            print("drafts de Agent Contract criados para o estilo: %s" % (", ".join(created) or "nenhum novo"))
+            return 0
+        doc = aisef_detect.detect(project)
+        aisef_detect.write(project, doc)
+        created = write_agent_drafts(project)
+        append(project, {"event_type": "evidence_recorded", "actor": {"type": "system", "id": "aisef_detect"},
+                         "summary": "Deteccao de stack e arquitetura: %s; estilos: %s" % (
+                             ", ".join(s["id"] for s in doc["stacks"]) or "nenhuma",
+                             ", ".join("%s %.2f" % (s["id"], s["confidence"]) for s in doc["styles"]) or "nenhum")})
+        print(aisef_detect.summary(doc))
+        print("drafts de Agent Contract criados para a stack: %s (ativar e decisao do usuario: agents --activate --roles ...)"
+              % (", ".join(created) or "nenhum novo"))
+        return 0
     if a.command == "agents":
         roles = [x for x in a.roles.split(",") if x] or None
         if a.activate:
             done = activate_agents(project, roles)
             print("ativados: %s" % (", ".join(done) or "nenhum (ja ativos ou inexistentes)"))
         else:
-            created = write_agent_drafts(project)
+            created = write_agent_drafts(project, roles)
             print("drafts criados: %s" % (", ".join(created) or "nenhum (ja existiam)"))
         return 0
     if a.command == "decide":

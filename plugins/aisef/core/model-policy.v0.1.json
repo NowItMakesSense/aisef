@@ -14,16 +14,7 @@
   "fable_extension": { "level": 7, "model": "fable", "effort": "high", "requires_flag": "--allow-fable" },
   "ceiling_level": 6,
   "floor_level": 0,
-  "role_defaults": {
-    "domain": 0,
-    "devops": 1,
-    "frontend": 3,
-    "implementer": 3,
-    "qa": 2,
-    "backend": 3,
-    "database": 3,
-    "security": 4
-  },
+  "role_defaults_source": "agents/catalog.v0.1.json (campo level de cada papel)",
   "not_routed_roles": ["orchestrator"],
   "validator": {
     "static_default": { "model": "sonnet", "effort": "medium", "level": 3 },

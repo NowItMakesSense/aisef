@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.12.0: equipe, boas práticas e arquitetura (trilha E, port do ECC; não lançado)
+- **Catálogo de agentes (E0, ADR 0020).** `core/agents/catalog.v0.1.json` é a fonte única dos papéis: tipo (`executor`, `fixer`, `evaluator`, `validator`, `advisor`, `orchestrator`), ativação (`always`, `manual`, `stack:`, `arch:`, `domain:`), nível padrão na Model Policy, ferramentas e teto do Agent Contract, e prompt em `core/agents/prompts/<id>.md`.
+  - `aisef_project`, `aisef_new`, `aisef_route`, `check_project` e `tools/gen_agents.py` leem do catálogo; `role_defaults` saiu da `model-policy.v0.1.json`.
+  - Os enums de papel nos schemas viraram `pattern`; a nova regra **`AGENT-ROLE-UNKNOWN`** confere o papel contra o catálogo.
+  - `init` e `agents` criam rascunhos só dos papéis que se aplicam ao projeto; `agents --roles x,y` cria os pedidos, inclusive os `manual`.
+  - `aisef_catalog.py check|list`; testes em `core/test_catalog.py`. Os 10 agentes atuais geram os mesmos `.md`, byte a byte.
+- **Equipe de agentes do ECC (E3 e E4): 56 papéis novos, 66 subagentes no total.** Texto adaptado do ECC (MIT, `THIRD_PARTY_NOTICES.md`), com blocos comuns por tipo gerados pelo `gen_agents`:
+  - **avaliador**: filtro de confiança acima de 80%, prova obrigatória para CRITICAL e HIGH, zero achados é válido, lista de falsos positivos, veredito APPROVE/WARNING/BLOCK;
+  - **corretor**: diff mínimo e nunca afrouxar lint, tipos ou testes para passar;
+  - **consultor**: investiga e propõe, decisão é do usuário.
+  - **Sempre ativos (22):** planner, architect, code-architect, code-explorer, spec-miner, code-reviewer, architecture-reviewer (novo, confere o estilo aprovado e a regra de dependência), database-reviewer, silent-failure-hunter, type-design-analyzer, pr-test-analyzer, comment-analyzer, agent-evaluator, code-simplifier, refactor-cleaner, performance-optimizer, commit-reviewer, doc-updater, docs-lookup, e2e-runner, conversation-analyzer (só propõe lições ao `aisef_learn`), harness-optimizer.
+  - **Por stack detectada:** revisores Python, Django, FastAPI, TypeScript/JavaScript, Go, Rust, Java, Kotlin, Swift, C#, F#, C++, PHP, Ruby, Flutter e Godot; corretores de build TS/JS, Python, Django, Go, Rust, Java, Kotlin, Swift, Dart/Flutter, C++, PyTorch e HarmonyOS.
+  - **Manuais:** RAG, ML, saúde; e os ligados a UI (React, Vue, acessibilidade, build React), que só relatam e não mexem em layout nem em tokens.
+  - `security` e `database` ganharam os checklists do ECC. **`frontend`, `implementer` e `validator` não mudaram.**
+- **Gateway:** subagente `aisef:<papel>` sem Agent Contract no projeto não edita nem faz operação sensível. Antes ele ficava sem teto.
+- **Detecção de stack e arquitetura (E1).** `core/aisef_detect.py` (stdlib, sem modelo) e `aisef_project.py detect`.
+  - **Stack:** 35 entradas em `core/detect/stacks.v0.1.json` (linguagens, frameworks, gerenciador de pacotes, comandos por stack). Derivado do ECC.
+  - **Estilos com confiança e evidência:** Clean/Onion, hexagonal, DDD tático e estratégico, CQRS, event sourcing, camadas/MVC, fatias verticais, orientado a eventos, monólito modular e microsserviços. Entende nomes .NET/Java com ponto (`Loja.Pedidos.Domain`).
+  - **Regra de dependência pelos imports** (Python, TS/JS, Java/Kotlin, C#, Go, PHP, Ruby, Dart, Rust): domínio importando aplicação, infraestrutura ou framework vira violação com `arquivo:linha`. `aisef_detect.py deps` sai 1 se houver.
+  - **Recomendações** com motivo, impacto e esforço (corrigir a regra de dependência, definir um estilo, tirar regra de controllers, glossário DDD, avaliar DDD tático, separação CQRS, fronteiras de serviço, testes). Domínios `ml` e `rag` ativam os revisores correspondentes.
+  - Grava `.aisef/architecture.json` (schema `architecture.schema.v0.1.json`) e cria os drafts dos agentes da stack. `detect --adopt <estilos> --request REQ-x` registra o estilo adotado, só com `architecture_decision` aprovado.
+  - **Novas regras:** `ARCH-SCHEMA`, `ARCH-UNAPPROVED` (erro), `ARCH-PENDING` e `ARCH-DEPENDENCY` (aviso).
+  - As skills `aisef-init` e `aisef-discovery` usam a detecção: confirmar o estilo no código, apresentar as recomendações e levar a adoção ao Approval Center.
+  - Testes em `core/test_detect.py`, com fixtures de cada estilo.
+- **Boas práticas (E2).** 33 arquivos em `core/practices/`:
+  - `common/`: estilo de código, testes/TDD, revisão (severidades e veredito), segurança, Git, fluxo (search-first antes de construir), padrões, desempenho, SOLID e Clean Code;
+  - `architecture/`: Clean/Onion, hexagonal, DDD tático e estratégico, CQRS/event sourcing, monólito modular, microsserviços, camadas/MVC, fatias verticais, contract-first, orientado a eventos. Cada um diz **quando não usar**;
+  - `lang/`: Python, TS/JS, web, Go, Rust, Java, Kotlin, Swift, C#/F#, C++, PHP, Ruby e Dart, com `paths:` para o Claude Code carregar só nos arquivos certos.
+  - `aisef_project.py practices [--apply]` (`core/aisef_practices.py`) instala em `.claude/rules/aisef/` só o que a detecção indicar; o estilo adotado prevalece; arquivo mudado no projeto é mantido sem `--force`.
+  - O `pack` da tarefa traz o estilo de arquitetura e as práticas que valem para os arquivos dela. O blueprint ganhou `architecture.style` e `architecture.layers` (opcionais). O `AGENTS.aisef.md` cita o estilo adotado e as práticas.
+  - Testes em `core/test_practices.py`.
+- **Revisores escolhidos em código (E5).** `core/aisef_review.py`:
+  - **Quem revisa:** sempre `code-reviewer`; o revisor da linguagem (pelas extensões dos caminhos da tarefa, ou pelas stacks do projeto) e o do framework (Django, FastAPI); `database-reviewer` para `data`/`db_schema`; `security` em risco alto; `architecture-reviewer` com estilo adotado ou `domain`; `pr-test-analyzer` com TDD.
+  - O `aisef_new` grava `review.reviewers` em cada tarefa (o brief pode fixar ou desligar). **Risco alto: revisão dupla**, com dois `code-reviewer` independentes em níveis de modelo diferentes (ideia do santa-method do ECC).
+  - O `validate-wave` devolve `reviews`, uma chamada por revisor pendente, para disparar em paralelo antes do validador. Só `APPROVE` de todos libera o validador; `WARNING`/`BLOCK` reprova e volta ao executor.
+  - Reprovação no precheck ou na revisão indica o `fixer`, o corretor de build ativo da stack.
+  - Tarefa antiga, sem o campo `review`, não muda de comportamento.
+  - Schemas: `review` no Task Contract e no Execution Report (veredito e contagem de achados). Nova regra `REPORT-REVIEW-ROLE`.
+  - A skill `aisef` traz a equipe por tipo e diz quem usar quando.
+- **Gates do ECC no gateway e verify-loop (E6).**
+  - **Proteção de config de qualidade** (config-protection do ECC): escrever em config de lint, formatação ou tipos (`.eslintrc*`, `eslint.config.*`, `.prettierrc*`, `biome.json`, `tsconfig*.json`, `ruff.toml`, `mypy.ini`, `.rubocop.yml`, `.golangci.yml`, `.pre-commit-config.yaml`, `.husky/` e outros) exige `config_ci_iac`. Os executores não têm esse recurso: consertam o código em vez de afrouxar a regra.
+  - **`--no-verify`, `--no-gpg-sign` e `-c commit.gpgsign=false` no Git são sempre negados** (block-no-verify do ECC).
+  - **`aisef_project.py verify-loop`** (`core/aisef_verify.py`): build → tipos → lint → testes por stack (de `architecture.json`, sobrescrevíveis em `config.json` → `verify`) → segredos nas linhas adicionadas do diff (o valor nunca é impresso) → resumo do diff. Ferramenta ausente vira SKIP; veredito PASS/FAIL/INCOMPLETE. `--task` grava `.aisef/evidence/VERIFY-<T>.json`. O prompt do executor manda rodar antes de entregar.
+  - Testes em `core/test_verify.py` e em `hooks/test_gateway.py`.
+
 ## 0.11.0: medir
 - **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:
   - pedidos de aprovação por tarefa e por tipo, e a fatia Git;

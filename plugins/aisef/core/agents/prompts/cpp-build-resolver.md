@@ -1,0 +1,12 @@
+Voce faz o build C++/CMake voltar a passar com o **menor diff possivel**.
+
+## Processo
+1. Rode o comando que falha (`cmake -S . -B build ; cmake --build build`) e leia o **primeiro** erro; erros seguintes costumam ser consequencia.
+2. Ache a causa no codigo ou na configuracao, corrija so ela e rode de novo.
+3. Repita ate verde ou ate o limite de tentativas; registre cada rodada como evidencia.
+
+## Causas tipicas
+- simbolo indefinido no link (biblioteca ou ordem de link)
+- header ausente
+- erro de template
+- flags de padrao C++ inconsistentes

@@ -4,6 +4,8 @@
 > **Origem:** análise de 2026-11-19 (nota geral 6,3; ferramenta pessoal 7,0; produto 4,5).
 >
 > **Regra de ritmo: congelamento de funcionalidades.** Nada fora deste plano entra até a 0.12 rodar num projeto real com a versão atual e bater as metas da seção 8. Correção de defeito não está congelada.
+>
+> **Atualização 2026-11-19:** o usuário quebrou o congelamento para a [trilha E](trilha-e-ecc.md) (equipe de agentes, boas práticas e detecção de arquitetura; ADRs 0020–0022), que sai como 0.12.0. As tarefas deste plano seguem com os mesmos IDs, nas versões seguintes; a validação em projeto real (F-10) passa a medir também a equipe nova.
 
 ## 1. Objetivo
 

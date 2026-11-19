@@ -42,6 +42,10 @@ SUITES = [
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),
     ("hook consultivo graph_nudge", [os.path.join(HOOKS, "test_graph_nudge.py")]),
     ("benchmark: fixtures validos (sem modelo)", [os.path.join(ROOT, "tools", "bench_outcomes.py"), "--check-fixtures"]),
+    ("deteccao de stack e arquitetura", [os.path.join(CORE, "test_detect.py")]),
+    ("boas praticas (practices)", [os.path.join(CORE, "test_practices.py")]),
+    ("verify-loop (verificacao antes de entregar)", [os.path.join(CORE, "test_verify.py")]),
+    ("catalogo de agentes (fonte unica)", [os.path.join(CORE, "test_catalog.py")]),
     ("agentes gerados da fonte unica", [os.path.join(ROOT, "tools", "gen_agents.py"), "--check"]),
     ("referencia de regras do check (docs)", [os.path.join(ROOT, "tools", "gen_docs.py"), "--check"]),
 ]

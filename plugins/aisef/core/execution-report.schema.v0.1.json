@@ -171,6 +171,18 @@
     "pending": { "type": "array", "items": { "type": "string" } },
     "limitations": { "type": "array", "items": { "type": "string" } },
 
+    "review": {
+      "type": "object", "additionalProperties": false, "required": ["verdict"],
+      "properties": {
+        "verdict": { "enum": ["APPROVE", "WARNING", "BLOCK"], "description": "APPROVE sem CRITICAL nem HIGH; WARNING com HIGH; BLOCK com CRITICAL." },
+        "findings": {
+          "type": "object", "additionalProperties": false,
+          "properties": { "critical": { "type": "integer", "minimum": 0 }, "high": { "type": "integer", "minimum": 0 },
+                          "medium": { "type": "integer", "minimum": 0 }, "low": { "type": "integer", "minimum": 0 } }
+        }
+      },
+      "description": "So em relatorio de avaliacao de um revisor (papel avaliador do catalogo): o veredito da revisao."
+    },
     "tdd_evidence": {
       "type": "object",
       "additionalProperties": false,
@@ -263,7 +275,7 @@
   "allOf": [
     {
       "$comment": "Regra de consistencia: 'executed' nao pode coexistir com criterio obrigatorio nao atendido ou nao verificavel.",
-      "if": { "properties": { "status": { "const": "executed" } }, "required": ["status"] },
+      "if": { "properties": { "status": { "const": "executed" } }, "required": ["status"], "not": { "required": ["review"] } },
       "then": {
         "properties": {
           "criteria_results": {

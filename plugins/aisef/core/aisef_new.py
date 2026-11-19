@@ -30,9 +30,10 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import aisef_catalog  # noqa: E402
 import aisef_project as ap  # noqa: E402
 
-AGENT_ROLES = {"orchestrator", "implementer", "backend", "frontend", "database", "qa", "security", "devops", "domain", "validator"}
+AGENT_ROLES = aisef_catalog.role_ids()  # fonte unica: core/agents/catalog.v0.1.json
 MAINT_FEATURE = "FEAT-MAINT"
 MAINT_REQ = "REQ-MAINT"
 
@@ -85,6 +86,18 @@ def need(brief, *keys):
         raise SystemExit("brief incompleto, faltam: " + ", ".join(missing))
 
 
+def add_review(project, task):
+    """Revisores da tarefa pelo roteamento em codigo (aisef_review): linguagem, dados, risco, arquitetura, TDD.
+    O brief pode fixar a lista com "review": {"reviewers": [...]} ou desligar com "review": {"reviewers": []}."""
+    import aisef_review
+    if "review" in task:
+        return task
+    task["review"] = {"reviewers": aisef_review.reviewers_for(project, task)}
+    if aisef_review.dual_review(task):
+        task["review"]["dual_review"] = True
+    return task
+
+
 def task_doc(t, feature_id, feature_version, env, now):
     kind = t.get("kind", "task")
     role = t.get("role") or ("implementer" if kind == "slice" else "backend")
@@ -125,6 +138,7 @@ def task_doc(t, feature_id, feature_version, env, now):
                        "validator_role": t.get("validator_role", "validator")},
         "deliverables": {"execution_report_schema": "execution-report/0.1.0"},
         **({"complexity": t["complexity"]} if t.get("complexity") else {}),
+        **({"review": t["review"]} if t.get("review") else {}),
         "risk": {"level": t.get("risk", "low")}, "limits": {"max_fix_attempts": None},
         "escalation": {"stop_and_report_when": ["scope_exceeded", "unexpected_risk", "requirement_conflict",
                                                 "max_attempts_reached"]},
@@ -168,6 +182,8 @@ def feature_docs(brief, project, now):
                     "text": "UI sem cores nem fontes fora da autoridade de design (.aisef/design/tokens.json)",
                     "command": "python -I <CORE>/design_check.py scan --project . --task %s" % t["id"]})
     tasks = [task_doc(t, fid, 1, cfg.get("environment", "dev"), now) for t in brief["tasks"]]
+    for t in tasks:
+        add_review(project, t)
     for t in brief["tasks"]:
         unknown = set(t["reqs"]) - known
         if unknown:

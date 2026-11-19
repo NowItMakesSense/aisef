@@ -20,7 +20,7 @@ Comandos:
         Gasta tokens. Roda `claude -p` em cada tarefa x braco x repeticao e grava docs/benchmarks/<data>.md e .json.
         Use em Linux ou WSL (o sandbox nativo do Claude Code nao existe no Windows).
 
-Bracos:
+Bracos (aisef-norev = aisef sem revisores especializados antes do validador, para medir o custo deles):
     plain  o repo e o pedido, sem AISEF. acceptEdits + Bash so para python e git de leitura.
     aisef  o mesmo repo com o AISEF iniciado (--plugin-dir plugins/aisef). Como nao ha ninguem para aprovar, o
            harness faz o papel do usuario ANTES do agente comecar: gera a feature a partir do pedido (uma fatia),
@@ -123,8 +123,8 @@ def prepare(task, arm, base):
     git(workdir, "-c", "user.email=bench@aisef.local", "-c", "user.name=bench", "add", "-A")
     git(workdir, "-c", "user.email=bench@aisef.local", "-c", "user.name=bench", "commit", "-q", "-m", "inicial")
     env = dict(os.environ, AISEF_HOME=os.path.join(base, "aisef-home-" + task["id"]))
-    if arm == "aisef":
-        prepare_aisef(task, workdir, env)
+    if arm.startswith("aisef"):
+        prepare_aisef(task, workdir, env, reviewers=arm != "aisef-norev")
     return workdir, env
 
 
@@ -136,7 +136,7 @@ def _core(script, *args, env, cwd):
     return r.stdout
 
 
-def prepare_aisef(task, workdir, env):
+def prepare_aisef(task, workdir, env, reviewers=True):
     """Faz o papel do usuario antes do agente: init, agentes ativos, feature de uma fatia e plano aprovado."""
     pid = "PRJ-BENCH-" + re.sub(r"[^A-Z0-9]", "", task["id"].upper())[:20]
     _core("aisef_project.py", "init", "--project", ".", "--project-id", pid, "--name", task["id"], env=env, cwd=workdir)
@@ -156,6 +156,8 @@ def prepare_aisef(task, workdir, env):
              "tasks": [{"id": "T-001", "kind": "slice", "title": task["id"], "reqs": ["REQ-001"], "touches": ["domain"],
                         "criteria": {"AC-1": "O pedido do REQ-001 esta implementado, com testes que falharam antes e passam depois"},
                         "paths": ["*.py", "tests/*"], "test_cmd": "python -m unittest discover -s tests -t ."}]}
+    if not reviewers:  # braco aisef-norev: o mesmo fluxo sem a revisao especializada antes do validador (A-05)
+        brief["tasks"][0]["review"] = {"reviewers": []}
     bpath = os.path.join(workdir, ".aisef", "bench-brief.json")
     with open(bpath, "w", encoding="utf-8") as fh:
         json.dump(brief, fh)
@@ -183,15 +185,15 @@ AISEF_PROMPT = ("Este projeto usa o AISEF. A feature FEAT-BENCH ja esta especifi
 
 
 def run_claude(claude, workdir, env, arm, prompt, model, timeout):
-    cmd = [claude, "-p", (AISEF_PROMPT + prompt) if arm == "aisef" else prompt, "--output-format", "json",
+    cmd = [claude, "-p", (AISEF_PROMPT + prompt) if arm.startswith("aisef") else prompt, "--output-format", "json",
            "--permission-mode", "acceptEdits", "--no-session-persistence", "--model", model]
-    if arm == "aisef":
+    if arm.startswith("aisef"):
         cmd += ["--plugin-dir", PLUGIN, "--allowedTools", *PLAIN_TOOLS, "Agent", "Bash(python -I:*)"]
     else:
         cmd += ["--allowedTools", *PLAIN_TOOLS]
     start = datetime.datetime.now()
     try:
-        r = subprocess.run(cmd, cwd=workdir, env=dict(env, CLAUDE_PROJECT_DIR=workdir), capture_output=True, text=True,
+        r = subprocess.run(cmd, cwd=workdir, env=dict(env, CLAUDE_PROJECT_DIR=workdir, CLAUDE_CODE_DISABLE_BACKGROUND_TASKS="1"), capture_output=True, text=True,
                            encoding="utf-8", errors="replace", timeout=timeout)
         out, err = r.stdout, r.stderr
     except subprocess.TimeoutExpired:
@@ -206,6 +208,33 @@ def run_claude(claude, workdir, env, arm, prompt, model, timeout):
             "is_error": data.get("is_error", not data), "input_tokens": usage.get("input_tokens"),
             "output_tokens": usage.get("output_tokens"), "cache_read_tokens": usage.get("cache_read_input_tokens"),
             "cache_write_tokens": usage.get("cache_creation_input_tokens"), "stderr": err[-400:]}
+
+
+CONTINUE_PROMPT = ("Continue o AISEF em modo continuo a partir do estado atual: rode aisef_project.py next e siga as "
+                   "acoes (dispatch, validate-wave com os revisores de `reviews` em paralelo e depois o validador, complete) "
+                   "ate o next devolver um stop_reason. Sem commit nem push.")
+PENDING_KINDS = ("dispatch", "validate", "complete")
+
+
+def run_aisef_until_stop(claude, workdir, env, arm, prompt, model, timeout, max_rounds=6):
+    """`claude -p` encerra quando o turno principal termina, mesmo com o fluxo no meio (ex.: logo depois do implementer).
+    O harness retoma a sessao enquanto o `next` tiver dispatch, validacao ou conclusao pendente, e soma custo e tempo."""
+    total = run_claude(claude, workdir, env, arm, prompt, model, timeout)
+    total["rounds"] = 1
+    for _ in range(max_rounds - 1):
+        try:
+            res = json.loads(_core("aisef_project.py", "next", "--project", ".", "--json", env=env, cwd=workdir))
+        except (ValueError, SystemExit):
+            break
+        if not any(a["kind"] in PENDING_KINDS for a in res["actions"]):
+            break
+        more = run_claude(claude, workdir, env, arm, CONTINUE_PROMPT, model, timeout)
+        total["rounds"] += 1
+        for k in ("seconds", "cost_usd", "turns", "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens"):
+            if more.get(k) is not None:
+                total[k] = round((total.get(k) or 0) + more[k], 6)
+        total["is_error"] = total["is_error"] or more["is_error"]
+    return total
 
 
 def gateway_counts(workdir, env):
@@ -279,7 +308,7 @@ def main(argv=None):
     if not a.run:
         p.print_help()
         return 0
-    arms = [x for x in a.arms.split(",") if x in ("plain", "aisef")]
+    arms = [x for x in a.arms.split(",") if x in ("plain", "aisef", "aisef-norev")]
     results = []
     base = tempfile.mkdtemp(prefix="aisef-bench-")
     for rep in range(1, a.reps + 1):
@@ -289,12 +318,17 @@ def main(argv=None):
                 os.makedirs(run_base, exist_ok=True)
                 wd, env = prepare(t, arm, run_base)
                 print("[%d/%d] %s %s ..." % (rep, a.reps, t["id"], arm), flush=True)
-                cl = run_claude(a.claude, wd, env, arm, t["prompt"], a.model, a.timeout)
+                cl = (run_aisef_until_stop if arm.startswith("aisef") else run_claude)(
+                    a.claude, wd, env, arm, t["prompt"], a.model, a.timeout)
                 vis = visible_cmd(wd)
                 res = {"task": t["id"], "kind": t["kind"], "arm": arm, "rep": rep, "claude": cl,
                        "visible": run_tests(wd, vis) if vis else None, "hidden": hidden_result(wd, t)}
-                if arm == "aisef":
+                if arm.startswith("aisef"):
                     res["aisef"] = gateway_counts(wd, env)
+                    rdir = os.path.join(wd, ".aisef", "reports")
+                    res["aisef"]["review_reports"] = len([f for f in os.listdir(rdir) if "-REV-" in f and f.endswith(".json")]) if os.path.isdir(rdir) else 0
+                    states = json.loads(_core("aisef_project.py", "next", "--project", ".", "--json", env=env, cwd=wd)).get("states", {})
+                    res["aisef"]["task_states"] = states
                 res["hidden"].pop("tail", None)
                 if res["visible"]:
                     res["visible"].pop("tail", None)

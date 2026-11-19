@@ -92,8 +92,16 @@ python -I CORE/aisef_new.py quick --project . --title "<o que>" --why "<por que>
 Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedido de plano dessa feature: leve ao usuario uma unica vez (**aisef-approve**). Depois, as tarefas ja nascem `ready`: faca a mudanca, rode os testes, registre o resultado e conclua, sem blueprint nem validador independente. Commit, push e afins continuam pedindo aprovacao.
 
 ## Delegacao
-- Use os agentes do plugin (`aisef:implementer`, `aisef:backend`, `aisef:frontend`, `aisef:database`, `aisef:qa`, `aisef:security`, `aisef:devops`, `aisef:domain`, `aisef:validator`) sob demanda. No Task Contract, `assigned_agent.agent_id` e o nome curto (`implementer`), que e o Agent Contract em `.aisef/contracts/agents/`.
-- **Fatia vertical (`kind: slice`) vai para o `implementer`**, que faz a fatia inteira com TDD (a skill `tdd` vem pre-carregada quando o plugin `mattpocock-skills` existe). No prompt da delegacao, exija `tdd_evidence` no Execution Report. Os especialistas viram **revisores** quando a fatia toca a area deles (`touches`: `data` -> `database`, `ui` -> `frontend`; risco alto ou ameaca no blueprint -> `security`); eles nao reimplementam, devolvem achados com evidencia.
+- **A equipe vem do catalogo** (`CORE/agents/catalog.v0.1.json`; `python -I CORE/aisef_catalog.py list`). No Task Contract, `assigned_agent.agent_id` e o nome curto (`implementer`), que e o Agent Contract em `.aisef/contracts/agents/`. Tipos:
+  - **executores** (implementer, backend, frontend, database, devops, doc-updater, e2e-runner): fazem a tarefa;
+  - **avaliadores** (code-reviewer, architecture-reviewer, database-reviewer, security, qa, pr-test-analyzer, silent-failure-hunter, type-design-analyzer, comment-analyzer, agent-evaluator e os revisores por linguagem): so relatam, com veredito;
+  - **corretores** (code-simplifier, refactor-cleaner, performance-optimizer e os `*-build-resolver` da stack): diff minimo, nunca afrouxam regra;
+  - **consultores** (planner, architect, code-architect, code-explorer, spec-miner, domain, docs-lookup, commit-reviewer, conversation-analyzer, harness-optimizer): investigam e propoem; decisao e do usuario;
+  - **validador** (validator): validacao independente, sempre por ultimo.
+- **Quem usar quando:** trabalho grande ou incerto -> `planner` antes da spec; decisao estrutural -> `architect` (vira ADR proposto); blueprint -> `code-architect`; area desconhecida -> `code-explorer`; codigo legado sem documentacao -> `spec-miner`; API de biblioteca que mudou -> `docs-lookup`; build ou tipos quebrados -> o `*-build-resolver` da stack (o `validate-wave` indica qual em `fixer`); depois da validacao, se o revisor apontou complexidade -> `code-simplifier`; manutencao de codigo morto -> `refactor-cleaner`; requisito de desempenho falhando -> `performance-optimizer`; fim de feature -> `doc-updater` e `commit-reviewer`.
+- **Papel sem contrato ativo nao age:** o gateway nega edicao de `aisef:<papel>` sem Agent Contract. Crie o draft (`aisef_project.py agents --roles <papel>`) e leve a ativacao ao usuario antes de delegar.
+- **Fatia vertical (`kind: slice`) vai para o `implementer`**, que faz a fatia inteira com TDD (a skill `tdd` vem pre-carregada quando o plugin `mattpocock-skills` existe). No prompt da delegacao, exija `tdd_evidence` no Execution Report.
+- **Revisao antes da validacao (em codigo):** o `aisef_new` grava em cada tarefa `review.reviewers`, calculado por `CORE/aisef_review.py` (sempre `code-reviewer`; revisor da linguagem; `data` -> `database-reviewer`; risco alto -> `security` e revisao dupla; estilo adotado ou `domain` -> `architecture-reviewer`; TDD -> `pr-test-analyzer`). O `validate-wave` devolve em `reviews` uma chamada por revisor pendente: dispare todas em paralelo. So `APPROVE` de todos libera o validador; `WARNING` ou `BLOCK` reprova a tarefa e ela volta ao executor com os achados. Revisor sem contrato ativo aparece em `inactive` (ofereca ativar). Tarefa de UI tambem recebe `react-reviewer`/`vue-reviewer` (pela stack) e `a11y-architect`: eles so relatam e nunca mexem em layout nem em tokens; o visual e do `frontend` e da autoridade de design. O `react-build-resolver` continua manual.
 - O gateway aplica o **teto** do Agent Contract a cada subagente: agente em `draft` e bloqueado, recursos e operacoes Git fora do teto sao negados (o `validator` so le o Git). Agentes sem contrato (ex.: `Explore`) seguem so a politica.
 - **Contexto (context engineering):** antes de delegar, gere o pacote da tarefa e entregue-o ao agente, em vez de deixa-lo explorar o repositorio:
   ```
@@ -123,7 +131,7 @@ Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedid
 ## Aprendizado continuo (licoes revisadas)
 O AISEF aprende com os **erros que ele mesmo registra**: reprovacoes (do validador e do `precheck`), bloqueios do gateway, `scope_discovery`, correcoes e problemas dos relatorios. Nunca aprende sozinho:
 1. **No fim de cada onda e no aceite da feature**, rode `python -I CORE/aisef_learn.py propose --project .`. Ele agrupa os sinais sem modelo, so desde a ultima rodada.
-2. Para cada grupo relevante, redija um `trigger` ("quando...") e uma `action` ("faca/evite..."), curtos e verificaveis. Se houver muitos grupos, use um subagente Haiku.
+2. Para cada grupo relevante, redija um `trigger` ("quando...") e uma `action` ("faca/evite..."), curtos e verificaveis. Se houver muitos grupos, delegue ao `aisef:conversation-analyzer` (Haiku), que so redige propostas e descarta casos isolados.
 3. Mostre a lista ao usuario (AskUserQuestion, multiSelect). **So o que ele escolher** vira licao:
    ```
    python -I CORE/aisef_learn.py accept --project . --proposal P-1 --trigger "..." --action "..." [--tags a,b]
@@ -132,6 +140,8 @@ O AISEF aprende com os **erros que ele mesmo registra**: reprovacoes (do validad
 4. Depois de cada onda, rode `python -I CORE/aisef_learn.py update --project .`. A confianca sobe quando a tarefa que recebeu a licao passa, cai quando e reprovada e decai sem uso; abaixo de 0,2 a licao e aposentada.
 
 A licao entra **so no pacote da tarefa relevante**, com a confianca e marcada como referencia (nao como ordem); o `dispatch` registra quem recebeu o que. Ela fica em `.aisef/knowledge/`, versionada, e o time herda.
+
+**Contexto insuficiente (recuperacao iterativa, ideia do iterative-retrieval do ECC):** se o executor devolver `needs_intervention` ou `scope_discoveries` por falta de contexto (nao por escopo), nao reenvie o mesmo pacote. Ate 3 rodadas: (1) leia o que faltou no relatorio; (2) busque so isso (grafo do Graphify, `aisef:code-explorer`, `aisef:docs-lookup` para API externa); (3) acrescente ao `context.on_demand` da tarefa ou ao prompt e despache de novo. Na terceira sem sucesso, escale ao usuario.
 
 **Contexto:** o doctor reinjeta o estado (fase, tarefas em andamento, decisoes pendentes) depois de `/compact` e `/resume`. Quando o `next` trouxer `guide.compact_hint`, sugira `/compact` ao usuario: e um marco de fase sem agente em voo.
 

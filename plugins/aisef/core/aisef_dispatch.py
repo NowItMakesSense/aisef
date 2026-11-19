@@ -27,9 +27,12 @@ sys.path.insert(0, HERE)
 import aisef_context as ctx  # noqa: E402
 import aisef_next as nx  # noqa: E402
 import aisef_project as ap  # noqa: E402
+import aisef_review  # noqa: E402
 import aisef_route as rt  # noqa: E402
 
 PY = "python -I %s" % os.path.join(HERE, "aisef_project.py").replace("\\", "/")
+VERIFY = "python -I %s" % os.path.join(HERE, "aisef_verify.py").replace("\\", "/")
+REVIEW = "python -I %s" % os.path.join(HERE, "aisef_review.py").replace("\\", "/")
 
 
 def _load(project, rel):
@@ -62,10 +65,12 @@ def executor_prompt(project, task, route, attempt, pack_text):
         "--task %s --summary \"%s iniciada\"" % (PY, role, fid, tid, tid),
         "2. Faca a tarefa%s." % (" com TDD: um comportamento por vez, teste vermelho antes do verde, nos seams de "
                                  "tests.seams; registre cada ciclo em tdd_evidence.cycles" if tdd else ""),
-        "3. Grave o Execution Report em .aisef/reports/RPT-%s-%d.json (schema execution-report do plugin) e o "
+        "3. Antes de entregar, rode a verificacao: %s --project . --task %s (build, tipos, lint, testes, segredos no diff). "
+        "FAIL e para corrigir; cite .aisef/evidence/VERIFY-%s.json nas evidencias." % (VERIFY, tid, tid),
+        "4. Grave o Execution Report em .aisef/reports/RPT-%s-%d.json (schema execution-report do plugin) e o "
         "relatorio legivel, com execution_profile = {\"model\": \"%s\", \"effort\": \"%s\", \"level\": %d, \"attempt\": %d}."
         % (tid, attempt, route["model"], route["effort"], route["level"], attempt),
-        "4. Ao terminar, registre: %s append --project . --type task_executed --actor agent --actor-id %s --feature %s "
+        "5. Ao terminar, registre: %s append --project . --type task_executed --actor agent --actor-id %s --feature %s "
         "--task %s --summary \"%s executada\"" % (PY, role, fid, tid, tid),
         "Achou algo fora do escopo ou uma decisao que nao e sua: pare a parte afetada e reporte em scope_discoveries.",
         "",
@@ -153,10 +158,45 @@ def precheck(project, task_id):
     return problems
 
 
+def review_dispatch(project, task, rv, policy):
+    """Uma chamada por revisor pendente (duas, com modelos diferentes, na revisao dupla), em paralelo."""
+    out = []
+    tid = task["task_id"]
+    base = rt.route(task, policy)
+    for p in rv["pending"]:
+        dual = rv["dual"] and p["role"] == "code-reviewer"
+        done = (2 if dual else 1) - p["missing"]
+        for i in range(done, done + p["missing"]):
+            probe = dict(task, assigned_agent={"agent_id": p["role"], "role": p["role"], "agent_contract_version": 1})
+            try:
+                r = rt.route(probe, policy)
+            except rt.RouteError:
+                r = base
+            if i == 1:  # segundo revisor independente: outro nivel, de preferencia outro modelo
+                lv = min(policy["ceiling_level"], r["level"] + 2)
+                e = policy["ladder"][lv]
+                r = {"model": e["model"], "effort": e["effort"], "level": lv}
+            suffix = "-" + "AB"[i] if dual else ""
+            rid = "RPT-%s-REV-%s%s" % (tid, p["role"], suffix)
+            prompt = ("Revise a entrega da tarefa %s (Task Contract .aisef/contracts/tasks/%s.json, Execution Report do executor em "
+                      ".aisef/reports/, diff com git). Siga o seu papel e o checklist; nao corrija nada.\n"
+                      "Ao terminar, OBRIGATORIAMENTE grave o veredito (voce nao tem Write: use este comando; sem ele a tarefa "
+                      "nao avanca):\n  %s record --project . --task %s --role %s --verdict APPROVE|WARNING|BLOCK "
+                      "--critical N --high N --medium N --low N --summary \"<1-2 frases>\" --model %s --effort %s --level %d%s\n"
+                      "APPROVE so sem CRITICAL nem HIGH. Depois devolva a tabela de achados no texto.%s"
+                      % (tid, tid, REVIEW, tid, p["role"], r["model"], r["effort"], r["level"],
+                         " --suffix " + suffix if suffix else "",
+                         " Revisao dupla (risco alto): voce e um revisor independente; nao leia a outra revisao." if rv["dual"] else ""))
+            out.append({"task_id": tid, "subagent_type": "aisef:" + p["role"], "role": p["role"], "model": r["model"],
+                        "effort": r["effort"], "level": r["level"], "report_id": rid,
+                        "description": "%s: revisao %s%s" % (tid, p["role"], suffix), "prompt": prompt})
+    return out
+
+
 def validation_wave(project, feature=None, dry_run=False, now=None):
     res = nx.compute_next(project, feature, now=now)
     todo = [a for a in res["actions"] if a["kind"] == "validate"]
-    out = {"rejected_by_precheck": [], "validator": None}
+    out = {"rejected_by_precheck": [], "rejected_by_review": [], "reviews": [], "validator": None}
     ready, levels = [], []
     policy = rt.load_policy()
     for a in todo:
@@ -169,9 +209,24 @@ def validation_wave(project, feature=None, dry_run=False, now=None):
                                     "feature_id": task["feature_id"], "task_id": tid,
                                     "summary": "%s reprovada no precheck (sem validador): %s" % (tid, "; ".join(problems)[:300]),
                                     "data": {"precheck": problems[:20]}})
-            out["rejected_by_precheck"].append({"task_id": tid, "problems": problems})
+            out["rejected_by_precheck"].append({"task_id": tid, "problems": problems, "fixer": aisef_review.fixer_for(project, task)})
             continue
-        lvl = next((r["execution_profile"]["level"] for r in reversed(_reports(project, tid))
+        reps = _reports(project, tid)
+        rv = aisef_review.status(project, task, reps)
+        if rv["rejected"]:
+            why = "; ".join("%s: %s" % (x["role"], "/".join(x["verdicts"])) for x in rv["rejected"])
+            if not dry_run:
+                ap.append(project, {"event_type": "task_rejected", "actor": {"type": "orchestrator", "id": "orchestrator"},
+                                    "feature_id": task["feature_id"], "task_id": tid,
+                                    "summary": "%s reprovada na revisao (sem validador): %s" % (tid, why[:300]),
+                                    "data": {"review": rv["rejected"]}})
+            out["rejected_by_review"].append({"task_id": tid, "rejected": rv["rejected"],
+                                              "fixer": aisef_review.fixer_for(project, task)})
+            continue
+        if rv["pending"]:
+            out["reviews"] += review_dispatch(project, task, rv, policy)
+            continue
+        lvl = next((r["execution_profile"]["level"] for r in reversed(reps)
                     if r.get("execution_profile") and r["agent"]["agent_id"] == task["assigned_agent"]["agent_id"]), None)
         levels.append(lvl if lvl is not None else rt.route(task, policy)["level"])
         ready.append(task)
