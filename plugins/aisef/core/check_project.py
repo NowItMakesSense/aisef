@@ -24,7 +24,8 @@ Regras (codigo -> o que verifica):
     TASK-*          referencias da tarefa (requisitos, criterios, ciclo)
     DEP-*           dependencias inexistentes, ciclos, entre features
     PAR-*           paralelismo: conflito de arquivos entre tarefas simultaneas
-    AGENT-*         agente da tarefa (existe, versao, papel, ativo, ambiente, recursos); AGENT-PATH-CEILING:
+    AGENT-*         agente da tarefa (existe, versao, papel, ativo, ambiente, recursos); AGENT-ROLE-UNKNOWN: papel fora
+                    do catalogo de agentes (core/agents/catalog.v0.1.json); AGENT-PATH-CEILING:
                     path do escopo que exige recurso fora do teto do agente (mesma classificacao do gateway)
     CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
     CONFIG-GRAPHIFY opcoes do Graphify no config.json (enabled, backend none|ollama|auto, paths e graph relativos)
@@ -53,6 +54,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import aisef_catalog  # noqa: E402
 import audit_chain  # noqa: E402
 import check_policy_consistency as pol  # noqa: E402
 
@@ -205,6 +207,14 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
     feats = {i: d for i, (_, d) in by["features"].items()}
     tasks = {i: d for i, (_, d) in by["tasks"].items()}
     agents = {i: d for i, (_, d) in by["agents"].items()}
+    # papeis vem do catalogo de agentes (fonte unica); arena_* sao papeis reservados do schema antigo
+    known_roles = aisef_catalog.role_ids() | {"arena_challenger", "arena_reviewer"}
+    for aid, ag in sorted(agents.items()):
+        if ag["role"] not in known_roles:
+            rep.err("AGENT-ROLE-UNKNOWN", "agente " + aid, "papel %s nao existe no catalogo de agentes do plugin" % ag["role"])
+        for v in (ag.get("validation_role") or {}).get("validates", []):
+            if v not in known_roles:
+                rep.err("AGENT-ROLE-UNKNOWN", "agente " + aid, "valida o papel %s, que nao existe no catalogo" % v)
     approvals = {i: d for i, (_, d) in by["approvals"].items()}
     auths = {i: d for i, (_, d) in by["authorizations"].items()}
     reports = [d for _, d in docs["reports"]]
@@ -552,6 +562,11 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                         "%s exige %s (%s), fora do teto do agente %s %s: o gateway negaria a escrita no meio da execucao"
                         % (p, resource, label, ag["agent_id"], sorted(ceiling)))
 
+        vrole = t["validation"].get("validator_role")
+        if vrole and vrole != "orchestrator" and vrole not in aisef_catalog.evaluator_roles():
+            rep.err("AGENT-ROLE-UNKNOWN", where, "validator_role %s nao e papel avaliador do catalogo" % vrole)
+        if t["assigned_agent"].get("role") and t["assigned_agent"]["role"] not in known_roles:
+            rep.err("AGENT-ROLE-UNKNOWN", where, "papel %s nao existe no catalogo de agentes" % t["assigned_agent"]["role"])
         if t["validation"]["independent_validator_required"]:
             role = t["assigned_agent"].get("role") or (ag or {}).get("role")
             ok = [v for v in validators if role in v["validation_role"].get("validates", []) and v["agent_id"] != t["assigned_agent"]["agent_id"]]
@@ -635,7 +650,7 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         if t_ is None or r["agent"]["agent_id"] == t_["assigned_agent"]["agent_id"]:
             return False
         ag_ = agents.get(r["agent"]["agent_id"])
-        return (ag_["role"] if ag_ else r["agent"].get("role")) in ("validator", "qa", "security")
+        return (ag_["role"] if ag_ else r["agent"].get("role")) in aisef_catalog.evaluator_roles()
 
     for r in reports:
         where = "relatorio " + r["report_id"]

@@ -39,7 +39,7 @@
       "properties": {
         "agent_id": { "type": "string" },
         "agent_contract_version": { "type": "integer", "minimum": 1 },
-        "role": { "enum": ["orchestrator", "implementer", "backend", "frontend", "database", "qa", "security", "devops", "domain", "validator"] }
+        "role": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*[a-z0-9]$", "description": "Papel do catalogo de agentes (core/agents/catalog.v0.1.json); o aisef-check confere que existe." }
       }
     },
 
@@ -140,7 +140,7 @@
       "required": ["independent_validator_required"],
       "properties": {
         "independent_validator_required": { "type": "boolean", "description": "O executor nunca e o unico a atestar a propria entrega quando true." },
-        "validator_role": { "enum": ["validator", "qa", "security", "orchestrator"] },
+        "validator_role": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*[a-z0-9]$", "description": "Papel avaliador ou validador do catalogo, ou orchestrator." },
         "qa_required": { "type": "boolean", "default": false }
       }
     },

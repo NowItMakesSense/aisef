@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.dev/schemas/agent-catalog/0.1.0",
+  "title": "AISEF Agent Catalog",
+  "description": "Fonte unica dos papeis de agente do plugin: tipo, ativacao, nivel padrao na Model Policy, ferramentas e teto do Agent Contract, e prompt do subagente.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["catalog_version", "roles"],
+  "properties": {
+    "$comment": { "type": "string" },
+    "catalog_version": { "const": "0.1.0" },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "kind", "group", "activation", "level", "task_types", "tools", "resources", "git_operations", "responsibilities"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*[a-z0-9]$" },
+          "name": { "type": "string", "minLength": 3, "maxLength": 80 },
+          "kind": { "enum": ["orchestrator", "executor", "fixer", "evaluator", "validator", "advisor"] },
+          "group": { "type": "string", "minLength": 2 },
+          "activation": { "type": "string", "pattern": "^(always|manual|(stack|arch|domain):[a-z0-9][a-z0-9_.+-]*)$" },
+          "level": { "type": ["integer", "null"], "minimum": 0, "maximum": 6 },
+          "task_types": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": { "enum": ["implementation", "refactoring", "testing", "review", "investigation", "documentation", "migration", "security_review", "validation", "arena_debate"] }
+          },
+          "tools": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
+          "resources": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+          "git_operations": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+          "responsibilities": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "description": { "type": "string", "minLength": 20, "maxLength": 400 },
+          "prompt": { "type": "string", "pattern": "^prompts/[a-z0-9-]+\\.md$" },
+          "generate_agent": { "type": "boolean" },
+          "preload_skills": { "type": "array", "items": { "type": "string" } },
+          "source": { "type": "string", "description": "Origem do texto quando portado (ex.: ECC agents/code-reviewer.md, MIT)." }
+        }
+      }
+    }
+  }
+}

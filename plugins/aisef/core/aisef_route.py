@@ -23,6 +23,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 POLICY_PATH = os.path.join(HERE, "model-policy.v0.1.json")
+sys.path.insert(0, HERE)
+import aisef_catalog  # noqa: E402
 ENV_OVERRIDES = ("CLAUDE_CODE_EFFORT_LEVEL", "CLAUDE_CODE_SUBAGENT_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL_FORCE")
 
 
@@ -31,8 +33,14 @@ class RouteError(Exception):
 
 
 def load_policy(path=POLICY_PATH):
+    """A Model Policy com os niveis padrao por papel vindos do catalogo de agentes (fonte unica).
+    Um `role_defaults` escrito na propria politica prevalece (permite politica de teste ou do projeto)."""
     with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
+        policy = json.load(fh)
+    defaults = aisef_catalog.role_defaults()
+    defaults.update(policy.get("role_defaults") or {})
+    policy["role_defaults"] = defaults
+    return policy
 
 
 def check_policy(policy):

@@ -1,5 +1,12 @@
 # Changelog
 
+## Não lançado (trilha E: equipe, práticas e arquitetura, port do ECC)
+- **Catálogo de agentes (E0, ADR 0020).** `core/agents/catalog.v0.1.json` é a fonte única dos papéis: tipo (`executor`, `fixer`, `evaluator`, `validator`, `advisor`, `orchestrator`), ativação (`always`, `manual`, `stack:`, `arch:`, `domain:`), nível padrão na Model Policy, ferramentas e teto do Agent Contract, e prompt em `core/agents/prompts/<id>.md`.
+  - `aisef_project`, `aisef_new`, `aisef_route`, `check_project` e `tools/gen_agents.py` leem do catálogo; `role_defaults` saiu da `model-policy.v0.1.json`.
+  - Os enums de papel nos schemas viraram `pattern`; a nova regra **`AGENT-ROLE-UNKNOWN`** confere o papel contra o catálogo.
+  - `init` e `agents` criam rascunhos só dos papéis que se aplicam ao projeto; `agents --roles x,y` cria os pedidos, inclusive os `manual`.
+  - `aisef_catalog.py check|list`; testes em `core/test_catalog.py`. Os 10 agentes atuais geram os mesmos `.md`, byte a byte.
+
 ## Não lançado (0.11.0: medir)
 - **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:
   - pedidos de aprovação por tarefa e por tipo, e a fatia Git;

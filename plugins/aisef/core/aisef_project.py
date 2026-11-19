@@ -19,6 +19,7 @@ Uso:
                                        [--option OPT-X] [--note TEXTO] [--ack impact_read,rollback_read,diff_reviewed]
                                        [--authorization rascunho.json]
     python3 -I aisef_project.py agents --project REPO [--activate] [--roles backend,qa]
+        (sem --activate: cria os drafts dos papeis que se aplicam ao projeto pelo catalogo, ou os de --roles)
     python3 -I aisef_project.py waves --project REPO [--feature FEAT-x] [--json]
     python3 -I aisef_project.py next --project REPO [--feature FEAT-x] [--json]
     python3 -I aisef_project.py dispatch --project REPO [--feature FEAT-x] [--dry-run]   (onda: prompts + delegation)
@@ -41,6 +42,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import aisef_catalog  # noqa: E402
 import audit_chain  # noqa: E402
 
 try:
@@ -432,31 +434,7 @@ def init(project, project_id, name=None, environment="dev"):
 # Agentes do plugin (plugins/aisef/agents/*.md). O contrato e o TETO; o gateway o aplica aos subagentes.
 EDIT_TOOLS = ["Read", "Grep", "Glob", "Edit", "Write", "Bash"]
 READ_TOOLS = ["Read", "Grep", "Glob", "Bash"]
-AGENT_PROFILES = {
-    "orchestrator": ("Orquestrador AISEF", ["implementation", "review", "investigation", "documentation"], EDIT_TOOLS,
-                     ["repo_code", "config_ci_iac"], ["status_log_diff", "commit", "push", "pull_request", "merge"],
-                     ["Coordenar o trabalho, executar tarefas pequenas e integrar resultados (sessao principal)"]),
-    "implementer": ("Implementador de fatias", ["implementation", "refactoring", "testing"], EDIT_TOOLS + ["Skill"],
-                    ["repo_code", "db_schema"], ["status_log_diff", "commit"],
-                    ["Implementar uma fatia vertical inteira com TDD (vermelho antes do verde), dentro dos seams aprovados"]),
-    "backend": ("Agente Backend", ["implementation", "refactoring", "testing"], EDIT_TOOLS, ["repo_code", "db_schema"], ["status_log_diff", "commit"],
-                ["APIs, servicos, regras de dominio e integracoes, com testes"]),
-    "frontend": ("Agente Frontend", ["implementation", "refactoring", "testing", "review"], EDIT_TOOLS + ["Skill"], ["repo_code"],
-                 ["status_log_diff", "commit"],
-                 ["Telas, componentes e fluxos de UX dentro da autoridade de design do projeto, com testes e evidencia visual"]),
-    "database": ("Agente de Banco de Dados", ["migration", "implementation", "review"], ["Read", "Grep", "Glob", "Edit", "Write"], ["repo_code", "db_schema"],
-                 ["status_log_diff"], ["Entidades e migrations com rollback, sem conectar ao banco"]),
-    "qa": ("Agente de QA", ["testing", "review"], READ_TOOLS, ["repo_code"], ["status_log_diff"],
-           ["Testes, cobertura dos criterios de aceite e regressoes"]),
-    "security": ("Agente de Seguranca", ["security_review", "review"], READ_TOOLS, ["repo_code"], ["status_log_diff"],
-                 ["Ameacas, controle de acesso, segredos e exposicao de dados"]),
-    "devops": ("Agente DevOps", ["implementation", "documentation"], EDIT_TOOLS, ["repo_code", "config_ci_iac", "deploy_infra"], ["status_log_diff", "commit"],
-               ["CI/CD, IaC, estrategia de deploy e rollback, sem executar deploy"]),
-    "domain": ("Agente de Dominio", ["investigation", "documentation"], ["Read", "Grep", "Glob", "WebSearch", "WebFetch"], ["repo_code"], ["status_log_diff"],
-               ["Regras de negocio, glossario e excecoes, sempre com fonte"]),
-    "validator": ("Agente Validador", ["validation"], READ_TOOLS, ["repo_code"], ["status_log_diff"],
-                  ["Verificar criterios de aceite com evidencias, sem nunca validar o proprio trabalho"]),
-}
+AGENT_PROFILES = aisef_catalog.profiles()  # fonte unica: core/agents/catalog.v0.1.json
 
 
 def agent_contract(role, created_at):
@@ -484,14 +462,35 @@ def agent_contract(role, created_at):
         "audit": {"created_by": "aisef-init", "created_at": created_at},
     }
     if role == "validator":
-        doc["validation_role"]["validates"] = ["implementer", "backend", "frontend", "database", "devops"]
+        doc["validation_role"]["validates"] = aisef_catalog.validatable_roles()
     return doc
 
 
-def write_agent_drafts(project):
-    """Cria os Agent Contracts dos agentes do plugin como 'draft' (nao sobrescreve existentes)."""
+def project_traits(project):
+    """Stacks, estilos de arquitetura e dominios do projeto, lidos de .aisef/architecture.json (aisef_detect).
+    Sem o arquivo, so os papeis `always` se aplicam."""
+    path = os.path.join(aisef_dir(project), "architecture.json")
+    if not os.path.exists(path):
+        return (), (), ()
+    with open(path, encoding="utf-8") as fh:
+        doc = json.load(fh)
+    return (tuple(s["id"] for s in doc.get("stacks", [])),
+            tuple(s["id"] for s in doc.get("styles", []) if s.get("confidence", 0) >= 0.5),
+            tuple(doc.get("domains", [])))
+
+
+def write_agent_drafts(project, roles=None):
+    """Cria os Agent Contracts como 'draft' (nao sobrescreve existentes). Sem `roles`, cria os papeis que se aplicam
+    ao projeto pelo catalogo (activation always, ou stack/arch/domain detectados); com `roles`, cria esses
+    (inclusive os de ativacao manual, que o usuario pediu)."""
+    if roles is None:
+        stacks, styles, domains = project_traits(project)
+        roles = [r["id"] for r in aisef_catalog.roles() if aisef_catalog.applicable(r, stacks, styles, domains)]
+    unknown = [r for r in roles if r not in AGENT_PROFILES]
+    if unknown:
+        raise SystemExit("papel fora do catalogo de agentes: %s" % ", ".join(unknown))
     created = []
-    for role in AGENT_PROFILES:
+    for role in roles:
         path = os.path.join(aisef_dir(project), "contracts", "agents", role + ".json")
         if not os.path.exists(path):
             write_json(path, agent_contract(role, now_iso()))
@@ -1184,7 +1183,7 @@ def main(argv):
             done = activate_agents(project, roles)
             print("ativados: %s" % (", ".join(done) or "nenhum (ja ativos ou inexistentes)"))
         else:
-            created = write_agent_drafts(project)
+            created = write_agent_drafts(project, roles)
             print("drafts criados: %s" % (", ".join(created) or "nenhum (ja existiam)"))
         return 0
     if a.command == "decide":

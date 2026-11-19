@@ -30,9 +30,10 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import aisef_catalog  # noqa: E402
 import aisef_project as ap  # noqa: E402
 
-AGENT_ROLES = {"orchestrator", "implementer", "backend", "frontend", "database", "qa", "security", "devops", "domain", "validator"}
+AGENT_ROLES = aisef_catalog.role_ids()  # fonte unica: core/agents/catalog.v0.1.json
 MAINT_FEATURE = "FEAT-MAINT"
 MAINT_REQ = "REQ-MAINT"
 

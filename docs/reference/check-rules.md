@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**149 regras** em 26 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**150 regras** em 26 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -32,7 +32,7 @@ Recursos e escopos das tarefas respeitam a política.
 
 Agent Contracts ativos, papel, teto de recursos e de ambiente.
 
-`AGENT-ENV`, `AGENT-INACTIVE`, `AGENT-PATH-CEILING`, `AGENT-RESOURCE`, `AGENT-ROLE`, `AGENT-UNKNOWN`, `AGENT-VERSION`
+`AGENT-ENV`, `AGENT-INACTIVE`, `AGENT-PATH-CEILING`, `AGENT-RESOURCE`, `AGENT-ROLE`, `AGENT-ROLE-UNKNOWN`, `AGENT-UNKNOWN`, `AGENT-VERSION`
 
 ## Feature Contract (`FEAT-*`)
 

@@ -1,0 +1,332 @@
+{
+  "$comment": "AISEF Agent Catalog: fonte unica dos papeis (ferramentas e teto do Agent Contract, nivel padrao da Model Policy, ativacao, tipo e prompt do subagente). tools/gen_agents.py gera plugins/aisef/agents/*.md daqui; aisef_project, aisef_new, aisef_route e check_project leem daqui.",
+  "catalog_version": "0.1.0",
+  "roles": [
+    {
+      "id": "orchestrator",
+      "name": "Orquestrador AISEF",
+      "kind": "orchestrator",
+      "group": "core",
+      "activation": "always",
+      "level": null,
+      "task_types": [
+        "implementation",
+        "review",
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code",
+        "config_ci_iac"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit",
+        "push",
+        "pull_request",
+        "merge"
+      ],
+      "responsibilities": [
+        "Coordenar o trabalho, executar tarefas pequenas e integrar resultados (sessao principal)"
+      ],
+      "generate_agent": false
+    },
+    {
+      "id": "implementer",
+      "name": "Implementador de fatias",
+      "kind": "executor",
+      "group": "core",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash",
+        "Skill"
+      ],
+      "resources": [
+        "repo_code",
+        "db_schema"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Implementar uma fatia vertical inteira com TDD (vermelho antes do verde), dentro dos seams aprovados"
+      ],
+      "description": "Implementador de fatias verticais do AISEF: implementa uma fatia inteira (todas as camadas que ela atravessa) a partir de um Task Contract, sempre com TDD vermelho-verde nos seams aprovados. Use quando o orquestrador AISEF delegar uma fatia (kind: slice).",
+      "prompt": "prompts/implementer.md",
+      "preload_skills": [
+        "mattpocock-skills:tdd"
+      ]
+    },
+    {
+      "id": "backend",
+      "name": "Agente Backend",
+      "kind": "executor",
+      "group": "core",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code",
+        "db_schema"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "APIs, servicos, regras de dominio e integracoes, com testes"
+      ],
+      "description": "Especialista backend do AISEF: implementa APIs, servicos, regras de dominio e integracoes a partir de um Task Contract, com testes. Use quando o orquestrador AISEF delegar tarefa de backend.",
+      "prompt": "prompts/backend.md"
+    },
+    {
+      "id": "frontend",
+      "name": "Agente Frontend",
+      "kind": "executor",
+      "group": "core",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "implementation",
+        "refactoring",
+        "testing",
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash",
+        "Skill"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "Telas, componentes e fluxos de UX dentro da autoridade de design do projeto, com testes e evidencia visual"
+      ],
+      "description": "Especialista frontend do AISEF: implementa e revisa telas, componentes e fluxos de UX dentro da autoridade de design do projeto (tipografia, cores, espacamento, componentes), com testes e evidencia visual. Use quando o orquestrador AISEF delegar ou pedir revisao de interface.",
+      "prompt": "prompts/frontend.md"
+    },
+    {
+      "id": "database",
+      "name": "Agente de Banco de Dados",
+      "kind": "executor",
+      "group": "core",
+      "activation": "always",
+      "level": 3,
+      "task_types": [
+        "migration",
+        "implementation",
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write"
+      ],
+      "resources": [
+        "repo_code",
+        "db_schema"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Entidades e migrations com rollback, sem conectar ao banco"
+      ],
+      "description": "Especialista de banco de dados do AISEF: modela entidades, escreve migrations com rollback e revisa schema, sem nunca conectar ao banco. Use quando o orquestrador AISEF delegar tarefa de dados ou migracao.",
+      "prompt": "prompts/database.md"
+    },
+    {
+      "id": "qa",
+      "name": "Agente de QA",
+      "kind": "evaluator",
+      "group": "quality",
+      "activation": "always",
+      "level": 2,
+      "task_types": [
+        "testing",
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Testes, cobertura dos criterios de aceite e regressoes"
+      ],
+      "description": "QA do AISEF: avalia testes, cobertura dos criterios de aceite, regressoes e qualidade de uma entrega. Use quando o orquestrador AISEF pedir avaliacao de qualidade ou testes de integracao e regressao.",
+      "prompt": "prompts/qa.md"
+    },
+    {
+      "id": "security",
+      "name": "Agente de Seguranca",
+      "kind": "evaluator",
+      "group": "quality",
+      "activation": "always",
+      "level": 4,
+      "task_types": [
+        "security_review",
+        "review"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Ameacas, controle de acesso, segredos e exposicao de dados"
+      ],
+      "description": "Especialista de seguranca do AISEF: revisa ameacas, autenticacao, autorizacao, segredos e exposicao de dados de uma feature ou entrega. Use quando o orquestrador AISEF pedir revisao de seguranca ou o blueprint tiver ameacas a mitigar.",
+      "prompt": "prompts/security.md"
+    },
+    {
+      "id": "devops",
+      "name": "Agente DevOps",
+      "kind": "executor",
+      "group": "core",
+      "activation": "always",
+      "level": 1,
+      "task_types": [
+        "implementation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Edit",
+        "Write",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code",
+        "config_ci_iac",
+        "deploy_infra"
+      ],
+      "git_operations": [
+        "status_log_diff",
+        "commit"
+      ],
+      "responsibilities": [
+        "CI/CD, IaC, estrategia de deploy e rollback, sem executar deploy"
+      ],
+      "description": "Especialista DevOps do AISEF: prepara CI/CD, infraestrutura como codigo, estrategia de deploy e rollback, sem executar deploy. Use quando o orquestrador AISEF delegar tarefa de pipeline, ambiente ou entrega.",
+      "prompt": "prompts/devops.md"
+    },
+    {
+      "id": "domain",
+      "name": "Agente de Dominio",
+      "kind": "advisor",
+      "group": "planning",
+      "activation": "always",
+      "level": 0,
+      "task_types": [
+        "investigation",
+        "documentation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "WebSearch",
+        "WebFetch"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Regras de negocio, glossario e excecoes, sempre com fonte"
+      ],
+      "description": "Especialista de dominio de negocio do AISEF: esclarece regras de negocio, glossario e casos de excecao a partir do que esta documentado, sem inventar. Use quando o orquestrador AISEF precisar interpretar requisitos ou regras de negocio.",
+      "prompt": "prompts/domain.md"
+    },
+    {
+      "id": "validator",
+      "name": "Agente Validador",
+      "kind": "validator",
+      "group": "quality",
+      "activation": "always",
+      "level": null,
+      "task_types": [
+        "validation"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "resources": [
+        "repo_code"
+      ],
+      "git_operations": [
+        "status_log_diff"
+      ],
+      "responsibilities": [
+        "Verificar criterios de aceite com evidencias, sem nunca validar o proprio trabalho"
+      ],
+      "description": "Validador independente do AISEF: verifica se uma entrega cumpre os criterios de aceite do Task Contract, com evidencias, e nunca valida o proprio trabalho. Use quando o orquestrador AISEF precisar mover uma tarefa de executed para validated.",
+      "prompt": "prompts/validator.md"
+    }
+  ]
+}
