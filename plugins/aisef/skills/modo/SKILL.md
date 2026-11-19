@@ -11,7 +11,7 @@ Rode exatamente:
 ```
 python -I <skill-dir>/../../core/aisef_project.py mode --project . --set $ARGUMENTS
 ```
-O gateway abre o prompt nativo de permissao (trocar de modo e decisao do usuario). Depois, confirme em uma linha:
+Entrar no `ask` e imediato (so restringe). Voltar ao `exec` abre o prompt nativo de permissao, porque devolve poder de execucao e e decisao do usuario. Depois, confirme em uma linha:
 - **ask:** "Modo Ask: respondo lendo o projeto, sem editar nem executar nada. Para voltar: /aisef:modo exec."
 - **exec:** "Modo normal: volto a executar dentro das regras do AISEF."
 

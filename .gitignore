@@ -5,3 +5,4 @@ __pycache__/
 .aisef/panel/
 *.lock
 *.tmp
+.claude/worktrees/

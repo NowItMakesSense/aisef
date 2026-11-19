@@ -1,22 +1,21 @@
 ---
 name: ask
-description: 'Modo pergunta do AISEF (como o Ask do Cursor): responde uma duvida sobre o projeto lendo o codigo e os contratos, num subagente Haiku so de leitura, sem editar nem executar nada. Use quando o usuario digitar /aisef:ask ou fizer uma pergunta e pedir explicitamente para nao mudar nada.'
+description: 'Modo pergunta do AISEF: responde uma duvida sobre o projeto sem editar nem executar nada, com o subagente aisef:ask (Haiku, so leitura) e um resumo da conversa para ele saber do que se fala. Use quando o usuario digitar /aisef:ask ou fizer uma pergunta pedindo para nao mudar nada.'
 argument-hint: "<sua pergunta>"
-context: fork
-agent: aisef:ask
-model: haiku
-effort: low
+disallowed-tools: Edit, Write, MultiEdit, NotebookEdit, Bash, PowerShell
 ---
 
-Responda a pergunta abaixo sobre este projeto. **Voce so le**: nao edite arquivos e nao rode comandos que mudem algo (nem tem as ferramentas para isso).
+# aisef:ask
 
-Pergunta: $ARGUMENTS
+Pergunta do usuario: **$ARGUMENTS**
 
-Como responder:
-1. Procure primeiro onde a resposta mora:
-   - `.aisef/discovery.md`, `.aisef/contracts/` (features, fatias, requisitos), `.aisef/design/` e `.aisef/knowledge/`;
-   - os docs;
-   - o codigo, com Grep e Glob antes de abrir arquivos inteiros.
-2. Responda direto, em poucas linhas, citando `arquivo:linha` ou o id do contrato (FEAT-, T-, REQ-) de onde tirou cada ponto.
-3. Separe o que **encontrou** do que esta **inferindo**. O que nao estiver documentado, diga que nao esta: nunca invente regra de negocio.
-4. Se a resposta for "isso exige uma mudanca", descreva a mudanca em uma frase e diga que, para executar, o usuario pede a mudanca normalmente (ou troca o modo com `/aisef:modo exec`).
+Voce nao responde lendo o projeto voce mesmo e nao muda nada: nesta resposta as ferramentas de escrita e de shell estao desligadas. Faca assim:
+
+1. **Monte o contexto em ate 6 linhas**, so com o que ja esta nesta conversa: o assunto em discussao, a feature/fatia/arquivo citados e decisoes ja tomadas que importam para a pergunta. Sem segredos.
+2. **Delegue** com UMA chamada da ferramenta Agent:
+   - `subagent_type: "aisef:ask"` (Haiku, ferramentas so `Read`, `Grep`, `Glob`)
+   - `description`: "Responder pergunta"
+   - `prompt`: "Contexto da conversa:\n<as linhas do passo 1>\n\nPergunta: $ARGUMENTS"
+   - em primeiro plano (sem `run_in_background`), porque o usuario espera a resposta.
+3. **Repasse a resposta** do agente como ela veio, com as citacoes `arquivo:linha`/ids. Corte so repeticoes. Se ele disser que algo nao esta documentado, mantenha isso.
+4. Se a resposta concluir que e preciso mudar algo, termine com uma linha: "Para fazer essa mudanca, e so pedir (ou `/aisef:modo exec`, se a sessao estiver no modo Ask)."
