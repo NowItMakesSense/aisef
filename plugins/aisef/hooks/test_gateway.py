@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "core"))
@@ -399,11 +400,43 @@ fails += not ok
 print("--- doctor (SessionStart)")
 r = run("doctor.py", {})
 total += 1
+ok = "Graphify esta ligado" in r.stdout and "graphify-out/graph.json" in r.stdout and r.returncode == 0
+print(("OK    " if ok else "FALHA ") + "doctor: projeto novo tem o Graphify ligado por padrao e avisa que falta o grafo")
+fails += not ok
+graph = os.path.join(proj, "graphify-out", "graph.json")
+os.makedirs(os.path.dirname(graph), exist_ok=True)
+with open(graph, "w", encoding="utf-8") as fh:
+    fh.write('{"nodes": [], "links": []}')
+os.utime(graph, (time.time() + 3600, time.time() + 3600))  # grafo mais novo que qualquer fonte
+r = run("doctor.py", {})
+total += 1
 ok = r.returncode == 0 and not r.stdout.strip()
 print(("OK    " if ok else "FALHA ") + "doctor: ambiente completo nao gera nenhuma saida (zero tokens)")
 if not ok:
     print("      ", r.stdout[:300])
 fails += not ok
+adr = os.path.join(proj, "docs", "adr", "0001-x.md")
+os.makedirs(os.path.dirname(adr), exist_ok=True)
+with open(adr, "w", encoding="utf-8") as fh:
+    fh.write("# ADR\n")
+os.utime(adr, (time.time() + 7200, time.time() + 7200))
+r = run("doctor.py", {})
+total += 1
+ok = "grafo do Graphify esta velho" in r.stdout and "docs/adr/0001-x.md" in r.stdout
+print(("OK    " if ok else "FALHA ") + "doctor: avisa grafo velho e diz qual fonte mudou")
+fails += not ok
+cfg_path = os.path.join(proj, ".aisef", "config.json")
+cfg_txt = open(cfg_path, encoding="utf-8").read()
+cfg = json.loads(cfg_txt)
+cfg["graphify"]["enabled"] = False
+aisef_project.write_json(cfg_path, cfg)
+r = run("doctor.py", {})
+total += 1
+ok = r.returncode == 0 and not r.stdout.strip()
+print(("OK    " if ok else "FALHA ") + "doctor: Graphify desligado pelo usuario nao gera aviso")
+fails += not ok
+open(cfg_path, "w", encoding="utf-8").write(cfg_txt)
+os.utime(adr, (time.time() - 7200, time.time() - 7200))
 cfg_bak = open(os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"), encoding="utf-8").read()
 qa = json.loads(cfg_bak)
 qa["status"] = "draft"

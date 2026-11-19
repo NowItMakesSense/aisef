@@ -122,6 +122,72 @@ def git_settings(cfg):
     return out, problems
 
 
+# Graphify (grafo de docs e decisoes): padrao em projeto novo desde a 0.11.0 (o init grava enabled=true; recusar no
+# aisef-init grava false). Projeto sem a chave fica como antes (desligado). backend "none" = so o passo estrutural,
+# nada vai a provedor de modelo; "ollama" = modelo local; "auto" = o que o Graphify detectar (envia docs).
+GRAPHIFY_DEFAULTS = {"enabled": False, "backend": "none", "paths": ["docs", ".aisef"], "graph": "graphify-out/graph.json"}
+GRAPHIFY_BACKENDS = ("none", "ollama", "auto")
+GRAPHIFY_SOURCE_EXT = (".md", ".json", ".txt", ".rst", ".yaml", ".yml")
+GRAPHIFY_SKIP = {"audit", "runtime", "panel", "keys", "session", "telemetry", "graphify-out", "node_modules", ".git"}
+
+
+def graphify_settings(cfg):
+    """Opcoes do Graphify (config.json -> graphify). Devolve (valores com padroes, problemas)."""
+    raw = cfg.get("graphify", {})
+    out, problems = dict(GRAPHIFY_DEFAULTS), []
+    if not isinstance(raw, dict):
+        return out, ["graphify deve ser um objeto"]
+    for key, value in raw.items():
+        if key not in GRAPHIFY_DEFAULTS:
+            problems.append("graphify.%s: chave desconhecida (aceitas: %s)" % (key, ", ".join(sorted(GRAPHIFY_DEFAULTS))))
+        elif key == "enabled" and not isinstance(value, bool):
+            problems.append("graphify.enabled: esperado booleano")
+        elif key == "backend" and value not in GRAPHIFY_BACKENDS:
+            problems.append("graphify.backend: use %s" % ", ".join(GRAPHIFY_BACKENDS))
+        elif key == "paths" and not (isinstance(value, list) and value and all(
+                isinstance(p, str) and p and not os.path.isabs(p) and ".." not in p.replace("\\", "/").split("/")
+                for p in value)):
+            problems.append("graphify.paths: lista de caminhos relativos ao projeto, sem '..'")
+        elif key == "graph" and not (isinstance(value, str) and value.endswith(".json") and not os.path.isabs(value)
+                                     and ".." not in value.replace("\\", "/").split("/")):
+            problems.append("graphify.graph: caminho relativo de um .json, sem '..'")
+        else:
+            out[key] = value
+    return out, problems
+
+
+def graphify_status(project, cfg=None, max_files=5000):
+    """Estado do grafo do Graphify: ligado?, existe?, velho? (alguma fonte em `paths` mais nova que o graph.json).
+    Barato: so stat, no maximo `max_files` arquivos, pula log, runtime, painel e chaves."""
+    cfg = load_config(project) if cfg is None else cfg
+    gs, problems = graphify_settings(cfg)
+    graph = os.path.join(project, gs["graph"])
+    st = {"enabled": gs["enabled"], "backend": gs["backend"], "graph": gs["graph"], "exists": os.path.isfile(graph),
+          "stale": False, "newer_source": None, "problems": problems}
+    if not (st["enabled"] and st["exists"]):
+        return st
+    built = os.path.getmtime(graph)
+    seen = 0
+    for rel in gs["paths"]:
+        top = os.path.join(project, rel)
+        for dirpath, dirnames, filenames in os.walk(top):
+            dirnames[:] = [d for d in dirnames if d not in GRAPHIFY_SKIP]
+            for name in filenames:
+                if not name.endswith(GRAPHIFY_SOURCE_EXT):
+                    continue
+                seen += 1
+                path = os.path.join(dirpath, name)
+                try:
+                    if os.path.getmtime(path) > built:
+                        st["stale"], st["newer_source"] = True, os.path.relpath(path, project).replace("\\", "/")
+                        return st
+                except OSError:
+                    continue
+                if seen >= max_files:
+                    return st
+    return st
+
+
 def private_key_path(project_id, key_id=KEY_ID):
     return os.path.join(home_dir(), "keys", project_id, key_id + ".pem")
 
@@ -336,7 +402,8 @@ def init(project, project_id, name=None, environment="dev"):
     write_json(os.path.join(root, "config.json"), {
         "schema_version": "0.1.0", "project_id": project_id, "log_id": project_id,
         "name": name or project_id, "environment": environment, "created_at": now_iso(),
-        "policy": "permission-policy.v0.1.json", "defaults": "orchestration-defaults.v0.1.json"})
+        "policy": "permission-policy.v0.1.json", "defaults": "orchestration-defaults.v0.1.json",
+        "graphify": {"enabled": True, "backend": "none", "paths": ["docs", ".aisef"]}})
     with open(os.path.join(root, ".gitignore"), "w", encoding="utf-8") as fh:
         fh.write("# gerado pelo AISEF\n*.lock\n*.tmp\npanel/\nruntime/\n")
     signed = False

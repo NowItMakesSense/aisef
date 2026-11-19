@@ -19,6 +19,12 @@
   - O painel usa essa ligação antes da heurística por papel.
   - A lógica de "quem disparou quem" saiu do `panel_live.py` para `core/aisef_runtime.py`, compartilhada com o hook.
   - Testes em `hooks/test_agent_events.py`.
+- **Graphify padrão (G-01).**
+  - Projeto novo nasce com `"graphify": {"enabled": true, "backend": "none", "paths": ["docs", ".aisef"]}`: só o passo estrutural, nada enviado a provedor de modelo.
+  - A `aisef-init` oferece o Graphify como primeira opção (recusar grava `enabled: false`). O codebase-memory-mcp continua opcional e em avaliação.
+  - **Doctor:** lembra quando o grafo falta e avisa quando ele está velho (uma fonte mais nova que o `graph.json`, dizendo qual).
+  - **Nova regra `CONFIG-GRAPHIFY`** (backend `none|ollama|auto`, caminhos relativos sem `..`).
+  - Projetos antigos, sem a chave, ficam como antes.
 
 ## 0.10.0 - 2026-11-19
 - **Painel v3** (o protótipo aprovado virou o painel real; ADR 0019):

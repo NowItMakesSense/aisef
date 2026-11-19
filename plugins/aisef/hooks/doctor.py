@@ -48,6 +48,14 @@ def problems(project):
         if drafts:
             found.append("agentes ainda em draft (bloqueados pelo gateway): %s. Peca ao usuario para aprova-los "
                          "(aisef-init, passo 4)" % ", ".join(drafts))
+        gst = ap.graphify_status(project, cfg)
+        if gst["enabled"] and not gst["exists"]:
+            found.append("o Graphify esta ligado (padrao do AISEF), mas nao ha grafo em %s. Ofereca ao usuario instalar "
+                         "e gerar (aisef-tooling, secao 6; GRAPHIFY_BACKEND=%s) ou desligar com \"graphify\": "
+                         "{\"enabled\": false} no .aisef/config.json" % (gst["graph"], gst["backend"]))
+        elif gst["stale"]:
+            found.append("o grafo do Graphify esta velho (%s mudou depois dele): regenere antes de delegar "
+                         "(aisef-tooling, secao 6)" % gst["newer_source"])
         settings = os.path.join(project, ".claude", "settings.json")
         perms = {}
         if os.path.exists(settings):

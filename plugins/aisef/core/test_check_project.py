@@ -109,6 +109,11 @@ for name, extra in (("modelo de .env (.env.example) nao e sensivel para o gatewa
 expect("config git invalido (branch_per_feature nao booleano)",
        lambda p: open(os.path.join(p, "config.json"), "w", encoding="utf-8").write(json.dumps({"git": {"branch_per_feature": "sim"}})),
        "CONFIG-GIT")
+for name, gcfg in (("graphify: backend desconhecido", {"backend": "openai"}),
+                   ("graphify: path com '..' (fora do projeto)", {"paths": ["../outro"]}),
+                   ("graphify: chave desconhecida", {"modo": "x"})):
+    expect(name, lambda p, g=gcfg: open(os.path.join(p, "config.json"), "w", encoding="utf-8").write(json.dumps({"graphify": g})),
+           "CONFIG-GRAPHIFY")
 expect("recurso exige escopo e tarefa nao tem", edit(T1, lambda d: d["permissions"].update(scope_authorization_id=None)), "PERM-SCOPE-REQUIRED")
 expect("autorizacao inexistente", edit(T1, lambda d: d["permissions"].update(scope_authorization_id="AUTH-404")), "AUTH-MISSING")
 expect("autorizacao nao cobre o recurso", edit("authorizations/AUTH-1.json", lambda d: d.update(resources=["config_ci_iac"])), "AUTH-RESOURCE")

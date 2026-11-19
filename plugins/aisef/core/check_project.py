@@ -27,6 +27,7 @@ Regras (codigo -> o que verifica):
     AGENT-*         agente da tarefa (existe, versao, papel, ativo, ambiente, recursos); AGENT-PATH-CEILING:
                     path do escopo que exige recurso fora do teto do agente (mesma classificacao do gateway)
     CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
+    CONFIG-GRAPHIFY opcoes do Graphify no config.json (enabled, backend none|ollama|auto, paths e graph relativos)
     VAL-*           validacao independente (existe validador, validador diferente do executor)
     PERM-* / AUTH-* permissoes da tarefa x politica e autorizacoes (existe, escopo, ambiente, validade)
     BP-*            blueprint x feature (versao, requisitos, componentes, endpoints, entidades, decisoes aprovadas, cobertura)
@@ -493,6 +494,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             cfg = {}
         for problem in aisef_project.git_settings(cfg if isinstance(cfg, dict) else {})[1]:
             rep.err("CONFIG-GIT", "config.json", problem)
+        for problem in aisef_project.graphify_settings(cfg if isinstance(cfg, dict) else {})[1]:
+            rep.err("CONFIG-GRAPHIFY", "config.json", problem)
 
     # ------------------------------------------------------------------ tarefas
     validators =[a for a in agents.values() if a["role"] == "validator" and a["status"] == "active"]

@@ -111,7 +111,7 @@ Estimativas em dias de trabalho seu com o Claude, como faixa.
     Critério de aceite: linha de base publicada. As metas da seção 8 ganham números reais.
     Estimativa: 1 dia de uso + 0,5 de registro
 
-[ ] G-01: Graphify padrão no aisef-init
+[x] G-01: Graphify padrão no aisef-init
     Descrição: no aisef-init, o Graphify vem marcado (opt-out). Um único OK seu instala no
       escopo do projeto (o ADR 0011 continua valendo: instalar passa pelo gateway).
       GRAPHIFY_BACKEND=none por padrão. Gera o grafo sobre docs/ e .aisef/.
