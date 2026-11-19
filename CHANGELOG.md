@@ -1,6 +1,6 @@
 # Changelog
 
-## Não lançado (0.11.0: medir)
+## 0.11.0: medir
 - **`aisef_project.py metrics`** (`core/aisef_metrics.py`), só leitura e sem modelo. Calcula, a partir do log (inclusive o arquivo), dos contratos e das aprovações:
   - pedidos de aprovação por tarefa e por tipo, e a fatia Git;
   - taxa de aprovação na 1ª validação e reprovações (precheck × validador);
