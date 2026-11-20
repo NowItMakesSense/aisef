@@ -19,12 +19,13 @@ CORE = `<skill-dir>/../../core`. Python = `$AISEF_PYTHON`, senao `python3`/`pyth
 | `project_id` | Identificador curto (ex.: `PRJ-LOJA`) | padrao `^[A-Za-z0-9][A-Za-z0-9._:-]{1,95}$` |
 | `name` | Nome do projeto | |
 | `environment` | Esta maquina/sessao trabalha em `dev`, `staging` ou `prod`? | Padrao `dev`. Na duvida, a politica trata como `prod`. |
+| `profile` | Quanta cerimonia? `solo` (Recomendado: a triagem escolhe entre caminho rapido, enxuto e completo), `team` (ciclo completo por padrao) ou `regulated` (sem caminho rapido; TDD sempre; blueprint em risco alto) | Padrao `solo`. O gateway e o log assinado sao iguais nos tres. Mudar depois e editar `profile` no `config.json` (o gateway pede a sua aprovacao). |
 
 Reaproveite o que o usuario ja disse. O resto (stack, dominio, requisitos) e assunto da **aisef-discovery**, nao daqui. Em projeto existente, investigue antes de perguntar o nome.
 
 ## 3. Crie
 ```
-python -I CORE/aisef_project.py init --project . --project-id <ID> --name "<nome>" --environment <env>
+python -I CORE/aisef_project.py init --project . --project-id <ID> --name "<nome>" --environment <env> --profile <perfil>
 ```
 Isso cria `.aisef/{contracts/{features,tasks,agents},blueprints,approvals,authorizations,reports,audit,keys}`, `config.json` e o evento genesis. A chave **privada** e o head assinado ficam em `~/.aisef/` (fora do repositorio). Nunca leia nem copie esses arquivos.
 

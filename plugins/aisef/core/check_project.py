@@ -33,6 +33,9 @@ Regras (codigo -> o que verifica):
                     arquitetural, estilo pendente de decisao, violacoes da regra de dependencia
     CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
     CONFIG-GRAPHIFY opcoes do Graphify no config.json (enabled, backend none|ollama|auto, paths e graph relativos)
+    CONFIG-PROFILE  perfil de cerimonia no config.json (solo, team, regulated)
+    PROFILE-*       perfil regulated: PROFILE-QUICK (sem caminho rapido), PROFILE-TDD (toda tarefa executora com TDD),
+                    PROFILE-BLUEPRINT (feature com tarefa de risco alto tem blueprint)
     VAL-*           validacao independente (existe validador, validador diferente do executor); VAL-REVIEW-MISSING: validada sem o
                     APPROVE de todos os revisores ativos de review.reviewers
     PERM-* / AUTH-* permissoes da tarefa x politica e autorizacoes (existe, escopo, ambiente, validade)
@@ -249,6 +252,13 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         if a["status"] == "approved" and rr and rr["kind"] == "architectural_decision":
             arch_decisions[(rr["id"], rr.get("version", 1))] = a
 
+    try:
+        with open(os.path.join(project, "config.json"), encoding="utf-8") as fh:
+            profile = (json.load(fh) or {}).get("profile") or "team"
+    except (OSError, ValueError, AttributeError):
+        profile = "team"
+    if profile == "regulated" and MAINT_FEATURE in feats:
+        rep.err("PROFILE-QUICK", "feature " + MAINT_FEATURE, "perfil regulated nao tem caminho rapido: mova as tarefas para uma feature")
     for fid, f in feats.items():
         where = "feature " + fid
         reqs = {}
@@ -262,6 +272,16 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         active = {i: r for i, r in reqs.items() if r["status"] == "active"}
         rule_ids = {b["id"] for b in f.get("business_rules", [])}
 
+        if profile == "regulated" and fid != MAINT_FEATURE:  # L-04: perfil regulated
+            ftasks = [tasks.get(i["task_id"]) for i in f["task_plan"]]
+            ftasks = [t for t in ftasks if t is not None]
+            for t in ftasks:
+                if t["assigned_agent"].get("role") in aisef_catalog.validatable_roles() and                         not (t.get("tests") or {}).get("tdd_required"):
+                    rep.err("PROFILE-TDD", where, "perfil regulated: %s sem TDD (tests.tdd_required)" % t["task_id"])
+            high = [t["task_id"] for t in ftasks if (t.get("risk") or {}).get("level") in ("high", "critical")]
+            if high and not any(b[1]["feature_id"] == fid for b in by["blueprints"].values()):
+                rep.err("PROFILE-BLUEPRINT", where, "perfil regulated: risco alto em %s exige Engineering Blueprint"
+                        % ", ".join(high))
         tri = f.get("triage")
         if tri:  # C-01: caminho escolhido em codigo (aisef_triage.py)
             order = ("quick", "lean", "full")
@@ -525,6 +545,9 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             rep.err("CONFIG-GIT", "config.json", problem)
         for problem in aisef_project.graphify_settings(cfg if isinstance(cfg, dict) else {})[1]:
             rep.err("CONFIG-GRAPHIFY", "config.json", problem)
+        prof = (cfg if isinstance(cfg, dict) else {}).get("profile")
+        if prof is not None and prof not in aisef_project.PROFILES:
+            rep.err("CONFIG-PROFILE", "config.json", "profile %r invalido (use %s)" % (prof, ", ".join(aisef_project.PROFILES)))
 
     # ------------------------------------------------------------------ tarefas
     validators =[a for a in agents.values() if a["role"] == "validator" and a["status"] == "active"]

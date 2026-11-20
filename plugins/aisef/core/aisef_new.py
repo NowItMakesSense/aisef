@@ -386,6 +386,8 @@ def cmd_blueprint(project, b):
 
 def cmd_quick(project, title, why, paths, test_cmd):
     """Caminho rapido: tarefa de manutencao na feature permanente FEAT-MAINT (plano aprovado uma vez)."""
+    if ap.load_config(project).get("profile") == "regulated":
+        raise SystemExit("perfil regulated nao tem caminho rapido: use a triagem (aisef_triage.py), que dara lean ou full")
     now = ap.now_iso()
     root = ap.aisef_dir(project)
     fpath = os.path.join(root, "contracts", "features", MAINT_FEATURE + ".json")

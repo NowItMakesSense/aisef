@@ -71,6 +71,8 @@ Pare quando `stop_reason` vier preenchido e resuma ao usuario o que foi feito e 
 - `nothing_ready`: nada pronto (tudo concluido ou aceito).
 Pare tambem se o **aisef-check** acusar erro, se a integridade do log falhar ou se o usuario pedir.
 
+**Projeto atras do plugin:** se o doctor avisar, mostre o plano de `python -I CORE/aisef_migrate.py --project .` ao usuario e aplique com `--apply` (o gateway pede a decisao dele). O migrate preserva o comportamento: projeto antigo vira `profile: team`.
+
 **Com o `/loop` do Claude Code:** use o modo autoritmado (sem intervalo), por exemplo `/loop siga o AISEF em modo continuo na FEAT-001`. Cada iteracao comeca pelo `next`; os subagentes em background notificam a conclusao e acordam a sessao; se so restar espera sem agente em voo, agende um `ScheduleWakeup` longo como fallback. Com `stop_reason`, encerre o loop (nao agende nova iteracao).
 
 **Aprovacoes continuam do usuario.** O modo continuo nunca roda `decide`, nunca responde prompt de permissao e nunca contorna o gateway; commit, push, PR, merge e release seguem pedindo aprovacao por operacao. Detalhes em `references/lifecycle.md`.

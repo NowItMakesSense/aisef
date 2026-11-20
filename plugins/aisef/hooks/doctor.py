@@ -20,6 +20,13 @@ def problems(project):
         found.append(libs)
     root = os.path.join(project, ".aisef")
     try:
+        import aisef_migrate
+        mig = aisef_migrate.status(project)  # F-06: projeto atras do plugin
+        if mig:
+            found.append(mig)
+    except Exception:
+        pass
+    try:
         import aisef_project as ap
         cfg = ap.load_config(project)
         key_id = ap.audit_settings(cfg)["key_id"]

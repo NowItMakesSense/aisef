@@ -20,6 +20,7 @@ GROUPS = [
     ("AGENT", "Agentes", "Agent Contracts ativos, papel, teto de recursos e de ambiente"),
     ("FEAT", "Feature Contract", "requisitos, critérios e arquitetura da feature"),
     ("TRIAGE", "Triagem", "caminho quick, lean ou full escolhido em código, sem rebaixar"),
+    ("PROFILE", "Perfil", "perfil regulated: sem caminho rápido, TDD e blueprint em risco alto"),
     ("PLAN", "Plano de tarefas", "plano coerente com a feature e os papéis"),
     ("TASK", "Task Contracts", "requisitos e critérios ligados, sem ciclos"),
     ("DEP", "Dependências", "dependências existem e não formam ciclo"),

@@ -284,6 +284,8 @@ def classify_bash(cmd, patterns, env):
     if re.search(r"aisef_project\.py\s+mode\b[^;&|]*--set\s+(?!ask\b)", cmd):
         # entrar no Ask so restringe (livre); sair dele devolve poder de execucao: decisao do usuario
         found.append(("aisef_decision", "write", env, False, "sair do modo Ask (decisao do usuario)"))
+    if re.search(r"aisef_migrate\.py\b[^;&|]*--apply\b", cmd):
+        found.append(("aisef_decision", "write", env, False, "migrate do projeto AISEF (decisao do usuario)"))
     if re.search(r"aisef_learn\.py\s+accept\b", cmd):
         found.append(("aisef_decision", "write", env, False, "aprovacao de licao aprendida (decisao do usuario)"))
     if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b|agents\b[^;&|]*--activate\b|settings\b[^;&|]*--apply\b|rotate-key\b)", cmd):

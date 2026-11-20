@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**158 regras** em 28 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**162 regras** em 29 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -45,6 +45,12 @@ Requisitos, critérios e arquitetura da feature.
 Caminho quick, lean ou full escolhido em código, sem rebaixar.
 
 `TRIAGE-LEAN-SHAPE`, `TRIAGE-OVERRIDDEN-DOWN`
+
+## Perfil (`PROFILE-*`)
+
+Perfil regulated: sem caminho rápido, TDD e blueprint em risco alto.
+
+`PROFILE-BLUEPRINT`, `PROFILE-QUICK`, `PROFILE-TDD`
 
 ## Plano de tarefas (`PLAN-*`)
 
@@ -164,7 +170,7 @@ Atores, ordem e referências dos eventos.
 
 Opções do config.json.
 
-`CONFIG-GIT`, `CONFIG-GRAPHIFY`
+`CONFIG-GIT`, `CONFIG-GRAPHIFY`, `CONFIG-PROFILE`
 
 ## Memória de projeto (`KNW-*`)
 

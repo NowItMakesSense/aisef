@@ -14,6 +14,7 @@ continuam lendo com cadeia de hash (aviso no verify).
 
 Uso:
     python3 -I aisef_project.py init   --project REPO --project-id ID [--name N] [--environment dev|staging|prod]
+                                       [--profile solo|team|regulated]   (padrao solo, L-04)
     python3 -I aisef_project.py append --project REPO --type EVENT_TYPE --summary TEXTO
                                        [--actor TIPO] [--actor-id ID] [--feature F] [--task T] [--data JSON]
     python3 -I aisef_project.py decide --project REPO --request APR-NNN --choice approve|reject|request_changes|select_option
@@ -402,7 +403,18 @@ def rotate_key(project):
     return new_id
 
 
-def init(project, project_id, name=None, environment="dev"):
+def _plugin_version():
+    try:
+        with open(os.path.join(os.path.dirname(HERE), ".claude-plugin", "plugin.json"), encoding="utf-8") as fh:
+            return json.load(fh)["version"]
+    except (OSError, ValueError, KeyError):
+        return "0.0.0"
+
+
+PROFILES = ("solo", "team", "regulated")  # L-04: projeto novo e solo; antigo vira team no migrate
+
+
+def init(project, project_id, name=None, environment="dev", profile="solo"):
     root = aisef_dir(project)
     if os.path.exists(os.path.join(root, "config.json")):
         raise SystemExit("ja existe %s; nada foi alterado" % os.path.join(root, "config.json"))
@@ -416,7 +428,8 @@ def init(project, project_id, name=None, environment="dev"):
         "schema_version": "0.1.0", "project_id": project_id, "log_id": project_id,
         "name": name or project_id, "environment": environment, "created_at": now_iso(),
         "policy": "permission-policy.v0.1.json", "defaults": "orchestration-defaults.v0.1.json",
-        "graphify": {"enabled": True, "backend": "none", "paths": ["docs", ".aisef"]}})
+        "graphify": {"enabled": True, "backend": "none", "paths": ["docs", ".aisef"]},
+        "profile": profile, "plugin_version": _plugin_version()})
     with open(os.path.join(root, ".gitignore"), "w", encoding="utf-8") as fh:
         fh.write("# gerado pelo AISEF\n*.lock\n*.tmp\npanel/\nruntime/\n")
     signed = False
@@ -1101,6 +1114,7 @@ def main(argv):
     ap.add_argument("--project-id")
     ap.add_argument("--name")
     ap.add_argument("--environment", default="dev", choices=["dev", "staging", "prod"])
+    ap.add_argument("--profile", default="solo", choices=list(PROFILES))
     ap.add_argument("--type")
     ap.add_argument("--summary")
     ap.add_argument("--actor", default="orchestrator", choices=["user", "orchestrator", "agent", "validator", "system"])
@@ -1125,7 +1139,7 @@ def main(argv):
     if a.command == "init":
         if not a.project_id:
             ap.error("--project-id e obrigatorio")
-        signed = init(project, a.project_id, a.name, a.environment)
+        signed = init(project, a.project_id, a.name, a.environment, a.profile)
         print("AISEF iniciado em %s (log %s)" % (aisef_dir(project), "assinado com Ed25519" if signed else "SEM assinatura: instale cryptography"))
         return 0
     if a.command == "append":

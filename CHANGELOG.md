@@ -18,6 +18,12 @@
   - perfil no `config.json`: `solo` usa a triagem; `team` (padrão sem perfil) só sugere o lean; `regulated` desliga o caminho rápido;
   - só se sobe de caminho: o `aisef_new` recusa descer, e o check ganha `TRIAGE-OVERRIDDEN-DOWN` e `TRIAGE-LEAN-SHAPE`;
   - skills `aisef` e `aisef-feature` (nova fase 0, Triagem) e eval `triage-choice`. Testes em `core/test_triage.py` (54).
+- **`migrate` e `plugin_version` (F-06).** O init grava `plugin_version`; o doctor avisa quando o projeto está atrás do plugin. Novo `core/aisef_migrate.py`: migrações ordenadas e idempotentes, plano por padrão e `--apply` como decisão do usuário (o gateway pergunta), com evento `decision_recorded`. A primeira migração dá `profile: team` aos projetos antigos, preservando o comportamento.
+- **Perfis de cerimônia (L-04).** `config.json` → `profile`; o init pergunta, com `solo` como padrão (`--profile`):
+  - `solo`: a triagem escolhe entre rápido, enxuto e completo;
+  - `team`: ciclo completo por padrão, como antes; o lean só é sugerido;
+  - `regulated`: sem caminho rápido (`aisef_new quick` recusa) e novas regras `PROFILE-QUICK`, `PROFILE-TDD` (toda tarefa executora com TDD) e `PROFILE-BLUEPRINT` (risco alto exige blueprint);
+  - `CONFIG-PROFILE` acusa perfil inválido. O gateway e o log assinado são iguais nos três.
 - **Doctor que resolve o ambiente (C-02) e init só com log assinado (D5).**
   - novo `core/aisef_env.py`: quando falta `jsonschema` ou `cryptography`, procura outro Python que tenha as duas (PATH, sem o atalho da Microsoft Store, e `py -0p` no Windows) e diz o valor exato de `AISEF_PYTHON` para o `settings.json`; sem nenhum, mostra o `pip install` só do que falta, no Python dos hooks;
   - o doctor (SessionStart) usa esse diagnóstico;

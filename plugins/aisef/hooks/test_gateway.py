@@ -331,6 +331,9 @@ case("remover servidor MCP -> ask", "PowerShell", "ask", command="claude mcp rem
 case("detalhes de plugin seguem livres", "Bash", "allow", command="claude plugin details aisef")
 case("aprovar licao aprendida -> ask (decisao do usuario)", "Bash", "ask", command="python aisef_learn.py accept --project . --proposal P-1 --trigger x --action y")
 case("subagente aprovando licao -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_learn.py accept --proposal P-1")
+case("migrate --apply -> ask (decisao do usuario)", "Bash", "ask", command="python -I core/aisef_migrate.py --project . --apply")
+case("migrate sem --apply (plano) nao pergunta", "Bash", "allow", command="python -I core/aisef_migrate.py --project .")
+case("subagente aplicando migrate -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_migrate.py --apply")
 case("propor licoes segue livre", "Bash", "allow", command="python aisef_learn.py propose --project .")
 case("impeccable detect segue livre", "Bash", "allow", command="npx impeccable detect web/")
 

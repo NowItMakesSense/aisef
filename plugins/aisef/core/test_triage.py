@@ -88,8 +88,12 @@ check("--force para baixo e recusado", ok)
 proj = os.path.join(work, "proj")
 os.makedirs(proj)
 ap.init(proj, "PRJ-TRI")
-check("projeto sem profile no config: team (comportamento anterior)", tr.triage(proj, **lean_args)["profile"] == "team")
+check("projeto novo: init grava profile solo (L-04)", ap.load_config(proj).get("profile") == "solo"
+      and tr.triage(proj, **lean_args)["path"] == "lean")
 cfg = ap.load_config(proj)
+cfg.pop("profile")
+ap.write_json(os.path.join(proj, ".aisef", "config.json"), cfg)
+check("projeto sem profile no config (antigo): team, comportamento anterior", tr.triage(proj, **lean_args)["profile"] == "team")
 cfg["profile"] = "solo"
 ap.write_json(os.path.join(proj, ".aisef", "config.json"), cfg)
 check("profile do config.json e lido", tr.triage(proj, **lean_args)["profile"] == "solo")
@@ -161,6 +165,35 @@ t2["tests"]["tdd_required"] = False
 ap.write_json(tpath, t2)
 check("check: TRIAGE-LEAN-SHAPE quando o lean perde o TDD", "TRIAGE-LEAN-SHAPE" in rules(proj))
 open(tpath, "w", encoding="utf-8").write(torig)
+
+# ------------------------------------------------------------------ perfil regulated (L-04)
+cfg = ap.load_config(proj)
+cfg["profile"] = "regulated"
+ap.write_json(os.path.join(proj, ".aisef", "config.json"), cfg)
+try:
+    an.cmd_quick(proj, "typo", "erro de digitacao", ["README.md"], None)
+    ok = False
+except SystemExit as e:
+    ok = "regulated" in str(e)
+check("regulated: aisef_new quick recusa", ok)
+check("regulated: lean com TDD passa sem erro PROFILE", not {r for r in rules(proj) if r.startswith("PROFILE")}, rules(proj))
+b = copy.deepcopy(BRIEF)
+b.pop("triage")
+b["id"] = "FEAT-020"
+b["requirements"] = {"REQ-200": "Trocar senha"}
+b["tasks"] = [{"id": "T-200", "kind": "task", "role": "backend", "title": "troca de senha", "reqs": ["REQ-200"],
+               "criteria": {"AC-200": "testes passam"}, "paths": ["src/conta.py"], "risk": "high"}]
+an.cmd_feature(proj, b)
+r = rules(proj)
+check("regulated: tarefa executora sem TDD -> PROFILE-TDD", "PROFILE-TDD" in r, r)
+check("regulated: risco alto sem blueprint -> PROFILE-BLUEPRINT", "PROFILE-BLUEPRINT" in r, r)
+cfg["profile"] = "team"
+ap.write_json(os.path.join(proj, ".aisef", "config.json"), cfg)
+r = rules(proj)
+check("team: as mesmas tarefas nao geram erro PROFILE", not {x for x in r if x.startswith("PROFILE")}, r)
+cfg["profile"] = "nenhum"
+ap.write_json(os.path.join(proj, ".aisef", "config.json"), cfg)
+check("perfil invalido -> CONFIG-PROFILE", "CONFIG-PROFILE" in rules(proj))
 
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

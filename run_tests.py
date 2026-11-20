@@ -40,6 +40,7 @@ SUITES = [
     ("Approval Center: request e decide reforcado", [os.path.join(CORE, "test_request_decide.py")]),
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),
+    ("migrate e plugin_version (F-06)", [os.path.join(CORE, "test_migrate.py")]),
     ("triagem e caminho enxuto (C-01)", [os.path.join(CORE, "test_triage.py")]),
     ("ambiente: Python com as bibliotecas (C-02)", [os.path.join(CORE, "test_env.py")]),
     ("grafo nativo de imports (G-06)", [os.path.join(CORE, "test_graph.py")]),
