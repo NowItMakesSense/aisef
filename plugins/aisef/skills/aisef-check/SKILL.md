@@ -13,6 +13,7 @@ python -I CORE/aisef_project.py verify --project .
 ```
 
 - `check_project.py` sai com codigo 1 se houver erro; `--strict` trata avisos como erro; `--json <arquivo>` grava o relatorio estruturado.
+- Cada achado pode trazer a **correcao** (linha `correcao:`; no JSON, `fix` com `cmd` e/ou `hint`). Com `--fix`, o check lista no fim os comandos sugeridos, sem repeticao: rode na ordem e confira de novo. Requisito que mudou se resolve com `aisef_new.py rebase-req --feature <F>`; tarefa ja iniciada pede reabertura (aisef-feature).
 - `aisef_project.py verify` compara o log com o head assinado **externo** (`~/.aisef/heads/`), o que detecta truncamento e reescrita.
 
 ## Como reportar

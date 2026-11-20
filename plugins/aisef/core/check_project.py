@@ -92,18 +92,56 @@ def parse_time(s):
     return datetime.datetime.fromisoformat(s)
 
 
+# F-07: como corrigir cada regra. `cmd` e um comando pronto (CORE = pasta core do plugin); `hint` e o passo a fazer.
+# Regras sem entrada aqui saem sem correcao sugerida. Nas regras de versao, o comando e por feature.
+REBASE = "python -I <CORE>/aisef_new.py rebase-req --project . --feature %s"
+FIX_HINTS = {
+    "VAL-NO-VALIDATOR": {"cmd": "python -I <CORE>/aisef_project.py agents --project . --roles validator",
+                         "hint": "cria o draft do validator; a ativacao e decisao do usuario (agents --activate)"},
+    "AGENT-PATH-CEILING": {"hint": "divida a tarefa ou troque o assigned_agent por um papel com esse recurso no teto"},
+    "DESIGN-MISSING": {"hint": "rode a skill aisef-design para propor e aprovar a autoridade de design"},
+    "STATE-UNAPPROVED-PLAN": {"hint": "leve o plan_approval da feature ao usuario (aisef-approve) antes de executar"},
+    "STATE-PLAN-NO-EVENT": {"hint": "registre a decisao pelo aisef-approve (decide), que grava o approval_granted do usuario"},
+    "STATE-NO-START-EVENT": {"hint": "o agente da tarefa registra: aisef_project.py append --type task_started --actor agent --actor-id <papel> --task <T>"},
+    "STATE-NO-REPORT": {"hint": "o executor grava o Execution Report em reports/RPT-*.json; sem ele, a tarefa volta a in_progress"},
+    "STATE-NO-VALIDATION": {"cmd": "python -I <CORE>/aisef_project.py validate-wave --project .",
+                            "hint": "valide antes de concluir (validador independente)"},
+    "STATE-NO-COMPLETE-EVENT": {"hint": "registre: aisef_project.py append --type task_completed --task <T> (orquestrador)"},
+    "STATE-DEP-INCOMPLETE": {"hint": "pause a tarefa (task_paused) ate a dependencia concluir"},
+    "STATE-FEATURE-TASKS": {"hint": "conclua as tarefas pendentes ou volte o estado da feature"},
+    "STATE-CLOSED-NO-ACCEPT": {"hint": "o aceite e do usuario: pedido feature_acceptance pelo aisef-approve"},
+    "TRIAGE-OVERRIDDEN-DOWN": {"hint": "suba o caminho no contrato (path) ate o calculado; descer nao e permitido"},
+    "CONFIG-PROFILE": {"hint": "use solo, team ou regulated em config.json -> profile"},
+}
+
+
 class Report:
     def __init__(self):
         self.findings = []
 
-    def add(self, severity, rule, where, message):
-        self.findings.append({"severity": severity, "rule": rule, "where": where, "message": message})
+    def add(self, severity, rule, where, message, fix=None):
+        f = {"severity": severity, "rule": rule, "where": where, "message": message}
+        fix = fix or FIX_HINTS.get(rule)
+        if fix:
+            f["fix"] = dict(fix)
+        self.findings.append(f)
 
-    def err(self, rule, where, message):
-        self.add("error", rule, where, message)
+    def err(self, rule, where, message, fix=None):
+        self.add("error", rule, where, message, fix)
 
-    def warn(self, rule, where, message):
-        self.add("warning", rule, where, message)
+    def warn(self, rule, where, message, fix=None):
+        self.add("warning", rule, where, message, fix)
+
+    def fixes(self, core=None):
+        """Comandos de correcao sem repeticao, na ordem dos achados (com <CORE> trocado pelo caminho real)."""
+        out = []
+        for f in self.findings:
+            c = (f.get("fix") or {}).get("cmd")
+            if c:
+                c = c.replace("<CORE>", core) if core else c
+                if c not in out:
+                    out.append(c)
+        return out
 
     def codes(self):
         return {f["rule"] for f in self.findings}
@@ -320,9 +358,11 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             if t["feature_id"] != fid:
                 rep.err("PLAN-FEATURE", where, "%s pertence a %s, nao a esta feature" % (tid, t["feature_id"]))
             if t["contract_version"] != item["contract_version"]:
-                rep.err("PLAN-VERSION", where, "%s: plano espera v%d, contrato esta em v%d" % (tid, item["contract_version"], t["contract_version"]))
+                rep.err("PLAN-VERSION", where, "%s: plano espera v%d, contrato esta em v%d" % (tid, item["contract_version"], t["contract_version"]),
+                        {"cmd": REBASE % fid, "hint": "alinha o plano as versoes atuais das tarefas"})
             if t["feature_contract_version"] != f["contract_version"]:
-                rep.err("PLAN-FEATURE-VERSION", where, "%s foi emitida para a v%d do Feature Contract; a atual e v%d" % (tid, t["feature_contract_version"], f["contract_version"]))
+                rep.err("PLAN-FEATURE-VERSION", where, "%s foi emitida para a v%d do Feature Contract; a atual e v%d" % (tid, t["feature_contract_version"], f["contract_version"]),
+                        {"cmd": REBASE % fid, "hint": "leva as tarefas a versao atual da feature; tarefa iniciada pede reabertura"})
             if set(item.get("depends_on", [])) != set(t.get("dependencies", {}).get("depends_on", [])):
                 rep.err("PLAN-DEPS", where, "%s: dependencias do plano diferem das do contrato da tarefa" % tid)
             if item.get("role") and t["assigned_agent"].get("role") and item["role"] != t["assigned_agent"]["role"]:
@@ -359,7 +399,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                     continue
                 refs = {(x["id"], x["version"]) for x in t["requirements"]["requirement_ids"]}
                 if (rid, req["version"]) not in refs:
-                    rep.err("RTM-TASK-NOT-LINKED", where, "%s: a tarefa %s nao declara este requisito (nesta versao)" % (rid, tid))
+                    rep.err("RTM-TASK-NOT-LINKED", where, "%s: a tarefa %s nao declara este requisito (nesta versao)" % (rid, tid),
+                            {"cmd": REBASE % fid, "hint": "atualiza a tarefa para a versao atual do requisito"})
                 crit_found |= {c["id"] for c in t["acceptance_criteria"]}
             for cid in e["criterion_ids"]:
                 if cid not in crit_found:
@@ -407,7 +448,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             rep.err("BP-FEATURE", where, "feature %s nao existe" % b["feature_id"])
             continue
         if b["feature_contract_version"] != f["contract_version"] and b["state"]["status"] != "superseded":
-            rep.err("BP-FEATURE-VERSION", where, "baseado na v%d do Feature Contract; a atual e v%d" % (b["feature_contract_version"], f["contract_version"]))
+            rep.err("BP-FEATURE-VERSION", where, "baseado na v%d do Feature Contract; a atual e v%d" % (b["feature_contract_version"], f["contract_version"]),
+                    {"cmd": REBASE % b["feature_id"], "hint": "acerta a base do blueprint; se ele cita o requisito que mudou, crie a nova versao do blueprint"})
         active = {r["id"] for r in f["requirements"] if r["status"] == "active"}
         allr = {r["id"] for r in f["requirements"]}
         comps = {c["id"] for c in b["architecture"]["components"]}
@@ -578,7 +620,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                 elif r["status"] != "active":
                     rep.err("TASK-REQ-SUPERSEDED", where, "requisito %s foi substituido" % x["id"])
                 elif r["version"] != x["version"]:
-                    rep.err("TASK-REQ-VERSION", where, "%s na v%d, requisito atual v%d" % (x["id"], x["version"], r["version"]))
+                    rep.err("TASK-REQ-VERSION", where, "%s na v%d, requisito atual v%d" % (x["id"], x["version"], r["version"]),
+                            {"cmd": REBASE % t["feature_id"], "hint": "tarefa ainda nao iniciada: nova versao com o requisito atual; iniciada ou concluida: reabra a feature (aisef-feature)"})
             if t.get("reopen_cycle", 1) > f["cycle"]["number"]:
                 rep.err("TASK-CYCLE", where, "ciclo %d maior que o da feature (%d)" % (t["reopen_cycle"], f["cycle"]["number"]))
         crit_ids = [c["id"] for c in t["acceptance_criteria"]]
@@ -1065,11 +1108,19 @@ def main(argv):
     ap.add_argument("--now")
     ap.add_argument("--json")
     ap.add_argument("--strict", action="store_true")
+    ap.add_argument("--fix", action="store_true", help="lista no fim os comandos de correcao sugeridos (F-07)")
     a = ap.parse_args(argv[1:])
     rep = check(a.project, a.schemas, a.policy, a.defaults, a.now)
     for f in sorted(rep.findings, key=lambda x: (x["severity"] != "error", x["rule"])):
         print("[%s] %s | %s | %s" % ("ERRO " if f["severity"] == "error" else "AVISO", f["rule"], f["where"], f["message"]))
+        if f.get("fix"):
+            fx = f["fix"]
+            print("        correcao: %s" % "; ".join(x for x in (fx.get("cmd", "").replace("<CORE>", HERE), fx.get("hint")) if x))
     print("%d erro(s), %d aviso(s)" % (rep.count("error"), rep.count("warning")))
+    if a.fix and rep.fixes():
+        print("\nComandos de correcao (rode na ordem e confira de novo):")
+        for c in rep.fixes(HERE):
+            print("  " + c)
     if a.json:
         with open(a.json, "w", encoding="utf-8") as fh:
             json.dump(rep.findings, fh, ensure_ascii=False, indent=2)

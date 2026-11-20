@@ -279,6 +279,24 @@ def compute_next(project, feature=None, now=None, git_state=None):
                               "independent_work_continues": True,
                               "hint": "escale ao usuario: mudar o contrato, trocar de agente ou cancelar"})
 
+    # ---- requisito mudou (F-07): a tarefa nao segue com a versao antiga do requisito
+    req_changed = []
+    for tid, t in sorted(tasks.items()):
+        if not in_scope(t.get("feature_id")) or state[tid] in DONE or tid in blocked:
+            continue
+        cur = {r["id"]: r["version"] for r in (feats.get(t.get("feature_id")) or {}).get("requirements", [])}
+        refs = (t.get("requirements") or {}).get("requirement_ids") or []
+        stale = [x["id"] for x in refs if isinstance(x, dict) and x.get("id") in cur and x.get("version") != cur[x["id"]]]
+        if not stale:
+            continue
+        block(tid, "requisito %s mudou" % ", ".join(stale))
+        started = state[tid] not in ("draft", "ready", "rejected", "blocked")
+        req_changed.append({"kind": "requirement_changed", "feature_id": t.get("feature_id"), "task_ids": [tid],
+                            "requirements": stale, "started": started,
+                            "cmd": _cmd("aisef_new.py", "rebase-req --project . --feature %s" % t.get("feature_id")),
+                            "hint": ("a tarefa ja comecou: reabra a feature (aisef-feature) para mudar o que foi feito"
+                                     if started else "rode o comando: nova versao da tarefa com o requisito atual")})
+
     # ---- validate e complete
     def executor_level(tid):
         agent = tasks[tid]["assigned_agent"]["agent_id"]
@@ -410,8 +428,10 @@ def compute_next(project, feature=None, now=None, git_state=None):
     wait_actions = [{"kind": "wait", "task_ids": wait,
                      "hint": "aguarde a notificacao dos agentes em background antes do proximo ciclo"}] if wait else []
 
-    automatable = complete + validate + acceptance + branch_actions + dispatch_actions
-    actions = critical + exhausted + decisions + complete + validate + acceptance + branch_actions + dispatch_actions + wait_actions + cleanup
+    rebase_now = [a for a in req_changed if not a["started"]]  # o orquestrador resolve sozinho (rebase-req)
+    decisions += [a for a in req_changed if a["started"]]        # reabrir e decisao do usuario
+    automatable = rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions
+    actions = critical + exhausted + decisions + rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions + wait_actions + cleanup
     if critical:
         stop, detail = "critical_risk", "risco critico: pare na hora e leve ao usuario"
     elif automatable or wait:
@@ -474,6 +494,9 @@ def format_next(res):
             ref = a.get("request_id") or a.get("event_id") or a.get("report_id") or ""
             lines.append("- await_decision [%s] %s %s%s" % (a["source"], ref, a.get("title") or "",
                                                            " (bloqueia %s)" % ", ".join(a["task_ids"]) if a.get("task_ids") else ""))
+        elif k == "requirement_changed":
+            lines.append("- requirement_changed %s (%s): %s" % (", ".join(a["task_ids"]), ", ".join(a["requirements"]),
+                                                               a["hint"] if a["started"] else a["cmd"]))
         elif k == "feature_acceptance":
             lines.append("- feature_acceptance %s: %s" % (a["feature_id"], a["hint"]))
         elif k == "create_branch":

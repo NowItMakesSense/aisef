@@ -163,7 +163,7 @@ Cada evento tem o ator certo, e o `append` recusa o resto antes de gravar (o log
 Eventos de decisao do usuario (`approval_granted`, `feature_accepted`...) so via **aisef-approve** com `--actor user`, o que dispara o prompt nativo de permissao.
 
 ## Antes de declarar qualquer coisa pronta
-Rode **aisef-check**. Erro de consistencia bloqueia a transicao de estado. Para o usuario acompanhar, **aisef-panel**.
+Rode **aisef-check**. Erro de consistencia bloqueia a transicao de estado. Cada achado traz a `correcao` (comando ou passo); com `--fix`, o check lista os comandos no fim. Requisito que mudou: `aisef_new.py rebase-req --feature <F>` (o `next` mostra como `requirement_changed`). Para o usuario acompanhar, **aisef-panel**.
 
 ## Reabertura
 Feature aceita fica congelada. Reabrir = novo ciclo (`cycle` + 1) com motivo `defect`, `requirement_change` ou `evolution`, novos contratos so para a mudanca, Impact Analysis e novo aceite. Detalhes em **aisef-feature**.
