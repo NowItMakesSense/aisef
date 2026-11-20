@@ -17,7 +17,8 @@ Le contratos, aprovacoes, relatorios e o log de auditoria e devolve o que fazer 
 `guide` diz a fase (discovery, specify, approve_plan, execute, review, decide, done) e o proximo passo com a
 skill certa, tambem antes da execucao; mapeia os comandos do Matt Pocock para o equivalente no AISEF.
 
-`stop_reason` diz quando o loop deve parar: critical_risk (para na hora), attempts_exhausted e
+`stop_reason` diz quando o loop deve parar: critical_risk (para na hora), budget_exhausted (L-01: tempo, tokens ou
+despachos da feature passaram do limite; para logo em seguida), attempts_exhausted e
 user_decision_pending (so quando nao resta trabalho automatizavel), nothing_ready (idle). None = seguir.
 
 Estado efetivo da tarefa: o do contrato combinado com o ultimo evento de ciclo de vida no log
@@ -279,6 +280,52 @@ def compute_next(project, feature=None, now=None, git_state=None):
                               "independent_work_continues": True,
                               "hint": "escale ao usuario: mudar o contrato, trocar de agente ou cancelar"})
 
+    # ---- orcamento, falta de progresso e agente parado (L-01, L-06)
+    import aisef_budget
+    import aisef_runtime
+    plimits = aisef_budget.project_limits(cfg)
+    budget_stop = []
+    usage_runs = aisef_runtime.read_usage(ap.aisef_dir(project))
+    for fid, f in sorted(feats.items()):
+        if not in_scope(fid) or fid == "FEAT-MAINT":
+            continue
+        tids = [i["task_id"] for i in f.get("task_plan", []) if i["task_id"] in tasks]
+        open_ids = [t for t in tids if state[t] not in DONE]
+        if not open_ids:
+            continue
+        lim = aisef_budget.feature_limits(cfg, f)
+        used = aisef_budget.feature_usage(fid, set(tids), log, usage_runs, now)
+        over = aisef_budget.exhausted(lim, used)
+        if over:
+            for t in open_ids:
+                block(t, "orcamento da feature esgotado")
+            budget_stop.append({"kind": "await_decision", "source": "budget_exhausted", "feature_id": fid,
+                                "task_ids": open_ids, "used": used, "limits": {k: lim[k] for k in aisef_budget.KEYS},
+                                "title": "%s passou do orcamento: %s" % (fid, ", ".join(
+                                    "%s %s de %s" % (k.replace("max_", ""), u, l) for k, u, l in over)),
+                                "independent_work_continues": False,
+                                "hint": "subir o limite e decisao do usuario (config.json -> budget, o gateway pergunta); "
+                                        "ou reduzir o escopo da feature"})
+    for tid, t in sorted(tasks.items()):
+        if not in_scope(t.get("feature_id")) or tid in blocked:
+            continue
+        if state[tid] == "rejected" and aisef_budget.no_progress(log, tid, plimits["no_progress_repeats"]):
+            block(tid, "sem progresso")
+            decisions.append({"kind": "await_decision", "source": "no_progress", "feature_id": t.get("feature_id"),
+                              "task_ids": [tid], "independent_work_continues": True,
+                              "title": "%s reprovada %d vezes seguidas pelo mesmo motivo" % (tid, plimits["no_progress_repeats"]),
+                              "hint": "subir de modelo nao resolve: traga contexto novo (code-explorer, docs-lookup, "
+                                      "o que faltou no relatorio) ou mude o contrato; so entao redelegue"})
+        elif state[tid] == "in_progress" and last_started.get(tid):
+            timeout = (t.get("limits") or {}).get("timeout_minutes") or plimits["agent_timeout_minutes"]
+            age = (now - last_started[tid]).total_seconds() / 60
+            if age > timeout:
+                block(tid, "agente parado")
+                decisions.append({"kind": "await_decision", "source": "stale_agent", "feature_id": t.get("feature_id"),
+                                  "task_ids": [tid], "independent_work_continues": True,
+                                  "title": "%s em andamento ha %d min (limite %d)" % (tid, age, timeout),
+                                  "hint": "veja se o agente ainda roda; se nao, redelegue ou pause a tarefa"})
+
     # ---- agente terminou sem Execution Report (F-04: o hook marca no_report no runtime)
     no_report = {}
     try:
@@ -460,9 +507,11 @@ def compute_next(project, feature=None, now=None, git_state=None):
     rebase_now = [a for a in req_changed if not a["started"]]  # o orquestrador resolve sozinho (rebase-req)
     decisions += [a for a in req_changed if a["started"]]        # reabrir e decisao do usuario
     automatable = rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions
-    actions = critical + exhausted + decisions + rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions + wait_actions + cleanup
+    actions = critical + budget_stop + exhausted + decisions + rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions + wait_actions + cleanup
     if critical:
         stop, detail = "critical_risk", "risco critico: pare na hora e leve ao usuario"
+    elif budget_stop:
+        stop, detail = "budget_exhausted", "orcamento da feature esgotado: pare e leve ao usuario"
     elif automatable or wait:
         stop, detail = None, None
     elif exhausted:

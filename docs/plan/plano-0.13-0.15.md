@@ -152,8 +152,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
     Critério de aceite: test_doctor com PATH simulado (achou, não achou, vários Pythons).
     Estimativa: 1 dia
 
-[~] F-01, F-03, F-06, F-07, F-08 (do plano anterior, sem mudança de escopo)
-    Status: F-06 feito (b2a1d03); faltam F-01, F-03, F-07 e F-08
+[x] F-01, F-03, F-06, F-07, F-08 (do plano anterior, sem mudança de escopo)
+    Status: todos feitos. F-01 virou um tipo proprio de autorizacao (mcp_tool, ADR 0024); F-03 no ADR 0025; F-08 com o item sandbox no setup
     F-01 MCP por escopo de ferramenta        2–3 dias
     F-03 Git por risco                        3–4 dias
     F-06 plugin_version e migrate             2–3 dias
@@ -186,10 +186,12 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
       negados e registrados no log.
     Estimativa: 1 dia
 
-[ ] F-04: Ciclo de vida registrado pelos hooks (do plano anterior)
+[x] F-04: Ciclo de vida registrado pelos hooks (do plano anterior)
+    Status: feito: task_started e task_executed pelo hook, no_report no next. O registro do validador continua com o validador
     Estimativa: 3–4 dias (confiança média)
 
-[ ] L-01 + L-06: Orçamento e falta de progresso
+[x] L-01 + L-06: Orçamento e falta de progresso
+    Status: feito: sem max_usd (nao ha tabela de precos); budget_exhausted, no_progress e stale_agent
     Descrição:
       - L-01 como no plano anterior: budget {max_minutes, max_tokens, max_usd,
         max_attempts_total} no Feature Contract, padrões em orchestration-defaults,

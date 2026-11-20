@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**163 regras** em 29 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**164 regras** em 30 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -45,6 +45,12 @@ Requisitos, critérios e arquitetura da feature.
 Caminho quick, lean ou full escolhido em código, sem rebaixar.
 
 `TRIAGE-LEAN-SHAPE`, `TRIAGE-OVERRIDDEN-DOWN`
+
+## Orçamento (`BUDGET-*`)
+
+Limites da feature no modo contínuo só podem baixar os do projeto.
+
+`BUDGET-RAISED`
 
 ## Perfil (`PROFILE-*`)
 

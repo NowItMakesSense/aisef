@@ -54,7 +54,7 @@ Com o plano aprovado, siga sozinho tarefa apos tarefa e feature apos feature; pa
 python -I CORE/aisef_project.py next --project . [--feature FEAT-001] [--json]
 ```
 O `next` deriva o estado do log (`delegation`/`task_started` -> em andamento, `task_executed`, `task_validated`, `task_rejected`, `task_completed`) e devolve as acoes, sem executar nada. Trate nesta ordem:
-1. `await_decision`: leve ao usuario (**aisef-approve**); so a tarefa bloqueada espera, o resto continua.
+1. `await_decision`: leve ao usuario (**aisef-approve**); so a tarefa bloqueada espera, o resto continua. Fontes novas: `no_progress` (reprovada 2x seguidas pelo mesmo motivo: traga contexto novo antes de redelegar, subir de modelo nao resolve), `stale_agent` (em andamento acima do tempo limite) e `no_report` (terminou sem Execution Report).
 2. `complete`: **aisef-check**, estado do contrato para `completed`, `append` de `task_completed` (comando pronto na acao).
 3. `validate`: rode `python -I CORE/aisef_project.py validate-wave --project .`. Ele faz o `precheck` deterministico de cada tarefa `executed` (quem falha volta ao executor como tentativa + 1, sem gastar modelo) e devolve **um** prompt de validador para o resto da onda; dispare-o em background com o `model`/`effort` devolvidos.
 4. `feature_acceptance`: antes, revise a feature inteira com a skill `code-review` (plugin `mattpocock-skills`; padroes + aderencia a spec; sem o plugin, um subagente revisor). Achados viram novas tentativas das fatias afetadas. Depois, relatorio final e pedido `feature_acceptance` com `aisef_project.py request`.
@@ -66,6 +66,7 @@ Se o `guide` trouxer `graph_refresh`, rode o comando dele (`graphify update .`, 
 
 Pare quando `stop_reason` vier preenchido e resuma ao usuario o que foi feito e o que depende dele:
 - `critical_risk`: pare na hora, nada mais e despachado.
+- `budget_exhausted`: a feature passou do orcamento (minutos desde a primeira delegacao, tokens dos subagentes ou despachos; limites em `orchestration-defaults` -> `budget`, ajustaveis em `config.json` -> `budget`). Subir o limite e decisao do usuario; o Feature Contract so pode baixar.
 - `attempts_exhausted`: limite de correcoes atingido (contrato ou `orchestration-defaults`); escale.
 - `user_decision_pending`: so restam decisoes do usuario.
 - `nothing_ready`: nada pronto (tudo concluido ou aceito).

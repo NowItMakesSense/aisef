@@ -42,6 +42,7 @@ SUITES = [
     ("Approval Center: request e decide reforcado", [os.path.join(CORE, "test_request_decide.py")]),
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),
+    ("orcamento e falta de progresso (L-01, L-06)", [os.path.join(CORE, "test_budget.py")]),
     ("check com correcao e rebase-req (F-07)", [os.path.join(CORE, "test_rebase.py")]),
     ("setup em lote do init (C-03)", [os.path.join(CORE, "test_setup.py")]),
     ("migrate e plugin_version (F-06)", [os.path.join(CORE, "test_migrate.py")]),

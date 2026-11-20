@@ -13,6 +13,14 @@
       "Cada tentativa gera evento na auditoria com causa, acao e resultado."
     ]
   },
+  "budget": {
+    "$note": "L-01/L-06 (0.13): limites por feature no modo continuo. config.json -> budget muda para o projeto (subir pede aprovacao do usuario); o Feature Contract -> budget so pode baixar.",
+    "max_minutes": 480,
+    "max_tokens": 5000000,
+    "max_attempts": 30,
+    "agent_timeout_minutes": 60,
+    "no_progress_repeats": 2
+  },
   "resolution": {
     "task_contract_null_means": "use_defaults",
     "task_contract_value_overrides_default": true,

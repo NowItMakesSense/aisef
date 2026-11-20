@@ -119,6 +119,16 @@
     },
 
     "constraints": { "type": "array", "items": { "type": "string" } },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opcional (0.13, L-01). Limites da feature no modo continuo; so podem BAIXAR os do projeto (orchestration-defaults e config.json -> budget). Subir e decisao do usuario no config.json.",
+      "properties": {
+        "max_minutes": { "type": "integer", "minimum": 1 },
+        "max_tokens": { "type": "integer", "minimum": 1 },
+        "max_attempts": { "type": "integer", "minimum": 1 }
+      }
+    },
     "triage": {
       "type": "object",
       "additionalProperties": false,

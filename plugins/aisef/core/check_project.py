@@ -34,6 +34,7 @@ Regras (codigo -> o que verifica):
     CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
     CONFIG-GRAPHIFY opcoes do Graphify no config.json (enabled, backend none|ollama|auto, paths e graph relativos)
     CONFIG-PROFILE  perfil de cerimonia no config.json (solo, team, regulated)
+    BUDGET-RAISED   Feature Contract com budget acima do limite do projeto (L-01: o contrato so baixa)
     PROFILE-*       perfil regulated: PROFILE-QUICK (sem caminho rapido), PROFILE-TDD (toda tarefa executora com TDD),
                     PROFILE-BLUEPRINT (feature com tarefa de risco alto tem blueprint)
     VAL-*           validacao independente (existe validador, validador diferente do executor); VAL-REVIEW-MISSING: validada sem o
@@ -333,6 +334,15 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             if high and not any(b[1]["feature_id"] == fid for b in by["blueprints"].values()):
                 rep.err("PROFILE-BLUEPRINT", where, "perfil regulated: risco alto em %s exige Engineering Blueprint"
                         % ", ".join(high))
+        try:
+            import aisef_budget
+            with open(os.path.join(project, "config.json"), encoding="utf-8") as fh:
+                _cfg = json.load(fh)
+        except (OSError, ValueError, ImportError):
+            _cfg = {}
+        for k in aisef_budget.raised(_cfg if isinstance(_cfg, dict) else {}, f):  # L-01
+            rep.err("BUDGET-RAISED", where, "budget.%s acima do limite do projeto: subir e decisao do usuario" % k,
+                    {"hint": "baixe o valor no Feature Contract ou peca ao usuario para subir config.json -> budget.%s" % k})
         tri = f.get("triage")
         if tri:  # C-01: caminho escolhido em codigo (aisef_triage.py)
             order = ("quick", "lean", "full")
