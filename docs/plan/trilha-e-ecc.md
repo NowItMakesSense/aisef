@@ -63,7 +63,18 @@
 - **A-07, decidido: manter a trava.**
 - **A-04, decidido:** `react-reviewer` e `vue-reviewer` ativados pela stack, `a11y-architect` por qualquer stack de UI; entram na revisao de tarefas de UI e so relatam. `react-build-resolver` segue manual.
 - **A-06, decidido: manter Opus** no planner, architect, spec-miner e healthcare-reviewer.
-- **A-05, pendente do usuario:** 3 repeticoes no WSL, na branch do PR #18.
+- **A-05, medido com 3 repetições** (feat-slugify, Sonnet, Windows; `docs/benchmarks/outcomes-2026-11-19-3reps.*`):
+
+  | Braço | Testes escondidos | Custo por execução | Mediana | Tempo (mediana) |
+  |---|---|---|---|---|
+  | plain | 3/3 com 7/7 | US$ 0,13 / 0,17 / 0,13 | US$ 0,13 | 26 s |
+  | aisef (3 revisores) | 3/3 com 7/7 | US$ 1,65 / 1,46 / 1,49 | US$ 1,49 | 335 s |
+  | aisef-norev | 3/3 com 7/7 | US$ 1,32 / 2,49 / 1,22 | US$ 1,32 | 333 s |
+
+  - **Custo dos revisores:** cerca de +US$ 0,17 por fatia na mediana (+13%). Na média, o braço sem revisores saiu mais caro (US$ 1,68 contra US$ 1,53), por causa de uma execução fora da curva. Conclusão: o custo dos revisores é pequeno e fica dentro da variação. Eles ficam ligados.
+  - **Os revisores rodaram de verdade** nas 3 execuções do braço aisef: 3 relatórios de revisão por execução, e a tarefa chegou a `completed`.
+  - **O AISEF custa cerca de 11× o Claude puro** numa tarefa pequena, com o mesmo resultado nos testes escondidos. A tarefa é pequena demais para o processo mostrar ganho de qualidade; esse ganho precisa ser medido em tarefas maiores e no uso real (M-05 e F-10).
+  - Uma rodada anterior falhou em silêncio (8 de 9 execuções com custo zero, provavelmente a CLI recusando sessões por um tempo). O harness agora grava a saída quando há falha e para depois de 3 falhas seguidas.
 - **A-11, conferido.** Os 56 papéis portados têm `source`, as 33 práticas têm `source:` e o `THIRD_PARTY_NOTICES.md` traz a licença MIT íntegra.
 
 | # | O que avaliar | Como | Decide |

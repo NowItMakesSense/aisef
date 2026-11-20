@@ -207,7 +207,8 @@ def run_claude(claude, workdir, env, arm, prompt, model, timeout):
     return {"seconds": round(secs, 1), "cost_usd": data.get("total_cost_usd"), "turns": data.get("num_turns"),
             "is_error": data.get("is_error", not data), "input_tokens": usage.get("input_tokens"),
             "output_tokens": usage.get("output_tokens"), "cache_read_tokens": usage.get("cache_read_input_tokens"),
-            "cache_write_tokens": usage.get("cache_creation_input_tokens"), "stderr": err[-400:]}
+            "cache_write_tokens": usage.get("cache_creation_input_tokens"), "stderr": err[-400:],
+            **({"stdout_head": out[:400]} if not data or data.get("is_error") else {})}
 
 
 CONTINUE_PROMPT = ("Continue o AISEF em modo continuo a partir do estado atual: rode aisef_project.py next e siga as "
@@ -310,9 +311,15 @@ def main(argv=None):
         return 0
     arms = [x for x in a.arms.split(",") if x in ("plain", "aisef", "aisef-norev")]
     results = []
+    fails_in_row = 0
     base = tempfile.mkdtemp(prefix="aisef-bench-")
+    stop = False
     for rep in range(1, a.reps + 1):
+        if stop:
+            break
         for t in tasks:
+            if stop:
+                break
             for arm in arms:
                 run_base = os.path.join(base, "r%d" % rep)
                 os.makedirs(run_base, exist_ok=True)
@@ -333,6 +340,12 @@ def main(argv=None):
                 if res["visible"]:
                     res["visible"].pop("tail", None)
                 results.append(res)
+                fails_in_row = fails_in_row + 1 if cl["is_error"] and not cl["cost_usd"] else 0
+                if fails_in_row >= 3:
+                    print("3 execucoes seguidas sem resposta do claude (custo 0): parando. Ultima saida: %r"
+                          % (cl.get("stdout_head") or cl["stderr"])[:300], flush=True)
+                    stop = True
+                    break
                 print("    escondidos %d/%d, US$ %s, %ss" % (res["hidden"]["passed"], res["hidden"]["ran"],
                                                           cl["cost_usd"], cl["seconds"]), flush=True)
     os.makedirs(a.out, exist_ok=True)

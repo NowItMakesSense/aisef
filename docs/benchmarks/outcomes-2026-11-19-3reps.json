@@ -1,0 +1,297 @@
+{
+  "model": "sonnet",
+  "reps": 3,
+  "results": [
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "plain",
+      "rep": 1,
+      "claude": {
+        "seconds": 19.5,
+        "cost_usd": 0.1329086,
+        "turns": 5,
+        "is_error": false,
+        "input_tokens": 8,
+        "output_tokens": 2167,
+        "cache_read_tokens": 122306,
+        "cache_write_tokens": 24748,
+        "stderr": ""
+      },
+      "visible": null,
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      }
+    },
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "aisef",
+      "rep": 1,
+      "claude": {
+        "seconds": 357.0,
+        "cost_usd": 1.645109,
+        "turns": 68,
+        "is_error": false,
+        "input_tokens": 110,
+        "output_tokens": 14435,
+        "cache_read_tokens": 2074750,
+        "cache_write_tokens": 124420,
+        "stderr": "",
+        "rounds": 4
+      },
+      "visible": {
+        "ok": true,
+        "ran": 10,
+        "passed": 10
+      },
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      },
+      "aisef": {
+        "gateway_asked": 2,
+        "gateway_denied": 0,
+        "approval_requests": 2,
+        "review_reports": 3,
+        "task_states": {
+          "T-001": "completed"
+        }
+      }
+    },
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "aisef-norev",
+      "rep": 1,
+      "claude": {
+        "seconds": 333.1,
+        "cost_usd": 1.318809,
+        "turns": 40,
+        "is_error": false,
+        "input_tokens": 80,
+        "output_tokens": 8846,
+        "cache_read_tokens": 1500599,
+        "cache_write_tokens": 79715,
+        "stderr": "",
+        "rounds": 3
+      },
+      "visible": {
+        "ok": true,
+        "ran": 8,
+        "passed": 8
+      },
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      },
+      "aisef": {
+        "gateway_asked": 1,
+        "gateway_denied": 3,
+        "approval_requests": 1,
+        "review_reports": 0,
+        "task_states": {
+          "T-001": "completed"
+        }
+      }
+    },
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "plain",
+      "rep": 2,
+      "claude": {
+        "seconds": 28.9,
+        "cost_usd": 0.1678069,
+        "turns": 9,
+        "is_error": false,
+        "input_tokens": 12,
+        "output_tokens": 4044,
+        "cache_read_tokens": 198989,
+        "cache_write_tokens": 26861,
+        "stderr": ""
+      },
+      "visible": null,
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      }
+    },
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "aisef",
+      "rep": 2,
+      "claude": {
+        "seconds": 335.0,
+        "cost_usd": 1.46297,
+        "turns": 45,
+        "is_error": false,
+        "input_tokens": 72,
+        "output_tokens": 11672,
+        "cache_read_tokens": 1473650,
+        "cache_write_tokens": 86031,
+        "stderr": "",
+        "rounds": 2
+      },
+      "visible": {
+        "ok": true,
+        "ran": 6,
+        "passed": 6
+      },
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      },
+      "aisef": {
+        "gateway_asked": 1,
+        "gateway_denied": 1,
+        "approval_requests": 2,
+        "review_reports": 3,
+        "task_states": {
+          "T-001": "completed"
+        }
+      }
+    },
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "aisef-norev",
+      "rep": 2,
+      "claude": {
+        "seconds": 611.5,
+        "cost_usd": 2.494933,
+        "turns": 45,
+        "is_error": false,
+        "input_tokens": 78,
+        "output_tokens": 12905,
+        "cache_read_tokens": 1647012,
+        "cache_write_tokens": 89235,
+        "stderr": "",
+        "rounds": 2
+      },
+      "visible": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      },
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      },
+      "aisef": {
+        "gateway_asked": 2,
+        "gateway_denied": 3,
+        "approval_requests": 2,
+        "review_reports": 0,
+        "task_states": {
+          "T-001": "completed"
+        }
+      }
+    },
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "plain",
+      "rep": 3,
+      "claude": {
+        "seconds": 25.5,
+        "cost_usd": 0.1306095,
+        "turns": 5,
+        "is_error": false,
+        "input_tokens": 8,
+        "output_tokens": 1931,
+        "cache_read_tokens": 122315,
+        "cache_write_tokens": 24763,
+        "stderr": ""
+      },
+      "visible": null,
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      }
+    },
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "aisef",
+      "rep": 3,
+      "claude": {
+        "seconds": 325.4,
+        "cost_usd": 1.494231,
+        "turns": 40,
+        "is_error": false,
+        "input_tokens": 68,
+        "output_tokens": 10386,
+        "cache_read_tokens": 1367130,
+        "cache_write_tokens": 84822,
+        "stderr": "",
+        "rounds": 2
+      },
+      "visible": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      },
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      },
+      "aisef": {
+        "gateway_asked": 1,
+        "gateway_denied": 2,
+        "approval_requests": 2,
+        "review_reports": 3,
+        "task_states": {
+          "T-001": "completed"
+        }
+      }
+    },
+    {
+      "task": "feat-slugify",
+      "kind": "feature",
+      "arm": "aisef-norev",
+      "rep": 3,
+      "claude": {
+        "seconds": 300.1,
+        "cost_usd": 1.216588,
+        "turns": 39,
+        "is_error": false,
+        "input_tokens": 64,
+        "output_tokens": 10593,
+        "cache_read_tokens": 1243061,
+        "cache_write_tokens": 80481,
+        "stderr": "",
+        "rounds": 2
+      },
+      "visible": {
+        "ok": true,
+        "ran": 6,
+        "passed": 6
+      },
+      "hidden": {
+        "ok": true,
+        "ran": 7,
+        "passed": 7
+      },
+      "aisef": {
+        "gateway_asked": 1,
+        "gateway_denied": 4,
+        "approval_requests": 2,
+        "review_reports": 0,
+        "task_states": {
+          "T-001": "completed"
+        }
+      }
+    }
+  ]
+}
