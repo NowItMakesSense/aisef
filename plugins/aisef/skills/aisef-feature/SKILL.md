@@ -87,4 +87,4 @@ A entrega, as evidências e a aprovação anteriores ficam congeladas. Crie um n
 - `requirement_change`: comportamento novo desejado. Segue o fluxo de alteração de requisitos (nova versão).
 - `evolution`: melhoria sem mudar requisitos. Trate como feature nova dependente da antiga.
 
-Exija Impact Analysis (o que da versão anterior pode regredir?), contratos e fatias só para a mudança e novo aceite comparando com o ciclo anterior. Registre `feature_reopened`.
+Exija Impact Analysis (o que da versão anterior pode regredir?), começando pelo grafo do sistema, sem modelo: `python -I CORE/aisef_sysgraph.py impact --project . --req <REQ>` (tarefas, critérios, testes, arquivos, evidências e blueprint ligados), `impact --file <caminho>` (requisitos e tarefas que tocam o arquivo) e `why --task <T>` (requisitos, decisões e ADRs que justificam a tarefa), contratos e fatias só para a mudança e novo aceite comparando com o ciclo anterior. Registre `feature_reopened`.

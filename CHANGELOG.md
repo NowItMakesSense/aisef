@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.14.0 (em andamento): grafo do sistema e saúde do código ([plano](docs/plan/plano-0.13-0.15.md))
+- **Grafo do sistema consultável (G-07).** Novo `core/aisef_sysgraph.py`, sem modelo: `impact --req` (tarefas, critérios, testes, arquivos do escopo e dos relatórios, evidências e elementos do blueprint), `impact --file` (requisitos e tarefas que tocam o arquivo, pelo escopo ou pelo que os relatórios registraram) e `why --task` (requisitos com origem, decisões, ADRs, blueprint e caminho da triagem). A reabertura de feature começa a Impact Analysis por ele, e o `rebase-req` aponta para ele quando uma tarefa iniciada fica bloqueada. Testes em `core/test_sysgraph.py` (16). O filtro "impacto de" no painel fica para quando houver o desenho aprovado da tela.
 - **Módulos menores, sem mudar comportamento (H-01).** Nenhum módulo do núcleo e dos hooks passa de 500 linhas (antes: `aisef_project.py` 1.300 e `check_project.py` 1.141):
   - `aisef_project.py` virou fachada com a CLI; o código foi para `aisef_base`, `aisef_audit_log`, `aisef_agents`, `aisef_requests` e `aisef_waves`. Quem faz `import aisef_project` continua igual;
   - a `check()` do check virou um registro de grupos de regras (`check_project.RULE_GROUPS`) em `check_rules_1..3.py`, com as regras sem mudança (a referência de regras gerada ficou idêntica);

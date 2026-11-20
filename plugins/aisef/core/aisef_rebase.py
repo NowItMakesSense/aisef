@@ -42,7 +42,7 @@ def rebase_plan(project, feature_id):
         status = (t.get("state") or {}).get("status")
         if stale and status not in REBASE_OK:
             out["blocked"].append("%s (%s) usa %s em versao antiga: reabra a feature para mudar uma tarefa ja iniciada "
-                                  "(aisef-feature, Reabertura)" % (t["task_id"], status, ", ".join(stale)))
+                                  "(aisef-feature, Reabertura); impacto: aisef_sysgraph.py impact --req %s" % (t["task_id"], status, ", ".join(stale), stale[0]))
         elif stale or t["feature_contract_version"] != fv or item["contract_version"] != t["contract_version"]:
             out["tasks"].append({"path": tpath, "task": t, "stale": stale})
     for bpath in sorted(glob.glob(os.path.join(root, "blueprints", "*.json"))):
