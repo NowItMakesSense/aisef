@@ -35,8 +35,8 @@
 
         "resources": {
           "type": "array", "minItems": 1, "uniqueItems": true,
-          "items": { "enum": ["repo_code", "config_ci_iac", "db_schema", "db_data", "deploy_infra"] },
-          "description": "Arquivos sensiveis e Git nao entram em escopo: exigem aprovacao por operacao."
+          "items": { "enum": ["repo_code", "config_ci_iac", "db_schema", "db_data", "deploy_infra", "git_feature_branch"] },
+          "description": "Arquivos sensiveis e Git nao entram em escopo: exigem aprovacao por operacao. Excecao (F-03): git_feature_branch, o push da branch de feature para ela mesma, com resource_filters.branches."
         },
         "resource_filters": {
           "type": "object",
@@ -46,7 +46,9 @@
             "schemas": { "type": "array", "items": { "type": "string" } },
             "tables": { "type": "array", "items": { "type": "string" } },
             "agents": { "type": "array", "items": { "type": "string" }, "description": "Agentes que podem usar esta autorizacao." },
-            "tasks": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+            "tasks": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+            "branches": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 },
+                          "description": "git_feature_branch: branches (ou globs) cujo push o escopo cobre." }
           }
         },
 
@@ -141,7 +143,7 @@
         {
           "$comment": "Em staging, o escopo nao cobre DDL nem deploy: a matriz exige aprovacao por operacao.",
           "if": { "properties": { "environment": { "const": "staging" } }, "required": ["environment"] },
-          "then": { "properties": { "resources": { "items": { "enum": ["repo_code", "config_ci_iac", "db_data"] } } } }
+          "then": { "properties": { "resources": { "items": { "enum": ["repo_code", "config_ci_iac", "db_data", "git_feature_branch"] } } } }
         },
         {
           "$comment": "Autorizacao revogada exige os dados da revogacao.",

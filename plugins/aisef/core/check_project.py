@@ -39,6 +39,7 @@ Regras (codigo -> o que verifica):
     VAL-*           validacao independente (existe validador, validador diferente do executor); VAL-REVIEW-MISSING: validada sem o
                     APPROVE de todos os revisores ativos de review.reviewers
     PERM-* / AUTH-* permissoes da tarefa x politica e autorizacoes (existe, escopo, ambiente, validade)
+                    AUTH-GIT-BRANCH: escopo de push (git_feature_branch) sem branches ou com branch que nao e de feature
     BP-*            blueprint x feature (versao, requisitos, componentes, endpoints, entidades, decisoes aprovadas, cobertura)
     STATE-*         estado da tarefa/feature x relatorios e eventos de auditoria
     REPORT-*        relatorio x contrato (versao, criterios, evidencias, arquivos dentro do escopo, tentativas)
@@ -154,6 +155,17 @@ def overlaps(a, b):
         return True
     pa, pb = a.rstrip("*").rstrip("/"), b.rstrip("*").rstrip("/")
     return bool(pa) and bool(pb) and (pa.startswith(pb + "/") or pb.startswith(pa + "/") or pa == pb)
+
+
+def aisef_project_git_settings(aisef_root):
+    """Opcoes git do config.json (prefixo e branch base), com os padroes. aisef_root e a pasta .aisef."""
+    import aisef_project
+    try:
+        with open(os.path.join(aisef_root, "config.json"), encoding="utf-8") as fh:
+            cfg = json.load(fh)
+    except (OSError, ValueError):
+        cfg = {}
+    return aisef_project.git_settings(cfg if isinstance(cfg, dict) else {})[0]
 
 
 def write_like_levels(policy, resource, env):
@@ -916,6 +928,17 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             rep.err("AUTH-FEATURE", where, "feature %s nao existe" % au["feature_id"])
         elif au.get("kind") == "scope" and au["cycle"] > feats[au["feature_id"]]["cycle"]["number"]:
             rep.err("AUTH-CYCLE", where, "ciclo maior que o da feature")
+        if au.get("kind") == "scope" and "git_feature_branch" in au["resources"]:  # F-03
+            import aisef_git
+            gcfg = aisef_project_git_settings(project)
+            pats = (au.get("resource_filters") or {}).get("branches") or []
+            if not pats:
+                rep.err("AUTH-GIT-BRANCH", where, "git_feature_branch sem resource_filters.branches: o escopo nao diria qual branch")
+            for b in pats:
+                probe = b.replace("*", "x").replace("?", "x")
+                if not aisef_git.is_feature_branch(probe, gcfg["branch_prefix"], gcfg["base_branch"]):
+                    rep.err("AUTH-GIT-BRANCH", where, "%s nao e branch de feature (prefixo %s, nunca %s nem protegidas)"
+                            % (b, gcfg["branch_prefix"], gcfg["base_branch"]))
         if au.get("kind") == "scope":
             if au["status"] == "active" and parse_time(au["validity"]["valid_until"]) < now:
                 rep.err("AUTH-EXPIRED", where, "expirou em %s mas segue 'active'" % au["validity"]["valid_until"])

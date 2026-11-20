@@ -293,7 +293,22 @@ def write_resource(path, patterns):
     return "repo_code", "codigo"
 
 
-def classify_bash(cmd, patterns, env, shell="sh"):
+def git_context(cmd, cwd, config):
+    """F-03: branch atual e se ela e de feature. Com cd, pushd, git -C/--git-dir/--work-tree no comando, a branch
+    efetiva e desconhecida: vale a regra antiga (mais restritiva)."""
+    if "git" not in cmd:
+        return None
+    sys.path.insert(0, CORE) if CORE not in sys.path else None
+    import aisef_git
+    g = config.get("git") if isinstance(config.get("git"), dict) else {}
+    prefix, base = g.get("branch_prefix") or "feat/", g.get("base_branch") or "main"
+    moved = bool(re.search(r"(?:^|[;&|(]\s*)(?:cd|pushd|Set-Location|sl|chdir)\s|\bgit\s+(?:[^;&|]*\s)?(?:-C\s|--git-dir|--work-tree)", cmd))
+    branch = None if moved else aisef_git.current_branch(cwd)
+    return {"branch": branch, "feature": aisef_git.is_feature_branch(branch, prefix, base), "prefix": prefix, "base": base,
+            "push_targets": [], "aisef_git": aisef_git}
+
+
+def classify_bash(cmd, patterns, env, shell="sh", ctx=None):
     """Retorna lista de (recurso, acao, ambiente, destrutivo, rotulo). Vazia = repo_code em dev.
 
     S-01 (0.13): alem da linha original, classifica os textos que o shell_parse tira dela (segmentos sem aspas,
@@ -303,9 +318,9 @@ def classify_bash(cmd, patterns, env, shell="sh"):
         sys.path.insert(0, HERE)
     import shell_parse
     an = shell_parse.analyze(cmd, shell)
-    found = _classify_text(cmd, patterns, env)
+    found = _classify_text(cmd, patterns, env, ctx)
     for text in an["texts"]:
-        found += _classify_text(text, patterns, env)
+        found += _classify_text(text, patterns, env, ctx)
     for why in an["dynamic"]:
         found.append(("unclassified", "execute", env, False, why + ": o gateway nao sabe o que vai rodar"))
     if an["unparsed"]:
@@ -313,7 +328,7 @@ def classify_bash(cmd, patterns, env, shell="sh"):
     return list(dict.fromkeys(found))
 
 
-def _classify_text(cmd, patterns, env):
+def _classify_text(cmd, patterns, env, ctx=None):
     found = []
     for rx, label, category in patterns["cmd"]:
         if rx.search(cmd):
@@ -332,16 +347,31 @@ def _classify_text(cmd, patterns, env):
                    "merge-base", "name-rev") or (sub in GIT_DRY_RUN_OK and GIT_DRY_RUN_RE.search(rest)) or (sub == "branch" and not re.search(r"\s-(?:d|D|-delete)\b", rest)):
             op = "status_log_diff"
         elif sub == "commit":
-            op = "history_rewrite" if "--amend" in rest else "commit"
+            if "--amend" in rest:
+                op = "history_rewrite"
+            elif ctx and ctx["feature"] and env in ("dev", "staging"):
+                op = "commit_feature"  # F-03: commit na branch de feature e livre em dev e staging
+            else:
+                op = "commit"
         elif sub == "push":
             if re.search(r"\s(?:-f|--force(?:-with-lease)?)\b|\s\+\S", rest):
                 op = "force_push"
             elif re.search(r"\s(?:--delete|-d)\b|\s:\S", rest):
                 op = "branch_delete"
-            elif "--tags" in rest:
+            elif "--tags" in rest or "--all" in rest or "--mirror" in rest:
                 op = "release_publish"
             else:
                 op = "push"
+                targets = ctx["aisef_git"].push_targets(rest.split(), ctx["branch"]) if ctx else None
+                if targets and all(s == d and ctx["aisef_git"].is_feature_branch(d, ctx["prefix"], ctx["base"])
+                                   for s, d in targets):
+                    # F-03: a branch de feature para ela mesma vai pelo escopo da feature (git_feature_branch)
+                    ctx["push_targets"] += [d for _s, d in targets]
+                    found.append(("git_feature_branch", "push", env, False,
+                                  "git push da branch de feature %s" % ", ".join(d for _s, d in targets)))
+                    continue
+        elif (sub == "add" or sub == "switch" or (sub == "checkout" and re.search(r"\s-[bB]\s", rest + " "))):
+            op = "local_staging"  # F-03: preparar o commit e trocar/criar branch local nao muda o remoto
         elif sub in ("merge", "pull", "cherry-pick"):
             op = "merge"
         elif sub in ("rebase", "filter-branch", "filter-repo", "replace") or (sub == "reset" and "--hard" in rest):
@@ -410,7 +440,11 @@ def is_pending_request(tool, path, inp):
     return isinstance(doc, dict) and doc.get("status") == "pending" and "decision" not in doc and "resulting_ref" not in doc
 
 
-def scope_covers(project, resource, env, now, max_days=None):
+def scope_covers(project, resource, env, now, max_days=None, branches=None):
+    """Autorizacao de escopo ativa que cobre o recurso. Para git_feature_branch (F-03), as branches do push precisam
+    casar com resource_filters.branches; sem o filtro, nao cobre."""
+    if resource == "git_feature_branch" and not branches:
+        return None
     for path in glob.glob(os.path.join(project, ".aisef", "authorizations", "*.json")):
         try:
             a = load_json(path)
@@ -420,6 +454,10 @@ def scope_covers(project, resource, env, now, max_days=None):
             continue
         if resource not in a.get("resources", []):
             continue
+        if resource == "git_feature_branch":
+            pats = (a.get("resource_filters") or {}).get("branches") or []
+            if not pats or not all(any(fnmatch.fnmatchcase(b, p) for p in pats) for b in branches):
+                continue
         v = a.get("validity", {})
         try:
             start = datetime.datetime.fromisoformat(v["valid_from"])
@@ -524,9 +562,15 @@ def enforce_ceiling(contract, tool, items, env):
         if resource == "aisef_decision":
             raise Decision("deny", "agente %s nao registra decisoes do usuario" % aid)
         if resource == "git":
-            if action not in ceiling.get("git_operations", ["status_log_diff"]):
-                raise Decision("deny", "agente %s nao pode solicitar %s (teto Git: %s)"
-                               % (aid, label, ", ".join(ceiling.get("git_operations", ["status_log_diff"]))))
+            ops = ceiling.get("git_operations", ["status_log_diff"])
+            # F-03: quem pode commitar pode preparar o commit e commitar na branch de feature (contratos antigos valem)
+            ok = action in ops or (action in ("commit_feature", "local_staging") and "commit" in ops)
+            if not ok:
+                raise Decision("deny", "agente %s nao pode solicitar %s (teto Git: %s)" % (aid, label, ", ".join(ops)))
+        elif resource == "git_feature_branch":
+            if "push" not in ceiling.get("git_operations", []):
+                raise Decision("deny", "agente %s nao faz push (teto Git: %s); o orquestrador faz"
+                               % (aid, ", ".join(ceiling.get("git_operations", []))))
         elif resource not in allowed:
             raise Decision("deny", "agente %s nao tem %s no teto de permissao (%s)" % (aid, resource, label))
 
@@ -621,7 +665,8 @@ def decide(data, project, policy, patterns, config, now):
         if GIT_SKIP_HOOKS_RE.search(operation):
             raise Decision("deny", "pular hooks ou assinatura do Git (--no-verify, --no-gpg-sign) esconde problemas: "
                                    "corrija o que o hook acusa")
-        items = classify_bash(operation, patterns, env, "ps" if tool == "PowerShell" else "sh")
+        gctx = git_context(operation, cwd, config)
+        items = classify_bash(operation, patterns, env, "ps" if tool == "PowerShell" else "sh", gctx)
         if inp.get("dangerouslyDisableSandbox") is True:  # F-08: sair do sandbox e decisao do usuario
             items.append(("unclassified", "execute", env, False, "comando pedindo para rodar fora do sandbox"))
     else:
@@ -670,8 +715,9 @@ def decide(data, project, policy, patterns, config, now):
             if destructive:
                 lvl = apply_t1(policy, lvl, eff_env)
             if lvl == "approve_scope":
+                branches = (gctx or {}).get("push_targets") if tool in SHELL_TOOLS and resource == "git_feature_branch" else None
                 auth = scope_covers(project, resource, eff_env, now,
-                                    policy.get("scope_authorization_schema_ref", {}).get("validity_max_days"))
+                                    policy.get("scope_authorization_schema_ref", {}).get("validity_max_days"), branches)
                 if auth:
                     scoped.append(auth)
                     lvl = "allow"

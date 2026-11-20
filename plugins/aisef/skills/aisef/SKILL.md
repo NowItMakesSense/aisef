@@ -29,7 +29,7 @@ python -I CORE/aisef_project.py next --project .
 5. **Toda tarefa tem criterios de aceite objetivos e verificaveis.** Sem isso, nao delegue.
 6. **Quem executa nao valida.** Estados: `executed` (agente terminou) -> `validated` (validador/QA verificou) -> `completed` (voce aceitou e integrou).
 7. **Toda comunicacao entre agentes passa por voce.** Especialistas nao delegam nem falam entre si.
-8. **Permissoes sao aplicadas pelo Execution Gateway** (hooks do plugin). Nunca tente contorna-lo; se ele negar, explique ao usuario o que precisa e use **aisef-approve**. Aprovar commit nao aprova push, merge nem release.
+8. **Permissoes sao aplicadas pelo Execution Gateway** (hooks do plugin). Nunca tente contorna-lo; se ele negar, explique ao usuario o que precisa e use **aisef-approve**. Aprovar commit nao aprova push, merge nem release. Excecao (ADR 0025): numa branch de feature (`feat/*`), `git add` e `git commit` sao livres, e o push dela para a branch de mesmo nome passa sem prompt se houver o escopo `git_feature_branch` (veja Branch por feature).
 9. **Segredos nunca em logs, relatorios ou painel.** Nunca registre raciocinio interno.
 10. **Sem sugestoes espontaneas** fora de tarefas: so sugira melhorias durante a execucao, diante de inconsistencia ou risco, ou quando pedirem.
 
@@ -85,6 +85,8 @@ Se `.aisef/config.json` tiver
 - ao iniciar a execucao de uma feature, o `next` sugere `create_branch` (`git switch -c feat/<id sem FEAT->`); crie antes da primeira onda;
 - com a feature aceita e o **merge do PR confirmado** (pergunte ao usuario ou veja `gh pr view <branch> --json state,mergedAt`), o `next` sugere `delete_merged_branch` com dois comandos: remoto (`git push origin --delete <branch>`) e local (`git branch -d <branch>`). Cada exclusao e operacao Git reforcada: um pedido `git_operation`/`branch_delete` e uma autorizacao reforcada com a `operation` exata, por comando (**aisef-approve**). Saia da branch antes de apagar a local.
 O `next` so sugere; quem executa e voce, e o gateway continua decidindo.
+
+**Escopo de push da feature (ADR 0025).** Junto com o pedido `plan_approval`, crie um pedido `scope_authorization` com `scope_proposal` = `{"environment": "dev", "resources": ["git_feature_branch"], "operations": ["push"], "resource_filters": {"branches": ["feat/<id>"]}, "valid_until": <ate 7 dias>}` e leve os dois juntos ao usuario (**aisef-approve**). Aprovado, a autorizacao gerada leva o mesmo `resource_filters.branches`. Dai em diante, `git push` da branch da feature para ela mesma passa sem prompt; para `main`, `--force`, tags ou exclusao, nada muda.
 
 ## Caminho rapido (mudancas pequenas)
 Use quando a triagem der `quick` (ela confere os criterios abaixo em codigo). Os criterios, **todos** verdadeiros: nao muda comportamento observavel; nao toca API, schema de banco, seguranca, CI/CD, configuracao de producao nem dependencia com quebra; cabe em poucos arquivos (guia: ate ~50 linhas). Exemplos: typo, texto, renomear variavel local, patch de dependencia, ajuste de lint. Na duvida, nao e rapido.

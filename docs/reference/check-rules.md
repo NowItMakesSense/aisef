@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**162 regras** em 29 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**163 regras** em 29 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -158,7 +158,7 @@ Pedidos, decisões e eventos consistentes.
 
 Escopo e reforçada válidas, no prazo e na operação certa.
 
-`AUTH-CYCLE`, `AUTH-DATASET`, `AUTH-ENV`, `AUTH-EXPIRED`, `AUTH-FEATURE`, `AUTH-HISTORY`, `AUTH-MISSING`, `AUTH-NOT-SCOPABLE`, `AUTH-POLICY-VERSION`, `AUTH-REDUNDANT`, `AUTH-REINFORCED-EXPIRED`, `AUTH-REINFORCED-VALIDITY`, `AUTH-RESOURCE`, `AUTH-SCOPE-TOO-LONG`, `AUTH-STATUS`, `AUTH-TASK`
+`AUTH-CYCLE`, `AUTH-DATASET`, `AUTH-ENV`, `AUTH-EXPIRED`, `AUTH-FEATURE`, `AUTH-GIT-BRANCH`, `AUTH-HISTORY`, `AUTH-MISSING`, `AUTH-NOT-SCOPABLE`, `AUTH-POLICY-VERSION`, `AUTH-REDUNDANT`, `AUTH-REINFORCED-EXPIRED`, `AUTH-REINFORCED-VALIDITY`, `AUTH-RESOURCE`, `AUTH-SCOPE-TOO-LONG`, `AUTH-STATUS`, `AUTH-TASK`
 
 ## Log de auditoria (`LOG-*`)
 

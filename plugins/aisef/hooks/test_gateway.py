@@ -70,7 +70,7 @@ case("git add --dry-run com grep de .aisef/audit -> allow", "Bash", "allow",
      command='cat .aisef/.gitignore; git add -A --dry-run | grep -v ".aisef/audit/archive"')
 case("git add -n -> allow", "Bash", "allow", command="git add -A -n")
 case("git clean --dry-run -> allow", "Bash", "allow", command="git clean -fd --dry-run")
-case("git add de verdade continua pedindo -> ask", "Bash", "ask", command="git add -A")
+case("git add e preparar o commit: livre (local_staging, F-03)", "Bash", "allow", command="git add -A")
 case("git commit --no-verify -> deny", "Bash", "deny", command='git commit --no-verify -m "x"')
 case("git push --no-verify -> deny", "Bash", "deny", command="git push --no-verify origin main")
 case("git -c commit.gpgsign=false -> deny", "Bash", "deny", command='git -c commit.gpgsign=false commit -m "x"')

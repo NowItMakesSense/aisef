@@ -40,7 +40,7 @@
 {"name": "cd para subpasta e testes", "tool": "Bash", "command": "cd tests && pytest -q", "expect": "allow", "bypass": false}
 {"name": "git push", "tool": "Bash", "command": "git push", "expect": "ask", "bypass": false}
 {"name": "git commit", "tool": "Bash", "command": "git commit -m \"fix: don't use eval here\"", "expect": "ask", "bypass": false}
-{"name": "git add de verdade", "tool": "Bash", "command": "git add -A", "expect": "ask", "bypass": false}
+{"name": "git add (local_staging, F-03)", "tool": "Bash", "command": "git add -A", "expect": "allow", "bypass": false}
 {"name": "git rm -r --cached nao e remocao recursiva", "tool": "Bash", "command": "git rm -r --cached build/", "expect": "ask", "bypass": false, "note": "F-02: git rm pede aprovacao como Git, sem o rotulo de remocao recursiva"}
 {"name": "rm -rf no repo", "tool": "Bash", "command": "rm -rf node_modules", "expect": "ask", "bypass": false}
 {"name": "Remove-Item -Recurse", "tool": "PowerShell", "command": "Remove-Item -Recurse -Force build", "expect": "ask", "bypass": false}
