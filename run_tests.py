@@ -42,6 +42,7 @@ SUITES = [
     ("Approval Center: request e decide reforcado", [os.path.join(CORE, "test_request_decide.py")]),
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),
+    ("pacote de evidencia por feature (T-02)", [os.path.join(CORE, "test_evidence.py")]),
     ("verificacao de PR no CI (T-01)", [os.path.join(CORE, "test_ci.py")]),
     ("worktree por fatia, de ponta a ponta (L-02)", [os.path.join(CORE, "test_slices.py")]),
     ("worktree grava no .aisef principal (L-02a)", [os.path.join(CORE, "test_worktree.py")]),

@@ -1,6 +1,13 @@
 # Changelog
 
 ## 0.15.0 (em andamento): times e mercado ([plano](docs/plan/plano-0.13-0.15.md))
+- **Pacote de evidência por feature (T-02).** Novo `core/aisef_evidence.py build --feature --out` junta, numa pasta:
+  - Feature Contract (requisitos, spec, RTM, triagem), Task Contracts, Execution Reports e os pedidos do Approval Center;
+  - os eventos assinados da feature, completos, e as chaves públicas;
+  - o resultado do verify do log e do aisef-check;
+  - uma tabela de controles com o status calculado e onde está cada evidência: SOC 2 CC8.1 (gestão de mudanças) e ISO/IEC 27001:2022 A.8.32 (gestão de mudanças) e A.5.3 (segregação de funções).
+
+  O pacote se verifica sozinho, sem o projeto (`verify --pack`): o `manifest.json` tem o sha256 de cada arquivo, e cada evento tem o hash recalculado e a assinatura Ed25519 conferida com a chave do pacote. Um evento adulterado é pego mesmo que o manifesto seja refeito. É material para o auditor, não certificação. Testes em `core/test_evidence.py` (12).
 - **GitHub Action `aisef-verify` (T-01).** Composite action em `.github/actions/aisef-verify/`, que roda o novo `core/aisef_ci.py`, só com as chaves públicas. A Action falha quando:
   - o log assinado não confere (cadeia de hash, Ed25519 e o `head.json` versionado);
   - o aisef-check acusa erro (com `strict`, também aviso);
