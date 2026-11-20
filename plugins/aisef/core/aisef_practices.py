@@ -118,7 +118,8 @@ def for_paths(project, rels):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="AISEF: boas praticas no projeto")
-    ap.add_argument("command", choices=["list", "apply", "for-paths"])
+    ap.add_argument("command", nargs="?", default="list", choices=["list", "apply", "for-paths"],
+                    help="list (padrao, so mostra), apply (grava) ou for-paths")
     ap.add_argument("--project", default=".")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("paths", nargs="*")
