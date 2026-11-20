@@ -227,7 +227,49 @@ def load_patterns(path=PATTERNS_PATH):
         "cmd": [(re.compile(r["regex"], re.I), r["label"], r["category"]) for r in raw["commands"]],
         "path": re.compile(raw["paths"]["regex"], re.I),
         "safe": re.compile(raw["paths"]["allow"], re.I),
+        "mcp_code": re.compile((raw.get("mcp_code_execution") or {}).get("regex") or r"(?!)", re.I),
     }
+
+
+def mcp_runs_code(tool, patterns):
+    """A ferramenta MCP executa codigo ou comandos? (pelo nome curto, depois do ultimo __)."""
+    return bool(patterns["mcp_code"].search(tool.rsplit("__", 1)[-1]))
+
+
+def mcp_allowed(tool, config, patterns):
+    """mcp_allow do config.json: nome exato sempre vale; glob nao cobre ferramenta que executa codigo (F-01)."""
+    code = mcp_runs_code(tool, patterns)
+    for pat in config.get("mcp_allow", []):
+        if pat == tool or (not code and fnmatch.fnmatchcase(tool, pat)):
+            return True
+    return False
+
+
+def mcp_trust(project, tool, now, patterns, max_days=7):
+    """Confianca do usuario numa ferramenta MCP (authorizations/*.json, kind mcp_tool, F-01): ativa, no prazo
+    (no maximo `max_days`), com glob que casa. Ferramenta que executa codigo so com allow_code_execution."""
+    code = mcp_runs_code(tool, patterns)
+    for path in glob.glob(os.path.join(project, ".aisef", "authorizations", "*.json")):
+        try:
+            a = load_json(path)
+        except (OSError, ValueError):
+            continue
+        if a.get("kind") != "mcp_tool" or a.get("status") != "active":
+            continue
+        if code and a.get("allow_code_execution") is not True:
+            continue
+        if not any(fnmatch.fnmatchcase(tool, g) for g in a.get("tools", [])):
+            continue
+        try:
+            start = datetime.datetime.fromisoformat(a["validity"]["valid_from"])
+            end = datetime.datetime.fromisoformat(a["validity"]["valid_until"])
+        except (KeyError, ValueError, TypeError):
+            continue
+        if (end - start).total_seconds() > max_days * 86400 + 1:
+            continue
+        if start <= now <= end:
+            return a.get("authorization_id", os.path.basename(path))
+    return None
 
 
 def is_sensitive_path(path, patterns):
@@ -346,6 +388,8 @@ def _classify_text(cmd, patterns, env):
         found.append(("aisef_decision", "write", env, False, "setup do AISEF: agentes, regras e docs (decisao do usuario)"))
     if re.search(r"aisef_practices\.py\s+apply\b|aisef_project\.py\s+practices\b[^;&|]*--apply\b", cmd):
         found.append(("aisef_decision", "write", env, False, "instalar boas praticas em .claude/rules (decisao do usuario)"))
+    if re.search(r"aisef_mcp\.py\s+(?:trust|revoke)\b", cmd):
+        found.append(("aisef_decision", "write", env, False, "confianca numa ferramenta MCP (decisao do usuario)"))
     if re.search(r"aisef_migrate\.py\b[^;&|]*--apply\b", cmd):
         found.append(("aisef_decision", "write", env, False, "migrate do projeto AISEF (decisao do usuario)"))
     if re.search(r"aisef_learn\.py\s+accept\b", cmd):
@@ -545,7 +589,7 @@ def ask_mode_block(tool, inp, config):
             return None  # sair do modo: segue para o prompt nativo
         if not read_only_command(cmd):
             return "modo Ask: so comandos de leitura (git status/log/diff, ls, cat, grep...); nada e executado"
-    if tool.startswith("mcp__") and not any(fnmatch.fnmatchcase(tool, pat) for pat in config.get("mcp_allow", [])):
+    if tool.startswith("mcp__") and not mcp_allowed(tool, config, load_patterns()):
         return "modo Ask: ferramenta MCP fora de mcp_allow"
     return None
 
@@ -597,9 +641,14 @@ def decide(data, project, policy, patterns, config, now):
 
     if tool.startswith("mcp__"):
         # Servidor MCP pode escrever arquivos, acessar banco ou fazer deploy sem passar pelo Bash:
-        # so as ferramentas que o usuario liberou em config.json -> mcp_allow (globs) passam direto.
-        if not any(fnmatch.fnmatchcase(tool, pat) for pat in config.get("mcp_allow", [])):
-            items.append(("unclassified", "execute", env, False, "ferramenta MCP %s fora de mcp_allow" % tool))
+        # so as ferramentas que o usuario liberou em config.json -> mcp_allow (globs) ou numa confianca com prazo
+        # (authorizations, kind mcp_tool) passam direto. Ferramenta que executa codigo nao entra por glob (F-01).
+        max_days = policy.get("scope_authorization_schema_ref", {}).get("validity_max_days") or 7
+        if not mcp_allowed(tool, config, patterns) and not mcp_trust(project, tool, now, patterns, max_days):
+            hint = " (executa codigo: so por nome exato ou confianca com --allow-code-execution)" if mcp_runs_code(tool, patterns) else ""
+            items.append(("unclassified", "execute", env, False,
+                          "ferramenta MCP %s sem confianca do usuario%s; para confiar por ate %d dias: "
+                          "aisef_mcp.py trust --tool %s" % (tool, hint, max_days, tool)))
     elif tool == "WebFetch" and WEBFETCH_SECRET_RE.search(inp.get("url") or ""):
         raise Decision("deny", "a URL parece carregar um segredo (token/chave na query): possivel vazamento de dados")
 

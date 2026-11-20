@@ -129,7 +129,50 @@ aisef_project.write_json(cfg_path, cfg)
 case("MCP liberado em mcp_allow -> allow", "mcp__github__get_issue", "allow", number=1)
 case("outra ferramenta do mesmo servidor nao liberada -> ask", "mcp__github__create_pull_request", "ask", title="x")
 case("subagente com MCP fora do teto -> deny", "mcp__db__run_query", "deny", _agent="aisef:backend", query="x")
+case("glob do mcp_allow nao cobre ferramenta que executa codigo (F-01)", "mcp__docs__execute_code", "ask", code="x")
+cfg["mcp_allow"] = ["mcp__docs__execute_code"]
+aisef_project.write_json(cfg_path, cfg)
+case("nome exato no mcp_allow cobre ferramenta que executa codigo", "mcp__docs__execute_code", "allow", code="x")
 open(cfg_path, "w", encoding="utf-8").write(cfg_text)
+
+print("--- confianca MCP com prazo (F-01)")
+import aisef_mcp  # noqa: E402
+case("trust de ferramenta MCP -> ask (decisao do usuario)", "Bash", "ask", command="python -I core/aisef_mcp.py trust --project . --tool mcp__github__create_*")
+case("subagente confiando em MCP -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_mcp.py trust --tool mcp__x__y")
+case("aisef_mcp list nao pergunta", "Bash", "allow", command="python -I core/aisef_mcp.py list --project .")
+t1 = aisef_mcp.trust(proj, ["mcp__github__create_*", "mcp__db__*"], days=7)
+case("confianca ativa cobre a ferramenta -> allow", "mcp__github__create_pull_request", "allow", title="x")
+case("confianca comum nao cobre ferramenta que executa codigo -> ask", "mcp__db__run_query", "ask", query="x")
+case("confianca comum cobre ferramenta de leitura do mesmo servidor", "mcp__db__list_tables", "allow")
+try:
+    aisef_mcp.trust(proj, ["mcp__db__run_query"])
+    refused = False
+except SystemExit as e:
+    refused = "--allow-code-execution" in str(e)
+total += 1
+print(("OK    " if refused else "FALHA ") + "trust recusa ferramenta que executa codigo sem --allow-code-execution")
+fails += not refused
+t2 = aisef_mcp.trust(proj, ["mcp__db__run_query"], allow_code=True)
+case("confianca com allow_code_execution cobre ferramenta que executa codigo -> allow", "mcp__db__run_query", "allow", query="x")
+aisef_mcp.revoke(proj, t2["authorization_id"])
+case("confianca revogada -> ask", "mcp__db__run_query", "ask", query="x")
+t1_path = os.path.join(proj, ".aisef", "authorizations", t1["authorization_id"] + ".json")
+old_t1 = json.load(open(t1_path, encoding="utf-8"))
+past = dict(old_t1, validity={"valid_from": "2020-01-01T00:00:00+00:00", "valid_until": "2020-01-05T00:00:00+00:00"})
+aisef_project.write_json(t1_path, past)
+case("confianca vencida -> ask", "mcp__github__create_pull_request", "ask", title="x")
+longa = dict(old_t1, validity={"valid_from": "2020-01-01T00:00:00+00:00", "valid_until": "2099-01-01T00:00:00+00:00"})
+aisef_project.write_json(t1_path, longa)
+case("confianca acima de 7 dias (editada a mao) nao vale -> ask", "mcp__github__create_pull_request", "ask", title="x")
+aisef_mcp.revoke(proj, t1["authorization_id"])
+try:
+    aisef_mcp.trust(proj, ["mcp__x__y"], days=30)
+    refused = False
+except SystemExit as e:
+    refused = "entre 1 e 7" in str(e)
+total += 1
+print(("OK    " if refused else "FALHA ") + "trust recusa prazo acima do maximo da politica")
+fails += not refused
 case("WebFetch comum -> allow", "WebFetch", "allow", url="https://docs.python.org/3/library/json.html", prompt="x")
 case("WebFetch levando token na query -> deny", "WebFetch", "deny", url="https://x.example/c?token=abcdef0123456789abcd", prompt="x")
 case("WebFetch levando JWT -> deny", "WebFetch", "deny", url="https://x.example/c/eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.x", prompt="x")
@@ -507,7 +550,8 @@ def check(name, cond):
 
 tools = [e for e in log if e["event_type"] == "tool_used" and e["actor"]["id"] == "claude-code"]
 gate = [e for e in log if e["actor"]["id"] == "execution-gateway"]
-decisions = [(e["event_type"], e["actor"]["type"]) for e in log if e["event_type"] in ("approval_granted", "authorization_granted")]
+decisions = [(e["event_type"], e["actor"]["type"]) for e in log if e["event_type"] in ("approval_granted", "authorization_granted")
+             and not str((e.get("data") or {}).get("authorization_id", "")).startswith("MCP-")]  # confiancas MCP (F-01)
 check("eventos do Approval Center registrados pelo usuario",
       decisions[:2] == [("approval_granted", "user"), ("authorization_granted", "user")])
 check("tentativas negadas e levadas a aprovacao ficam no log, sem segredo",

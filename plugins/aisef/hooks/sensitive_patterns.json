@@ -43,5 +43,10 @@
     "label": "arquivo sensivel",
     "regex": "(?:^|[\\\\/\\s\"'=])\\.env(?:\\.[\\w.-]+)?(?=$|[\\s\"';|&)])|(?:^|[\\\\/\\s\"'=])(?:secrets?|\\.ssh|\\.aws|\\.gnupg)[\\\\/]|\\.(?:pem|key|p12|pfx|jks|keystore)(?![\\w.])|\\bid_(?:rsa|dsa|ecdsa|ed25519)\\b|\\bcredentials(?:\\.json)?\\b|\\.(?:pgpass|netrc|npmrc|pypirc)\\b|\\.my\\.cnf\\b|\\bservice-account[\\w-]*\\.json\\b",
     "allow": "\\.env\\.(?:example|sample|template|dist|defaults)\\b"
+  },
+  "mcp_code_execution": {
+    "label": "ferramenta MCP que executa codigo ou comandos",
+    "regex": "(?:^|_)(?:execute|exec|eval|evaluate|run|javascript|js|script|shell|terminal|bash|powershell|python|repl|command|cmd|sql|query)(?:_|$)",
+    "$comment": "Aplicada ao nome curto da ferramenta (depois do ultimo __). Ferramenta que casa nunca entra por glob do mcp_allow nem por confianca comum (F-01): so pelo nome exato no mcp_allow ou por confianca com allow_code_execution."
   }
 }

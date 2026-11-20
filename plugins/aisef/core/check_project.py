@@ -224,7 +224,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             if v not in known_roles:
                 rep.err("AGENT-ROLE-UNKNOWN", "agente " + aid, "valida o papel %s, que nao existe no catalogo" % v)
     approvals = {i: d for i, (_, d) in by["approvals"].items()}
-    auths = {i: d for i, (_, d) in by["authorizations"].items()}
+    auths = {i: d for i, (_, d) in by["authorizations"].items() if d.get("kind") != "mcp_tool"}
+    mcp_trusts = {i: d for i, (_, d) in by["authorizations"].items() if d.get("kind") == "mcp_tool"}
     reports = [d for _, d in docs["reports"]]
     events = {e["sequence"]: e for e in log}
     ev_by_task, ev_by_feature = {}, {}
@@ -944,6 +945,19 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                 rep.err("AUTH-REINFORCED-VALIDITY", where, "janela real de %.0f min excede validity_minutes (%d)" % (span, au["validity_minutes"]))
             if au["status"] == "approved" and parse_time(au["expires_at"]) < now:
                 rep.err("AUTH-REINFORCED-EXPIRED", where, "aprovada e vencida sem uso: deveria estar 'expired'")
+
+    for aid, au in mcp_trusts.items():  # F-01: confianca em ferramentas MCP, com prazo
+        where = "confianca MCP " + aid
+        if au["status"] == "active" and parse_time(au["validity"]["valid_until"]) < now:
+            rep.warn("AUTH-EXPIRED", where, "venceu em %s; o gateway ja nao a usa (renove com aisef_mcp.py trust)"
+                     % au["validity"]["valid_until"])
+        if au["history"][0]["event"] != "granted":
+            rep.err("AUTH-HISTORY", where, "primeiro evento do historico deve ser 'granted'")
+        max_days = (policy or {}).get("scope_authorization_schema_ref", {}).get("validity_max_days") or 7
+        days = (parse_time(au["validity"]["valid_until"]) - parse_time(au["validity"]["valid_from"])).total_seconds() / 86400
+        if days > max_days + 1e-6:
+            rep.err("AUTH-SCOPE-TOO-LONG", where, "validade de %.1f dias excede o maximo da politica (%d); o gateway a ignora"
+                    % (days, max_days))
 
     # ------------------------------------------------------------------ log
     last = None

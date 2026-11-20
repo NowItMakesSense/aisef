@@ -63,7 +63,7 @@ Pergunte **uma vez** (AskUserQuestion, `multiSelect: true`, todos marcados como 
 python -I CORE/aisef_setup.py --project . --apply --only <itens escolhidos> [--roles <agentes, se ele limitou>]
 ```
 
-Ferramentas MCP pedem aprovacao ate o usuario libera-las em `.aisef/config.json` -> `"mcp_allow": ["mcp__servidor__ferramenta", "mcp__docs__*"]` (so leitura e o que ele confia).
+Ferramentas MCP pedem aprovacao ate o usuario confiar nelas. Dois jeitos: por ate 7 dias, renovavel, com `python -I CORE/aisef_mcp.py trust --project . --tool mcp__servidor__ferramenta[,glob]` (decisao do usuario; o proprio prompt do gateway mostra o comando), ou sem prazo em `.aisef/config.json` -> `"mcp_allow"`. Ferramenta que executa codigo ou comandos (execute_*, *_eval, run_*, sql...) nunca entra por glob: so pelo nome exato no `mcp_allow` ou com `--allow-code-execution`.
 
 ## 5. Pesquisa de ferramentas (pergunte antes)
 A **aisef-tooling** sugere skills, plugins e MCPs para o projeto e pesquisa skills com a skill `find-skills`
