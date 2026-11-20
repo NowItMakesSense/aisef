@@ -42,6 +42,7 @@ SUITES = [
     ("Approval Center: request e decide reforcado", [os.path.join(CORE, "test_request_decide.py")]),
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),
+    ("log por pessoa, com merge de verdade (T-04, T-05)", [os.path.join(CORE, "test_streams.py")]),
     ("exportacao OpenTelemetry (T-03)", [os.path.join(CORE, "test_otel.py")]),
     ("pacote de evidencia por feature (T-02)", [os.path.join(CORE, "test_evidence.py")]),
     ("verificacao de PR no CI (T-01)", [os.path.join(CORE, "test_ci.py")]),

@@ -47,6 +47,13 @@ def verify_log(project):
                 pubs[name[:-4]] = serialization.load_pem_public_key(fh.read())
     if not pubs:
         return ["sem chave publica em .aisef/keys/: o log nao pode ser verificado"], []
+    if os.path.isdir(os.path.join(root, "audit", "streams")):
+        import aisef_streams  # T-05: cada stream com a propria cadeia, assinaturas e o head.json versionado dele
+        errors, warnings = aisef_streams.verify_all(project, head_source="project")
+        for d in audit_chain.stream_dirs(os.path.join(root, "audit")):
+            if audit_chain.read_stream(d) and not os.path.exists(os.path.join(d, "head.json")):
+                errors.append("%s sem head.json versionado" % os.path.relpath(d, root).replace("\\", "/"))
+        return errors, warnings
     head = None
     hp = os.path.join(root, "audit", "head.json")
     if os.path.exists(hp):
@@ -64,21 +71,30 @@ def git(project, *args):
 
 
 def append_only(project, base):
-    """O ultimo evento do log da base continua no log da PR, com o mesmo hash?"""
-    raw = git(project, "show", "%s:.aisef/audit/head.json" % base)
-    if raw is None:
-        return [], ["a base %s nao tem .aisef/audit/head.json: nada a comparar" % base]
-    try:
-        bh = json.loads(raw)
-    except ValueError:
-        return ["head.json da base %s ilegivel" % base], []
-    log = audit_chain.read_log_dir(os.path.join(ap.aisef_dir(project), "audit"))
-    ev = next((e for e in log if e.get("sequence") == bh.get("sequence")), None)
-    if ev is None:
-        return ["o log da PR nao tem mais o evento %s da base (o log foi cortado)" % bh.get("sequence")], []
-    if ev.get("hash") != bh.get("hash"):
-        return ["o evento %s da base foi reescrito na PR (hash diferente)" % bh.get("sequence")], []
-    return [], []
+    """Em cada stream da base (o do dono e, com T-05, o de cada pessoa), o ultimo evento continua no log da PR, com o
+    mesmo hash? Um stream que existia na base e sumiu na PR tambem conta como corte."""
+    rels = [".aisef/audit"]
+    listed = git(project, "ls-tree", "-d", "--name-only", "%s:.aisef/audit/streams" % base)
+    if listed:
+        rels += [".aisef/audit/streams/%s" % x.strip() for x in listed.splitlines() if x.strip()]
+    errors, notes = [], []
+    for rel in rels:
+        raw = git(project, "show", "%s:%s/head.json" % (base, rel))
+        if raw is None:
+            notes.append("a base %s nao tem %s/head.json: nada a comparar" % (base, rel))
+            continue
+        try:
+            bh = json.loads(raw)
+        except ValueError:
+            errors.append("%s/head.json da base %s ilegivel" % (rel, base))
+            continue
+        log = audit_chain.read_stream(os.path.join(project, rel))
+        ev = next((e for e in log if e.get("sequence") == bh.get("sequence")), None)
+        if ev is None:
+            errors.append("%s: o log da PR nao tem mais o evento %s da base (o log foi cortado)" % (rel, bh.get("sequence")))
+        elif ev.get("hash") != bh.get("hash"):
+            errors.append("%s: o evento %s da base foi reescrito na PR (hash diferente)" % (rel, bh.get("sequence")))
+    return errors, notes
 
 
 def touched_tasks(project, base):

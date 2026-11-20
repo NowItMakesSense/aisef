@@ -128,7 +128,14 @@ def check_integrity(project):
     except ImportError:
         warnings.append("biblioteca cryptography ausente: assinaturas nao verificadas")
 
-    if keys:
+    if keys and os.path.isdir(os.path.join(project, "audit", "streams")):
+        import aisef_streams  # T-05: log por pessoa; cada stream com a propria cadeia, assinaturas e head versionado
+        errs, warns = aisef_streams.verify_all(os.path.dirname(os.path.abspath(project)), head_source="project")
+        errors.extend(errs)
+        warnings.extend(warns)
+        signatures_verified = not errs
+        head_verified = not errs
+    elif keys:
         import audit_signing
         verifier = audit_signing.AuditVerifier(keys)
         errs, warns = verifier.verify(log, head)

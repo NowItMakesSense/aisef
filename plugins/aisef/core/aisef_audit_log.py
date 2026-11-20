@@ -69,17 +69,19 @@ def load_signer(project_id, key_id=KEY_ID):
     return audit_signing.AuditSigner(key_id, key)
 
 
-def _write_event(project, cfg, partial):
-    """Anexa UM evento ao segmento atual. Chamar com o lock do log ja obtido."""
-    audit_dir = os.path.join(aisef_dir(project), "audit")
+def _write_event(project, cfg, partial, ctx=None):
+    """Anexa UM evento ao segmento atual do stream (o do dono, ou o da pessoa com T-05). Chamar com o lock ja obtido."""
+    ctx = ctx or {"dir": os.path.join(aisef_dir(project), "audit"), "log_id": cfg["log_id"],
+                  "key_id": audit_settings(cfg)["key_id"], "prefix": "", "owner": True}
+    audit_dir = ctx["dir"]
     log_path = os.path.join(audit_dir, "log.jsonl")
     last = last_event(audit_dir)
-    event = {"schema_version": "0.1.0", "log_id": cfg["log_id"], "project_id": cfg["project_id"],
+    event = {"schema_version": "0.1.0", "log_id": ctx["log_id"], "project_id": cfg["project_id"],
              "timestamp": now_iso()}
     event.update(partial)
-    event.setdefault("event_id", "E%d" % (last["sequence"] + 1 if last else 0))
+    event.setdefault("event_id", "%sE%d" % (ctx["prefix"], last["sequence"] + 1 if last else 0))
     tail = [last] if last else []  # a cadeia so precisa do ultimo evento (sequencia e hash)
-    key_id = audit_settings(cfg)["key_id"]
+    key_id = ctx["key_id"]
     signer = load_signer(cfg["project_id"], key_id)
     if signer is None and any(n.endswith(".pem") for n in os.listdir(os.path.join(aisef_dir(project), "keys"))):
         # log assinado sem a chave privada: gravar sem assinatura quebraria a verificacao em silencio
@@ -89,7 +91,7 @@ def _write_event(project, cfg, partial):
     with open(log_path, "a", encoding="utf-8", newline="\n") as fh:
         fh.write(json.dumps(new, ensure_ascii=False) + "\n")
     if signer:
-        write_json(external_head_path(cfg["project_id"]), signer.head)
+        write_json(external_head_path(cfg["project_id"] if ctx["owner"] else ctx["log_id"]), signer.head)
         write_json(os.path.join(audit_dir, "head.json"), signer.head)
     return new
 
@@ -131,6 +133,13 @@ def append(project, partial):
     A cada `checkpoint_every` eventos grava um checkpoint assinado e uma ancora externa; segmentos
     grandes sao arquivados."""
     cfg = load_config(project)
+    import aisef_streams
+    ctx = aisef_streams.context(project, cfg)  # T-05: com log por pessoa, cada um grava no proprio stream
+    if not ctx["owner"]:
+        os.makedirs(ctx["dir"], exist_ok=True)
+        with Lock(os.path.join(ctx["dir"], "log.jsonl") + ".lock"):
+            aisef_streams.ensure_stream(project, cfg, ctx)
+            return _write_event(project, cfg, partial, ctx)
     log_path = os.path.join(aisef_dir(project), "audit", "log.jsonl")
     with Lock(log_path + ".lock"):
         new = _write_event(project, cfg, partial)
@@ -192,6 +201,10 @@ def rotate_key(project):
 def verify(project):
     """Retorna (erros, avisos). Usa o head EXTERNO como referencia, nao a copia do projeto."""
     cfg = load_config(project)
+    import aisef_streams
+    if aisef_streams.enabled(cfg) or os.path.isdir(os.path.join(aisef_dir(project), "audit", "streams")):
+        e, w = aisef_streams.verify_all(project)  # T-05: cada stream com a propria cadeia, assinaturas e head
+        return e + anchor_errors(cfg, audit_chain.read_stream(os.path.join(aisef_dir(project), "audit"))), w
     audit_dir = os.path.join(aisef_dir(project), "audit")
     log = audit_chain.read_log_dir(audit_dir)
     if not log:

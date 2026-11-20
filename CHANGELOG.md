@@ -1,6 +1,13 @@
 # Changelog
 
 ## 0.15.0 (em andamento): times e mercado ([plano](docs/plan/plano-0.13-0.15.md))
+- **Um log por pessoa (T-04 + T-05, [ADR 0026](docs/adr/0026-log-por-pessoa.md)).** Com `aisef_streams.py enable` (decisão do usuário), o log atual vira o stream do dono, sem reescrever nada.
+  - **Stream de cada pessoa:** fica em `.aisef/audit/streams/<id>/`, com cadeia, `log_id`, chave Ed25519, ids de evento e `head.json` próprios. A identidade vem do `AISEF_USER` ou do e-mail do Git.
+  - **Merge sem conflito:** cada pessoa só anexa aos próprios arquivos, então o merge do Git não conflita no log.
+  - **Decisões:** aprovações e aceites saem assinados pela chave de quem decidiu.
+  - **Leitura:** os leitores recebem os streams juntos, em ordem de tempo.
+  - **Verificação:** o `verify`, o painel e a Action verificam stream a stream; o check usa a posição para a ordem das correções e confere o tempo dentro de cada stream. Na PR, apagar ou cortar o stream de alguém é pego.
+  - **Sem streams, nada muda.** Teste com git de verdade, duas pessoas e um merge em `core/test_streams.py` (17).
 - **Exportação OpenTelemetry (T-03).** Novo `core/aisef_otel.py export --out traces.json`, que gera OTLP/JSON sem modelo e sem rede, para enviar a um coletor OTLP/HTTP ou importar num backend:
   - um trace por feature, com id estável entre exportações;
   - span raiz da feature, com as decisões do usuário e do gateway como eventos;

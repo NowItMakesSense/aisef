@@ -25,7 +25,10 @@ def rules_log(_cx):
     projects = {a["project_id"] for a in approvals.values()}
     # Correcoes (0.4.0): o log e imutavel; um evento 'correction' posterior registra que outro evento estava
     # errado. Erros de ATOR do evento corrigido viram aviso citando a correcao. Autovalidacao nunca e perdoada.
-    seq_by_id = {e["event_id"]: e["sequence"] for e in log}
+    # T-05: com log por pessoa a sequencia e de cada stream; a ordem entre eventos e a posicao no log (em ordem de
+    # tempo). Com um stream so, posicao e sequencia andam juntas.
+    seq_by_id = {e["event_id"]: (e.get("log_id"), e["sequence"], i) for i, e in enumerate(log)}
+    pos = {id(e): i for i, e in enumerate(log)}
     corrected = {}
     for e in log:
         if e["event_type"] != "correction":
@@ -34,7 +37,7 @@ def rules_log(_cx):
         where = "evento %d (%s)" % (e["sequence"], e["event_id"])
         if target not in seq_by_id:
             rep.err("LOG-CORRECTION-UNKNOWN", where, "corrige o evento inexistente %s" % target)
-        elif seq_by_id[target] >= e["sequence"]:
+        elif (seq_by_id[target][0] == e.get("log_id") and seq_by_id[target][1] >= e["sequence"]) or                 seq_by_id[target][2] >= pos[id(e)]:
             rep.err("LOG-CORRECTION-ORDER", where, "corrige %s, que nao e anterior a correcao" % target)
         else:
             corrected.setdefault(target, e["event_id"])
@@ -48,9 +51,10 @@ def rules_log(_cx):
     for e in log:
         where = "evento %d (%s)" % (e["sequence"], e["event_id"])
         t = parse_time(e["timestamp"])
-        if last is not None and t < last:
-            rep.err("LOG-TIME-ORDER", where, "timestamp anterior ao do evento anterior")
-        last = t
+        last = last if isinstance(last, dict) else {}
+        if e.get("log_id") in last and t < last[e.get("log_id")]:
+            rep.err("LOG-TIME-ORDER", where, "timestamp anterior ao do evento anterior (no mesmo stream)")
+        last[e.get("log_id")] = t
         if e.get("feature_id") and e["feature_id"] not in feats:
             rep.err("LOG-UNKNOWN-FEATURE", where, "feature %s nao existe" % e["feature_id"])
         if e.get("task_id") and e["task_id"] not in tasks:
