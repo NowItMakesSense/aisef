@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.13.0 (em andamento): custo, atrito, loop e gateway ([plano](docs/plan/plano-0.13-0.15.md))
+## 0.13.0: custo, atrito, loop e gateway ([plano](docs/plan/plano-0.13-0.15.md))
 - **Grafo nativo de imports (G-06).** Sem o Graphify, o pacote de contexto passa a ter raio de impacto mesmo assim:
   - novo `core/aisef_imports.py` (fonte única dos regex de import, também usada pelo radar) resolve cada import para o arquivo do repositório em Python, TypeScript/JavaScript, Java/Kotlin, C#, Go, PHP, Ruby, Dart e Rust; import ambíguo demais é descartado, e biblioteca externa fica de fora;
   - `aisef_graph.py build-native` grava `.aisef/runtime/graph.json` (fora do Git) no formato do Graphify, e o `pack` o reconstrói sozinho quando um arquivo de código muda, entra ou sai;

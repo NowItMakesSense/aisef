@@ -90,6 +90,13 @@ The review gate adds about 13% per slice, which is within run-to-run noise. On a
 
 ## What's new
 
+- **0.13.0, less friction, harder gateway, a loop that knows when to stop.**
+  - code triage picks the path (quick, lean or full); the new lean path is one TDD slice with no blueprint, and ceremony profiles (solo, team, regulated) set the defaults;
+  - a Python project starts with 15 agents instead of 33, and the init applies agents, native rules, practices and docs in one approval;
+  - the gateway reads commands token by token (`bash -c`, `eval`, `$(...)`, inline code), and a 138-command corpus with 48 bypass attempts guards it. It also closed real gaps: a `git -c` force push only asked, and the signing key and head anchor were reachable;
+  - Git by risk: commits on `feat/*` are free, and the feature push is covered by the feature scope. MCP tools can be trusted for up to 7 days;
+  - the continuous loop stops on budget, on repeated identical failures and on stalled agents. Hooks record task start and end, `check --fix` suggests the fix, and `rebase-req` follows a changed requirement;
+  - a native import graph when Graphify is missing, a doctor that finds the right Python, `migrate` and the native sandbox.
 - **0.12.1, field-tested fixes.** These came from running 0.12 on a real project:
   - architecture decisions can apply to the whole project, so you can adopt a style before the first feature exists;
   - the radar checks module boundaries and no longer counts skeleton services as microservices;

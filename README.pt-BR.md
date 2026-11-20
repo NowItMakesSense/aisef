@@ -90,6 +90,13 @@ O portão de revisão acrescenta cerca de 13% por fatia, dentro da variação en
 
 ## Novidades
 
+- **0.13.0, menos atrito, gateway mais duro e um loop que sabe parar.**
+  - a triagem em código escolhe o caminho (rápido, enxuto ou completo); o caminho enxuto é uma fatia com TDD e sem blueprint, e os perfis (solo, team, regulated) definem o padrão;
+  - um projeto Python começa com 15 agentes, não 33, e o init aplica agentes, regras nativas, boas práticas e docs numa aprovação só;
+  - o gateway lê os comandos por partes (`bash -c`, `eval`, `$(...)`, código inline), protegido por um corpus de 138 comandos com 48 tentativas de contorno. Também fechou falhas reais: um force push com `git -c` só pedia aprovação, e a chave de assinatura e a âncora do head estavam ao alcance dos agentes;
+  - Git por risco: commit em `feat/*` é livre, e o push da feature vale pelo escopo dela. Ferramentas MCP ganham confiança por até 7 dias;
+  - o modo contínuo para por orçamento, por falha repetida e por agente travado. O hook registra início e fim da tarefa, o `check --fix` sugere a correção e o `rebase-req` acompanha requisito que mudou;
+  - grafo de imports nativo quando falta o Graphify, doctor que acha o Python certo, `migrate` e sandbox nativo.
 - **0.12.1, correções vindas do uso.** Saíram de rodar a 0.12 num projeto real:
   - decisão de arquitetura pode valer para o projeto todo, então dá para adotar um estilo antes da primeira feature;
   - o radar confere as fronteiras entre módulos e não chama mais de microsserviço um serviço que é só esqueleto;
