@@ -333,5 +333,30 @@ expect("fatia sem criterio de teste automatizado", both(edit(F, lambda d: d.upda
        "SLICE-NO-AUTOMATED-TEST")
 expect("spec sem seams de teste e invalida", edit(F, lambda d: d.update(spec=dict(SPEC, test_seams=[]))), "SCHEMA")
 
+
+def mcp_trust(valid_from, valid_until, status="active", first="granted"):
+    """Confianca MCP (F-01) gravada direto em authorizations/."""
+    def m(proj):
+        doc = {"schema_version": "0.1.0", "kind": "mcp_tool", "authorization_id": "MCP-001", "project_id": "PRJ-DEMO",
+               "tools": ["mcp__github__get_*"], "allow_code_execution": False,
+               "validity": {"valid_from": valid_from, "valid_until": valid_until}, "status": status,
+               "granted_by": "user", "granted_at": valid_from, "history": [{"event": first, "at": valid_from}]}
+        with open(os.path.join(proj, "authorizations", "MCP-001.json"), "w", encoding="utf-8") as fh:
+            json.dump(doc, fh)
+    return m
+
+
+total += 1
+r = run(mcp_trust("2025-12-30T00:00:00+00:00", "2026-01-05T00:00:00+00:00"))
+ok = not [f for f in r.findings if f["severity"] == "error"]
+print(("OK    " if ok else "FALHA ") + "confianca MCP valida: sem erro (nao e confundida com escopo de feature)" + ("" if ok else str(r.findings)))
+fails += not ok
+expect("confianca MCP vencida e ativa: aviso", mcp_trust("2025-12-01T00:00:00+00:00", "2025-12-05T00:00:00+00:00"), "AUTH-EXPIRED")
+expect("confianca MCP acima de 7 dias", mcp_trust("2025-12-30T00:00:00+00:00", "2026-03-01T00:00:00+00:00"), "AUTH-SCOPE-TOO-LONG")
+expect("confianca MCP sem 'granted' no inicio do historico",
+       mcp_trust("2025-12-30T00:00:00+00:00", "2026-01-05T00:00:00+00:00", first="revoked"), "AUTH-HISTORY")
+expect("confianca MCP com campo a mais e invalida", lambda p: (mcp_trust("2025-12-30T00:00:00+00:00", "2026-01-05T00:00:00+00:00")(p),
+       edit("authorizations/MCP-001.json", lambda d: d.update(feature_id="FEAT-001"))(p)), "SCHEMA")
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

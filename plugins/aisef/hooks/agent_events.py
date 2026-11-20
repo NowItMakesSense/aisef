@@ -68,6 +68,104 @@ def _parse(ts):
         return None
 
 
+# ------------------------------------------------------------------ ciclo de vida pelo hook (F-04)
+LIFECYCLE = ("delegation", "task_started", "task_resumed", "task_paused", "task_executed", "task_validated",
+             "task_rejected", "task_completed")
+
+
+def _task(project, tid):
+    try:
+        with open(os.path.join(project, ".aisef", "contracts", "tasks", tid + ".json"), encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError, TypeError):
+        return None
+
+
+def _last_lifecycle(project, tid):
+    import audit_chain
+    last = None
+    for e in audit_chain.read_log_dir(os.path.join(project, ".aisef", "audit")):
+        if e.get("task_id") == tid and e.get("event_type") in LIFECYCLE:
+            last = e
+    return last
+
+
+def _exact_task(project, rec):
+    """Tarefa do subagente so quando a ligacao e exata: "T-xxx:" no disparo, sem duvida de qual disparo, e o papel
+    do subagente e o assigned_agent do contrato. Senao None (o hook nao grava no log assinado por palpite)."""
+    tid = rec.get("task_id")
+    if not tid or rec.get("spawn_inferred"):
+        return None, None
+    t = _task(project, tid)
+    if not t:
+        return None, None
+    agent = t.get("assigned_agent") or {}
+    if aisef_runtime.role(rec.get("agent_type")) not in (agent.get("agent_id"), agent.get("role")):
+        return None, None
+    return tid, t
+
+
+def _record(project, t, etype, summary, data):
+    import aisef_project as ap
+    ap.append(project, {"event_type": etype, "actor": {"type": "agent", "id": t["assigned_agent"]["agent_id"]},
+                        "feature_id": t["feature_id"], "task_id": t["task_id"], "summary": summary,
+                        "data": dict(data, recorded_by="hook")})
+
+
+def lifecycle_start(project, rec):
+    """SubagentStart com ligacao exata: task_started, se o ultimo evento da tarefa ainda nao e esse (idempotente)."""
+    tid, t = _exact_task(project, rec)
+    if not tid:
+        return None
+    last = _last_lifecycle(project, tid)
+    if last is not None and last["event_type"] not in ("delegation", "task_rejected", "task_paused"):
+        return None
+    _record(project, t, "task_started", "%s iniciada pelo %s" % (tid, t["assigned_agent"]["agent_id"]),
+            {"agent_run_id": rec.get("agent_id")})
+    return "task_started"
+
+
+def _executed_report(project, t, since):
+    """Execution Report do executor, desta versao do contrato, terminado depois do inicio do subagente."""
+    import glob
+    best = None
+    for path in glob.glob(os.path.join(project, ".aisef", "reports", "*.json")):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                r = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        if r.get("task_id") != t["task_id"] or (r.get("agent") or {}).get("agent_id") != t["assigned_agent"]["agent_id"]:
+            continue
+        if r.get("status") != "executed" or r.get("contract_version") != t.get("contract_version") or r.get("review"):
+            continue
+        fin = _parse((r.get("timing") or {}).get("finished_at"))
+        if since and fin and fin < since:
+            continue
+        best = r
+    return best
+
+
+def lifecycle_stop(project, start, usage):
+    """SubagentStop: com relatorio executado, task_executed (com os tokens); sem relatorio, marca no runtime para o
+    `next` levar ao usuario (await_decision, no_report). Idempotente."""
+    tid, t = _exact_task(project, start)
+    if not tid:
+        return None
+    last = _last_lifecycle(project, tid)
+    if last is None or last["event_type"] not in ("delegation", "task_started", "task_resumed"):
+        return None
+    rep = _executed_report(project, t, _parse(start.get("at")))
+    if rep is None:
+        runtime_append(project, {"event": "no_report", "task_id": tid, "agent_id": start.get("agent_id"),
+                                 "after_seq": last.get("sequence")})
+        return "no_report"
+    _record(project, t, "task_executed", "%s executada (%s)" % (tid, rep.get("report_id")),
+            {"report_id": rep.get("report_id"),
+             **({"billable_tokens": aisef_runtime.billable_tokens(usage)} if isinstance(usage, dict) else {})})
+    return "task_executed"
+
+
 def on_start(project, data):
     rec = {"event": "start", "agent_id": data.get("agent_id"), "agent_type": data.get("agent_type"),
            "session_id": data.get("session_id")}
@@ -78,6 +176,10 @@ def on_start(project, data):
         rec["task_id"] = link[4]
         rec["spawn_inferred"] = link[2]
     runtime_append(project, rec)
+    try:
+        lifecycle_start(project, dict(rec, at=rec.get("at")))
+    except Exception:
+        pass  # o registro no log nunca derruba o hook; o next ainda ve a tarefa pela delegation
 
 
 def on_stop(project, data):
@@ -94,6 +196,10 @@ def on_stop(project, data):
            "usage": usage}
     with open(aisef_runtime.usage_path(os.path.join(project, ".aisef")), "a", encoding="utf-8") as fh:
         fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    try:
+        lifecycle_stop(project, start, usage)
+    except Exception:
+        pass
 
 
 def main():

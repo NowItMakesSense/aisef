@@ -19,6 +19,8 @@ Tipos (`kind`):
 
 Ativacao (`activation`), usada para decidir quais Agent Contracts viram rascunho num projeto:
   always | manual | stack:<id>[|<id>...] | arch:<id>[|...] | domain:<id>[|...]  (qualquer um dos ids ativa)
+Nivel (`tier`, 0.13, C-04), so para `always`: `core` (padrao) entra no init; `extended` so quando o usuario pede
+(`aisef_project.py agents --roles <papel>`), como os `manual`. Assim um projeto Python novo comeca com 15 agentes, nao 33.
 
 Uso:
     python3 -I aisef_catalog.py list [--kind evaluator] [--activation always]
@@ -97,7 +99,7 @@ def applicable(role, stacks=(), styles=(), domains=()):
     """O papel se aplica ao projeto? `manual` nunca se aplica sozinho (so quando o usuario pede)."""
     act = role.get("activation", "always")
     if act == "always":
-        return True
+        return role.get("tier", "core") == "core"
     if act == "manual":
         return False
     kind, _, values = act.partition(":")
@@ -128,6 +130,8 @@ def check(path=CATALOG_PATH):
             p.append("id invalido: %s" % rid)
         if not ACTIVATION_RE.match(r.get("activation", "")):
             p.append("%s: activation invalida %r" % (rid, r.get("activation")))
+        if r.get("tier") and r.get("activation") != "always":
+            p.append("%s: tier so vale para activation always" % rid)
         gen = r.get("generate_agent", True)
         if gen and not r.get("prompt"):
             p.append("%s: agente gerado sem prompt" % rid)
@@ -151,6 +155,7 @@ def main(argv=None):
     ap.add_argument("command", choices=["list", "check"])
     ap.add_argument("--kind")
     ap.add_argument("--activation")
+    ap.add_argument("--tier", choices=["core", "extended"])
     a = ap.parse_args(argv)
     if a.command == "check":
         problems = check()
@@ -163,7 +168,10 @@ def main(argv=None):
             continue
         if a.activation and not r["activation"].startswith(a.activation):
             continue
-        print("%-28s %-12s %-10s %s" % (r["id"], r["kind"], r["group"], r["activation"]))
+        tier = r.get("tier", "core") if r["activation"] == "always" else "-"
+        if a.tier and tier != a.tier:
+            continue
+        print("%-28s %-12s %-10s %-9s %s" % (r["id"], r["kind"], r["group"], tier, r["activation"]))
     return 0
 
 

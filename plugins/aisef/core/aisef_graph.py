@@ -10,17 +10,33 @@ links[source, target, relation]) em vez de chamar a CLI ou o servidor MCP.
 - codigo de fora da tarefa que chama ou importa o codigo da tarefa (raio de impacto: onde pode quebrar);
 - o que o codigo da tarefa chama ou importa de fora (dependencias).
 Com teto de itens e de caracteres: o grafo nunca estoura o pacote.
+
+Grafo nativo (0.13, G-06): sem o Graphify, `build_native` monta um grafo de imports do proprio repositorio (um no por
+arquivo de codigo, arestas `imports`), no mesmo formato node-link, em .aisef/runtime/graph.json (fora do Git).
+`ensure_native` o reconstroi so quando um arquivo de codigo mudou, entrou ou saiu. O `related()` funciona igual sobre ele.
+
+    python -I aisef_graph.py build-native --project <repo>   (forca a reconstrucao e mostra o tamanho)
 """
+import argparse
 import datetime
 import json
 import os
 import re
+import sys
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import aisef_imports  # noqa: E402
 
 MAX_GRAPH_BYTES = 40 * 1024 * 1024
 MAX_ITEMS = 15
 MAX_CHARS = 2500
 DOC_RELATIONS = ("rationale_for", "references")
 IMPACT_RELATIONS = ("calls", "imports", "imports_from", "inherits", "indirect_call", "method")
+NATIVE_GRAPH = os.path.join(".aisef", "runtime", "graph.json")
+MAX_NATIVE_FILES = 20000
+MAX_NATIVE_BYTES = 300_000
 ID_RE = re.compile(r"\b(?:REQ|BR|D|ADR|DEC|FEAT|T)-[A-Za-z0-9._-]+\b")
 
 
@@ -115,3 +131,94 @@ def graph_info(project, graph_rel):
     except OSError:
         return None
     return {"path": graph_rel.replace("\\", "/"), "built_at": built.isoformat(timespec="seconds")}
+
+
+# ------------------------------------------------------------------ grafo nativo (G-06)
+def _source_files(project):
+    import aisef_detect
+    files, _dirs, _trunc = aisef_detect.scan(project)
+    src = [f for f in files if os.path.splitext(f)[1] in aisef_imports.IMPORT_RES]
+    return src[:MAX_NATIVE_FILES]
+
+
+def build_native(project, files=None):
+    """Grafo de imports do repositorio no formato node-link. `files`: arquivos de codigo (padrao: varredura)."""
+    files = _source_files(project) if files is None else files
+    res = aisef_imports.Resolver(files)
+    nodes = [{"id": f, "label": os.path.basename(f), "source_file": f, "file_type": "code"} for f in files]
+    links, seen = [], set()
+    for rel in files:
+        try:
+            with open(os.path.join(project, rel), encoding="utf-8", errors="replace") as fh:
+                text = fh.read(MAX_NATIVE_BYTES)
+        except OSError:
+            continue
+        for imp, line in aisef_imports.imports_in(text, os.path.splitext(rel)[1]):
+            for target in res.resolve(rel, imp):
+                if target != rel and (rel, target) not in seen:
+                    seen.add((rel, target))
+                    links.append({"source": rel, "target": target, "relation": "imports",
+                                  "source_location": "L%d" % line})
+    return {"directed": True, "nodes": nodes, "links": links,
+            "aisef": {"kind": "native", "files": len(files),
+                      "built_at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")}}
+
+
+def _native_stale(project, path, files):
+    try:
+        built = os.path.getmtime(path)
+        with open(path, encoding="utf-8") as fh:
+            meta = (json.load(fh) or {}).get("aisef") or {}
+    except (OSError, ValueError):
+        return True
+    if meta.get("files") != len(files):
+        return True
+    for f in files:
+        try:
+            if os.path.getmtime(os.path.join(project, f)) > built:
+                return True
+        except OSError:
+            return True
+    return False
+
+
+def ensure_native(project, force=False):
+    """Caminho relativo do grafo nativo, reconstruido se faltar ou estiver velho. None se nao ha codigo ou deu erro."""
+    if not os.path.isfile(os.path.join(project, ".aisef", "config.json")):
+        return None  # so grava em projeto AISEF
+    path = os.path.join(project, NATIVE_GRAPH)
+    try:
+        files = _source_files(project)
+        if not files:
+            return None
+        if force or _native_stale(project, path, files):
+            graph = build_native(project, files)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            tmp = path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump(graph, fh, ensure_ascii=False)
+            os.replace(tmp, path)
+        return NATIVE_GRAPH.replace(os.sep, "/")
+    except Exception:
+        return None
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(description="Grafo nativo de imports do AISEF")
+    sub = p.add_subparsers(dest="cmd", required=True)
+    b = sub.add_parser("build-native", help="reconstroi .aisef/runtime/graph.json")
+    b.add_argument("--project", default=".")
+    a = p.parse_args(argv)
+    project = os.path.abspath(a.project)
+    t0 = time.time()
+    rel = ensure_native(project, force=True)
+    if not rel:
+        print("nada gravado: projeto sem .aisef/config.json, sem arquivo de codigo ou erro ao gravar")
+        return 1
+    g = load(os.path.join(project, rel))
+    print("%s: %d arquivo(s), %d import(s) resolvido(s), %.2f s" % (rel, len(g[0]), len(g[1]), time.time() - t0))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

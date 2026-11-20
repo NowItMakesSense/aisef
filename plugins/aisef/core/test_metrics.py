@@ -184,5 +184,38 @@ check("1a validacao por modo: graphify 50%, none 100%", cm["graphify"]["first_pa
 txt = mt.format_metrics(mc2)
 check("texto mostra a comparacao e avisa amostra pequena", "Contexto do agente" in txt and "amostra pequena" in txt, txt[-600:])
 
+print("--- uso por agente (C-04)")
+with open(os.path.join(rdir, "usage.jsonl"), "a", encoding="utf-8") as fh:
+    fh.write(json.dumps({"at": ap.now_iso(), "agent_type": "aisef:code-reviewer", "task_id": "T-2",
+                         "usage": {"input_tokens": 40, "output_tokens": 10}}) + "\n")
+rep = {"report_id": "RPT-T-2-REV-code-reviewer", "task_id": "T-2", "feature_id": "FEAT-A",
+       "agent": {"agent_id": "code-reviewer", "role": "code-reviewer"}, "timing": {"finished_at": ap.now_iso()},
+       "review": {"verdict": "APPROVE"}}
+ap.write_json(os.path.join(ap.aisef_dir(p), "reports", rep["report_id"] + ".json"), rep)
+rep2 = dict(rep, report_id="RPT-T-2-REV-code-reviewer-2", review={"verdict": "WARNING"})
+ap.write_json(os.path.join(ap.aisef_dir(p), "reports", rep2["report_id"] + ".json"), rep2)
+ap.write_agent_drafts(p, ["qa"])
+ap.activate_agents(p)
+ag = mt.compute_metrics(p, run_check=False)["agents"]
+b = ag["by_role"]
+check("executor: tarefas, despachos e 1a validacao pelo assigned_agent",
+      b["backend"]["tasks"] == 3 and b["backend"]["dispatches"] == 5 and b["backend"]["first_pass_validation_rate"] == 0.5, b)
+check("revisor: vereditos dos relatorios de avaliacao", b["code-reviewer"]["reviews"] == {"APPROVE": 1, "WARNING": 1}, b)
+check("execucoes e tokens pelo agent_type do usage.jsonl", b["code-reviewer"]["runs"] == 1
+      and b["code-reviewer"]["billable_tokens"] == 50, b["code-reviewer"])
+check("contrato ativo sem uso aparece (insumo da revisao do catalogo)", "qa" in ag["active_unused"]
+      and "backend" not in ag["active_unused"] and "code-reviewer" not in ag["active_unused"], ag["active_unused"])
+txt = mt.format_metrics(mt.compute_metrics(p, run_check=False))
+check("texto mostra a secao Agentes", "Agentes (C-04" in txt and "ativos sem uso" in txt, txt[-700:])
+au = subprocess.run([sys.executable, "-I", os.path.join(HERE, "..", "..", "..", "tools", "agent_usage.py"), p, cx, "--json"],
+                    capture_output=True, text=True, encoding="utf-8")
+try:
+    aj = json.loads(au.stdout)
+except ValueError:
+    aj = {}
+check("tools/agent_usage.py: soma os projetos e lista quem nunca trabalhou",
+      au.returncode == 0 and aj.get("projects") == 2 and aj["by_role"]["backend"]["tasks"] == 6
+      and "code-reviewer" not in aj["never_used"] and "swift-reviewer" in aj["never_used"], au.stdout[-500:] + au.stderr[-300:])
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

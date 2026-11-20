@@ -156,11 +156,15 @@ check("pack/grafo: .mcp.json quebrado = nenhum grafo, sem excecao", ctx.detect_g
 gf = mkproject("gf")
 put(gf, "src/auth/token.py")
 put(gf, "src/api/routes.py")
-check("pack/graphify: config sem a chave (projeto antigo) = sem grafo, modo none",
-      ctx.build_pack(gf, "T-001")["on_demand"]["graph"]["related"] is None and ctx.build_pack(gf, "T-001")["context_mode"] == "none")
+nat = ctx.build_pack(gf, "T-001")
+check("pack/nativo: config sem a chave do Graphify = grafo nativo de imports, modo native (G-06)",
+      nat["context_mode"] == "native" and nat["on_demand"]["graph"]["related"]["source"] == "native"
+      and nat["on_demand"]["graph"]["related"]["path"] == ".aisef/runtime/graph.json", nat["on_demand"]["graph"]["related"])
+check("pack/nativo: render diz que e o grafo nativo", "grafo nativo de imports" in ctx.render_pack(nat))
 with open(os.path.join(gf, ".aisef", "config.json"), "w", encoding="utf-8") as fh:
     json.dump({"project_id": "PRJ-T", "schema_version": "0.1.0", "graphify": {"enabled": True, "backend": "none"}}, fh)
-check("pack/graphify: ligado mas sem graph.json = sem bloco", ctx.build_pack(gf, "T-001")["on_demand"]["graph"]["related"] is None)
+check("pack/graphify: ligado mas sem graph.json = cai no grafo nativo",
+      ctx.build_pack(gf, "T-001")["on_demand"]["graph"]["related"]["source"] == "native")
 os.makedirs(os.path.join(gf, "graphify-out"))
 nodes = [
     {"id": "tok_issue", "label": "issue_token()", "source_file": "src/auth/token.py", "source_location": "L10", "file_type": "code"},

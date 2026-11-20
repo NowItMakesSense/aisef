@@ -1,5 +1,5 @@
 {
-  "$comment": "AISEF Agent Catalog: fonte unica dos papeis (ferramentas e teto do Agent Contract, nivel padrao da Model Policy, ativacao, tipo e prompt do subagente). tools/gen_agents.py gera plugins/aisef/agents/*.md daqui; aisef_project, aisef_new, aisef_route e check_project leem daqui.",
+  "$comment": "AISEF Agent Catalog: fonte unica dos papeis (ferramentas e teto do Agent Contract, nivel padrao da Model Policy, ativacao, tipo e prompt do subagente). tools/gen_agents.py gera plugins/aisef/agents/*.md daqui; aisef_project, aisef_new, aisef_route e check_project leem daqui. Ativacao: papeis 'always' sao o nucleo (entram no init); com tier 'extended', so por pedido (agents --roles).",
   "catalog_version": "0.1.0",
   "roles": [
     {
@@ -184,6 +184,7 @@
       "kind": "evaluator",
       "group": "quality",
       "activation": "always",
+      "tier": "extended",
       "level": 2,
       "task_types": [
         "testing",
@@ -276,6 +277,7 @@
       "kind": "advisor",
       "group": "planning",
       "activation": "always",
+      "tier": "extended",
       "level": 0,
       "task_types": [
         "investigation",
@@ -396,6 +398,7 @@
       "kind": "advisor",
       "group": "planning",
       "activation": "always",
+      "tier": "extended",
       "level": 3,
       "task_types": [
         "investigation",
@@ -456,6 +459,7 @@
       "kind": "advisor",
       "group": "planning",
       "activation": "always",
+      "tier": "extended",
       "level": 5,
       "task_types": [
         "investigation",
@@ -515,7 +519,7 @@
       "name": "Revisor de arquitetura",
       "kind": "evaluator",
       "group": "quality",
-      "activation": "always",
+      "activation": "arch:clean|hexagonal|ddd-tactical|ddd-strategic|cqrs|event-sourcing|layered-mvc|vertical-slices|event-driven|modular-monolith|microservices",
       "level": 4,
       "task_types": [
         "review"
@@ -574,6 +578,7 @@
       "kind": "evaluator",
       "group": "quality",
       "activation": "always",
+      "tier": "extended",
       "level": 3,
       "task_types": [
         "review"
@@ -603,6 +608,7 @@
       "kind": "evaluator",
       "group": "quality",
       "activation": "always",
+      "tier": "extended",
       "level": 3,
       "task_types": [
         "review"
@@ -661,6 +667,7 @@
       "kind": "evaluator",
       "group": "quality",
       "activation": "always",
+      "tier": "extended",
       "level": 0,
       "task_types": [
         "review"
@@ -690,6 +697,7 @@
       "kind": "evaluator",
       "group": "quality",
       "activation": "always",
+      "tier": "extended",
       "level": 2,
       "task_types": [
         "review"
@@ -719,6 +727,7 @@
       "kind": "fixer",
       "group": "quality",
       "activation": "always",
+      "tier": "extended",
       "level": 3,
       "task_types": [
         "refactoring"
@@ -751,6 +760,7 @@
       "kind": "fixer",
       "group": "quality",
       "activation": "always",
+      "tier": "extended",
       "level": 3,
       "task_types": [
         "refactoring"
@@ -783,6 +793,7 @@
       "kind": "fixer",
       "group": "quality",
       "activation": "always",
+      "tier": "extended",
       "level": 4,
       "task_types": [
         "implementation",
@@ -817,6 +828,7 @@
       "kind": "advisor",
       "group": "delivery",
       "activation": "always",
+      "tier": "extended",
       "level": 2,
       "task_types": [
         "investigation",
@@ -847,6 +859,7 @@
       "kind": "executor",
       "group": "delivery",
       "activation": "always",
+      "tier": "extended",
       "level": 1,
       "task_types": [
         "documentation"
@@ -879,6 +892,7 @@
       "kind": "advisor",
       "group": "delivery",
       "activation": "always",
+      "tier": "extended",
       "level": 0,
       "task_types": [
         "investigation",
@@ -910,6 +924,7 @@
       "kind": "executor",
       "group": "quality",
       "activation": "always",
+      "tier": "extended",
       "level": 3,
       "task_types": [
         "implementation",
@@ -943,6 +958,7 @@
       "kind": "advisor",
       "group": "process",
       "activation": "always",
+      "tier": "extended",
       "level": 1,
       "task_types": [
         "investigation",
@@ -972,6 +988,7 @@
       "kind": "advisor",
       "group": "process",
       "activation": "always",
+      "tier": "extended",
       "level": 3,
       "task_types": [
         "investigation",

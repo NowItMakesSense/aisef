@@ -21,7 +21,7 @@ Everything below ships in one plugin, runs locally with the Python standard libr
 |---|---|---|---|
 | 👥 | **Agent team** | 66 specialists: executors, reviewers, fixers and advisors. Each one has a signed permission ceiling. | automatic delegation, `aisef:<agent>` |
 | 🧭 | **Architecture radar** | It finds your stack and your style (Clean, hexagonal, DDD, CQRS, modular monolith, microservices, MVC, vertical slices…). It checks the dependency rule and module boundaries from your imports, then recommends improvements. | `aisef_project.py detect` |
-| 📚 | **Best-practice library** | 33 rules: common ones (Clean Code, SOLID, testing, security, Git), one per architecture style with a "when not to use it" section, and one per language. | `aisef_project.py practices --apply` |
+| 📚 | **Best-practice library** | 33 rules: common ones (Clean Code, SOLID, testing, security, Git), one per architecture style with a "when not to use it" section, and one per language. | `aisef_setup.py --apply` (no init) |
 | 🔍 | **Review gate** | Reviewers are picked in code for each task: general, language, database, security, architecture and tests. All of them must approve before the validator runs. High-risk tasks get two independent reviews. | automatic in every wave |
 | ✅ | **verify-loop** | Build → types → lint → tests → secrets in the diff → diff summary, ending in PASS or FAIL, with evidence saved for the task. | `aisef_project.py verify-loop` |
 | 🛡️ | **Execution Gateway** | Every tool call gets allow, ask or deny, enforced in code. Each Git operation needs its own approval. No `--no-verify`. Databases and deploys are denied. Agents cannot loosen lint configs. | always on (hook) |
@@ -90,6 +90,13 @@ The review gate adds about 13% per slice, which is within run-to-run noise. On a
 
 ## What's new
 
+- **0.13.0, less friction, harder gateway, a loop that knows when to stop.**
+  - code triage picks the path (quick, lean or full); the new lean path is one TDD slice with no blueprint, and ceremony profiles (solo, team, regulated) set the defaults;
+  - a Python project starts with 15 agents instead of 33, and the init applies agents, native rules, practices and docs in one approval;
+  - the gateway reads commands token by token (`bash -c`, `eval`, `$(...)`, inline code), and a 138-command corpus with 48 bypass attempts guards it. It also closed real gaps: a `git -c` force push only asked, and the signing key and head anchor were reachable;
+  - Git by risk: commits on `feat/*` are free, and the feature push is covered by the feature scope. MCP tools can be trusted for up to 7 days;
+  - the continuous loop stops on budget, on repeated identical failures and on stalled agents. Hooks record task start and end, `check --fix` suggests the fix, and `rebase-req` follows a changed requirement;
+  - a native import graph when Graphify is missing, a doctor that finds the right Python, `migrate` and the native sandbox.
 - **0.12.1, field-tested fixes.** These came from running 0.12 on a real project:
   - architecture decisions can apply to the whole project, so you can adopt a style before the first feature exists;
   - the radar checks module boundaries and no longer counts skeleton services as microservices;

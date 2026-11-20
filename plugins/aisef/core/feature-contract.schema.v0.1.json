@@ -119,6 +119,30 @@
     },
 
     "constraints": { "type": "array", "items": { "type": "string" } },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opcional (0.13, L-01). Limites da feature no modo continuo; so podem BAIXAR os do projeto (orchestration-defaults e config.json -> budget). Subir e decisao do usuario no config.json.",
+      "properties": {
+        "max_minutes": { "type": "integer", "minimum": 1 },
+        "max_tokens": { "type": "integer", "minimum": 1 },
+        "max_attempts": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "triage": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opcional (0.13, C-01). Caminho escolhido em codigo pelo aisef_triage.py: quick, lean ou full, com os motivos. computed e o que o calculo deu; path e o efetivo (perfil ou pedido do usuario). Descer abaixo do calculado e erro do check.",
+      "required": ["computed", "path", "profile", "reasons"],
+      "properties": {
+        "computed": { "enum": ["quick", "lean", "full"] },
+        "path": { "enum": ["quick", "lean", "full"] },
+        "profile": { "enum": ["solo", "team", "regulated"] },
+        "reasons": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+        "note": { "type": "string" },
+        "forced_by_user": { "type": "boolean" }
+      }
+    },
     "spec": {
       "type": "object",
       "additionalProperties": false,

@@ -70,7 +70,7 @@ case("git add --dry-run com grep de .aisef/audit -> allow", "Bash", "allow",
      command='cat .aisef/.gitignore; git add -A --dry-run | grep -v ".aisef/audit/archive"')
 case("git add -n -> allow", "Bash", "allow", command="git add -A -n")
 case("git clean --dry-run -> allow", "Bash", "allow", command="git clean -fd --dry-run")
-case("git add de verdade continua pedindo -> ask", "Bash", "ask", command="git add -A")
+case("git add e preparar o commit: livre (local_staging, F-03)", "Bash", "allow", command="git add -A")
 case("git commit --no-verify -> deny", "Bash", "deny", command='git commit --no-verify -m "x"')
 case("git push --no-verify -> deny", "Bash", "deny", command="git push --no-verify origin main")
 case("git -c commit.gpgsign=false -> deny", "Bash", "deny", command='git -c commit.gpgsign=false commit -m "x"')
@@ -129,7 +129,50 @@ aisef_project.write_json(cfg_path, cfg)
 case("MCP liberado em mcp_allow -> allow", "mcp__github__get_issue", "allow", number=1)
 case("outra ferramenta do mesmo servidor nao liberada -> ask", "mcp__github__create_pull_request", "ask", title="x")
 case("subagente com MCP fora do teto -> deny", "mcp__db__run_query", "deny", _agent="aisef:backend", query="x")
+case("glob do mcp_allow nao cobre ferramenta que executa codigo (F-01)", "mcp__docs__execute_code", "ask", code="x")
+cfg["mcp_allow"] = ["mcp__docs__execute_code"]
+aisef_project.write_json(cfg_path, cfg)
+case("nome exato no mcp_allow cobre ferramenta que executa codigo", "mcp__docs__execute_code", "allow", code="x")
 open(cfg_path, "w", encoding="utf-8").write(cfg_text)
+
+print("--- confianca MCP com prazo (F-01)")
+import aisef_mcp  # noqa: E402
+case("trust de ferramenta MCP -> ask (decisao do usuario)", "Bash", "ask", command="python -I core/aisef_mcp.py trust --project . --tool mcp__github__create_*")
+case("subagente confiando em MCP -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_mcp.py trust --tool mcp__x__y")
+case("aisef_mcp list nao pergunta", "Bash", "allow", command="python -I core/aisef_mcp.py list --project .")
+t1 = aisef_mcp.trust(proj, ["mcp__github__create_*", "mcp__db__*"], days=7)
+case("confianca ativa cobre a ferramenta -> allow", "mcp__github__create_pull_request", "allow", title="x")
+case("confianca comum nao cobre ferramenta que executa codigo -> ask", "mcp__db__run_query", "ask", query="x")
+case("confianca comum cobre ferramenta de leitura do mesmo servidor", "mcp__db__list_tables", "allow")
+try:
+    aisef_mcp.trust(proj, ["mcp__db__run_query"])
+    refused = False
+except SystemExit as e:
+    refused = "--allow-code-execution" in str(e)
+total += 1
+print(("OK    " if refused else "FALHA ") + "trust recusa ferramenta que executa codigo sem --allow-code-execution")
+fails += not refused
+t2 = aisef_mcp.trust(proj, ["mcp__db__run_query"], allow_code=True)
+case("confianca com allow_code_execution cobre ferramenta que executa codigo -> allow", "mcp__db__run_query", "allow", query="x")
+aisef_mcp.revoke(proj, t2["authorization_id"])
+case("confianca revogada -> ask", "mcp__db__run_query", "ask", query="x")
+t1_path = os.path.join(proj, ".aisef", "authorizations", t1["authorization_id"] + ".json")
+old_t1 = json.load(open(t1_path, encoding="utf-8"))
+past = dict(old_t1, validity={"valid_from": "2020-01-01T00:00:00+00:00", "valid_until": "2020-01-05T00:00:00+00:00"})
+aisef_project.write_json(t1_path, past)
+case("confianca vencida -> ask", "mcp__github__create_pull_request", "ask", title="x")
+longa = dict(old_t1, validity={"valid_from": "2020-01-01T00:00:00+00:00", "valid_until": "2099-01-01T00:00:00+00:00"})
+aisef_project.write_json(t1_path, longa)
+case("confianca acima de 7 dias (editada a mao) nao vale -> ask", "mcp__github__create_pull_request", "ask", title="x")
+aisef_mcp.revoke(proj, t1["authorization_id"])
+try:
+    aisef_mcp.trust(proj, ["mcp__x__y"], days=30)
+    refused = False
+except SystemExit as e:
+    refused = "entre 1 e 7" in str(e)
+total += 1
+print(("OK    " if refused else "FALHA ") + "trust recusa prazo acima do maximo da politica")
+fails += not refused
 case("WebFetch comum -> allow", "WebFetch", "allow", url="https://docs.python.org/3/library/json.html", prompt="x")
 case("WebFetch levando token na query -> deny", "WebFetch", "deny", url="https://x.example/c?token=abcdef0123456789abcd", prompt="x")
 case("WebFetch levando JWT -> deny", "WebFetch", "deny", url="https://x.example/c/eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTYifQ.x", prompt="x")
@@ -286,7 +329,7 @@ case("subagente registrando decisao do usuario -> deny", "Bash", "deny", _agent=
      command="python aisef_project.py decide --request APR-1 --choice approve")
 case("subagente sem Agent Contract segue so a politica", "Bash", "ask", _agent="Explore", command="git commit -m x")
 case("ativar agentes -> ask (decisao do usuario)", "Bash", "ask", command="python aisef_project.py agents --project . --activate")
-case("editar Agent Contract -> ask", "Edit", "ask", file_path=os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"))
+case("editar Agent Contract -> ask", "Edit", "ask", file_path=os.path.join(proj, ".aisef", "contracts", "agents", "security.json"))
 
 print("--- PowerShell (ferramenta do Claude Code no Windows): mesma politica do Bash")
 case("PS: git status -> allow", "PowerShell", "allow", command="git status")
@@ -313,7 +356,7 @@ print("--- escrita por shell em arquivos de decisao do AISEF")
 case("redirecionar para config.json -> ask", "Bash", "ask", command="echo {} > .aisef/config.json")
 case("PS: Set-Content numa aprovacao -> ask", "PowerShell", "ask", command="Set-Content .aisef/approvals/APR-9.json x")
 case("cp sobre uma autorizacao -> ask", "Bash", "ask", command="cp /tmp/a.json .aisef/authorizations/AUTH-1.json")
-case("sed -i em Agent Contract -> ask", "Bash", "ask", command="sed -i s/draft/active/ .aisef/contracts/agents/qa.json")
+case("sed -i em Agent Contract -> ask", "Bash", "ask", command="sed -i s/draft/active/ .aisef/contracts/agents/security.json")
 case("subagente escrevendo aprovacao por shell -> deny", "Bash", "deny", _agent="aisef:backend",
      command="echo {} > .aisef/approvals/APR-9.json")
 case("ler uma aprovacao segue livre", "Bash", "allow", command="cat .aisef/approvals/APR-1.json 2>/dev/null")
@@ -331,6 +374,16 @@ case("remover servidor MCP -> ask", "PowerShell", "ask", command="claude mcp rem
 case("detalhes de plugin seguem livres", "Bash", "allow", command="claude plugin details aisef")
 case("aprovar licao aprendida -> ask (decisao do usuario)", "Bash", "ask", command="python aisef_learn.py accept --project . --proposal P-1 --trigger x --action y")
 case("subagente aprovando licao -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_learn.py accept --proposal P-1")
+case("migrate --apply -> ask (decisao do usuario)", "Bash", "ask", command="python -I core/aisef_migrate.py --project . --apply")
+case("migrate sem --apply (plano) nao pergunta", "Bash", "allow", command="python -I core/aisef_migrate.py --project .")
+case("subagente aplicando migrate -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_migrate.py --apply")
+case("setup --apply -> ask (uma decisao do usuario)", "Bash", "ask", command="python -I core/aisef_setup.py --project . --apply --only agents,docs")
+case("setup sem --apply (plano) nao pergunta", "Bash", "allow", command="python -I core/aisef_setup.py --project .")
+case("practices apply -> ask (escreve .claude/rules)", "Bash", "ask", command="python -I core/aisef_practices.py apply --project .")
+case("comando fora do sandbox -> ask (F-08)", "Bash", "ask", command="npm test", dangerouslyDisableSandbox=True)
+case("comando dentro do sandbox segue livre", "Bash", "allow", command="npm test", dangerouslyDisableSandbox=False)
+case("practices list nao pergunta", "Bash", "allow", command="python -I core/aisef_practices.py list --project .")
+case("aisef_project practices --apply -> ask", "Bash", "ask", command="python -I core/aisef_project.py practices --project . --apply")
 case("propor licoes segue livre", "Bash", "allow", command="python aisef_learn.py propose --project .")
 case("impeccable detect segue livre", "Bash", "allow", command="npx impeccable detect web/")
 
@@ -425,6 +478,9 @@ if not ok:
 fails += not ok
 
 print("--- doctor (SessionStart)")
+os.makedirs(os.path.join(proj, ".claude"), exist_ok=True)  # sandbox ligado: no Linux, desligado gera aviso (F-08)
+with open(os.path.join(proj, ".claude", "settings.local.json"), "w", encoding="utf-8") as fh:
+    json.dump({"sandbox": {"enabled": True}}, fh)
 r = run("doctor.py", {})
 total += 1
 ok = "Graphify esta ligado" in r.stdout and "graphify-out/graph.json" in r.stdout and r.returncode == 0
@@ -464,16 +520,16 @@ print(("OK    " if ok else "FALHA ") + "doctor: Graphify desligado pelo usuario 
 fails += not ok
 open(cfg_path, "w", encoding="utf-8").write(cfg_txt)
 os.utime(adr, (time.time() - 7200, time.time() - 7200))
-cfg_bak = open(os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"), encoding="utf-8").read()
-qa = json.loads(cfg_bak)
-qa["status"] = "draft"
-aisef_project.write_json(os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"), qa)
+cfg_bak = open(os.path.join(proj, ".aisef", "contracts", "agents", "security.json"), encoding="utf-8").read()
+sec = json.loads(cfg_bak)
+sec["status"] = "draft"
+aisef_project.write_json(os.path.join(proj, ".aisef", "contracts", "agents", "security.json"), sec)
 r = run("doctor.py", {})
 total += 1
-ok = "draft" in r.stdout and "qa" in r.stdout and r.returncode == 0
+ok = "draft" in r.stdout and "security" in r.stdout and r.returncode == 0
 print(("OK    " if ok else "FALHA ") + "doctor: avisa agente em draft, sem bloquear")
 fails += not ok
-open(os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"), "w", encoding="utf-8").write(cfg_bak)
+open(os.path.join(proj, ".aisef", "contracts", "agents", "security.json"), "w", encoding="utf-8").write(cfg_bak)
 
 print("--- hook de auditoria")
 for payload in ({"tool_name": "Bash", "tool_input": {"command": "npm test"}, "session_id": "s1"},
@@ -494,7 +550,8 @@ def check(name, cond):
 
 tools = [e for e in log if e["event_type"] == "tool_used" and e["actor"]["id"] == "claude-code"]
 gate = [e for e in log if e["actor"]["id"] == "execution-gateway"]
-decisions = [(e["event_type"], e["actor"]["type"]) for e in log if e["event_type"] in ("approval_granted", "authorization_granted")]
+decisions = [(e["event_type"], e["actor"]["type"]) for e in log if e["event_type"] in ("approval_granted", "authorization_granted")
+             and not str((e.get("data") or {}).get("authorization_id", "")).startswith("MCP-")]  # confiancas MCP (F-01)
 check("eventos do Approval Center registrados pelo usuario",
       decisions[:2] == [("approval_granted", "user"), ("authorization_granted", "user")])
 check("tentativas negadas e levadas a aprovacao ficam no log, sem segredo",

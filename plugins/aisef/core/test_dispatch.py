@@ -30,6 +30,7 @@ def check(name, cond, detail=None):
 proj = os.path.join(work, "p")
 os.makedirs(proj)
 ap.init(proj, "PRJ-DSP", "despacho", "dev")
+ap.write_agent_drafts(proj, ["architecture-reviewer"])  # entra pelo estilo; aqui a tarefa toca domain
 ap.activate_agents(proj)
 open(os.path.join(proj, ".aisef", "discovery.md"), "w", encoding="utf-8").write("# Discovery\n")
 brief = json.loads(json.dumps(aisef_new.EXAMPLES["feature"]))
@@ -50,9 +51,9 @@ res = dsp.dispatch_wave(proj)
 a10 = next(a for a in res["agents"] if a["task_id"] == "T-010")
 check("dispatch: um prompt por fatia, com agente, modelo e effort roteados",
       a10["subagent_type"] == "aisef:implementer" and a10["model"] == "sonnet" and a10["effort"] in ("medium", "high"), a10)
-check("dispatch: o prompt traz o pacote de contexto, o TDD e os comandos de registro do proprio agente",
-      "Pacote de contexto" in a10["prompt"] and "tdd_evidence" in a10["prompt"] and "--actor agent --actor-id implementer" in a10["prompt"]
-      and "RPT-T-010-1.json" in a10["prompt"])
+check("dispatch: o prompt traz o pacote de contexto, o TDD e o relatorio; o registro e do hook (F-04)",
+      "Pacote de contexto" in a10["prompt"] and "tdd_evidence" in a10["prompt"] and "nao rode append" in a10["prompt"]
+      and "--actor agent" not in a10["prompt"] and "RPT-T-010-1.json" in a10["prompt"])
 log = [json.loads(x) for x in open(os.path.join(proj, ".aisef", "audit", "log.jsonl"), encoding="utf-8")]
 dele = [e for e in log if e["event_type"] == "delegation"]
 check("dispatch: registra um 'delegation' por fatia, com modelo e tentativa", len(dele) == 2 and dele[0]["data"]["attempt"] == 1, dele)

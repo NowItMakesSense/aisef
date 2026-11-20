@@ -36,6 +36,16 @@ python -I CORE/aisef_project.py decide --project . --request APR-NNN --choice ap
 O comando valida tudo contra os schemas antes de gravar, gera a autorizacao (escopo `active` ou reforcada `approved`), anexa `approval_granted`/`approval_rejected` e `authorization_granted` com ator `user`, e preenche `audit.decided_event_ref`. Pedido decidido nao muda: para mudar, crie outro pedido.
 Aprovar `reinforced_approval` ou `git_operation` de `force_push`, `history_rewrite` ou `branch_delete` **exige** `--authorization` com um rascunho `kind: "reinforced"` cuja `operation` e identica a `operation.operation` do pedido (e mesma feature e tarefa); sem isso o `decide` recusa e nada e gravado, porque um pedido aprovado sem autorizacao reforcada nao libera nada no gateway. Recusar nao exige autorizacao.
 
+## Ferramenta MCP que pede aprovacao a cada chamada
+Quando o gateway perguntar por uma ferramenta MCP, ofereca ao usuario (AskUserQuestion) confiar nela por ate 7 dias,
+em vez de aprovar chamada a chamada: so a ferramenta, um glob do servidor (ex.: `mcp__github__get_*`, so leitura) ou
+nada. Com a escolha, um comando, que abre o prompt nativo e vai para o log:
+```
+python -I CORE/aisef_mcp.py trust --project . --tool <nome ou glob>[,<outro>] [--days N] [--reason "..."]
+```
+Ferramenta que executa codigo ou comandos exige `--allow-code-execution` e um aviso claro do risco. Revogar:
+`aisef_mcp.py revoke --id MCP-NNN`; ver as ativas: `aisef_mcp.py list`.
+
 ## 4. Depois
 - Escopo ativo: o gateway libera as operacoes cobertas (recurso + ambiente + validade) sem novo prompt.
 - Reforcada: repita **exatamente** a `operation` aprovada. O gateway ainda pede a confirmacao nativa uma vez. Um prefixo `cd <raiz do projeto> &&` ou `cd <raiz do projeto>;` e ignorado na comparacao (inclusive no estilo Git Bash, `/c/...`); `cd` para outro diretorio ou qualquer comando a mais faz a operacao deixar de ser a aprovada.

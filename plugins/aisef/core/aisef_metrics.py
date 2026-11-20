@@ -196,6 +196,7 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
     for tid, row in out["tasks"].items():
         row["tokens"] = out["cost"].get("_per_task", {}).get(tid)
     out["context_modes"] = _by_context_mode(per, out["cost"].get("_per_task", {}))
+    out["agents"] = _agents(project, per, tasks, in_window, in_feature)
     out["cost"].pop("_per_task", None)
     if run_check:
         import check_project
@@ -238,6 +239,53 @@ def _cost(project, per, completed, in_window, in_feature, tasks):
             "duration_minutes": _summary([round(r["duration_ms"] / 60000.0, 1) for r in runs
                                           if isinstance(r.get("duration_ms"), int)]),
             "_per_task": per_task}
+
+
+def _agents(project, per, tasks, in_window, in_feature):
+    """C-04: uso por agente, para revisar o catalogo com dado. Executores: tarefas, despachos e 1a validacao (pelo
+    assigned_agent do contrato). Revisores: vereditos dos relatorios de avaliacao. Todos: execucoes e tokens do
+    usage.jsonl (agent_type). `active_unused`: Agent Contract ativo que nunca trabalhou na janela."""
+    rows = {}
+
+    def row(role):
+        return rows.setdefault(role, {"tasks": 0, "dispatches": 0, "first_pass": [], "reviews": {}, "runs": 0, "tokens": 0})
+
+    for tid, s in per.items():
+        role = ((tasks.get(tid) or {}).get("assigned_agent") or {}).get("agent_id")
+        if not role:
+            continue
+        r = row(role)
+        r["tasks"] += 1
+        r["dispatches"] += s["delegations"]
+        if s["first_verdict"]:
+            r["first_pass"].append(s["first_verdict"] == "validated")
+    for rep in _load_dir(project, "reports"):
+        rev = rep.get("review") or {}
+        if rev.get("verdict") and in_feature(rep.get("feature_id")) and                 in_window((rep.get("timing") or {}).get("finished_at")):
+            role = (rep.get("agent") or {}).get("role") or (rep.get("agent") or {}).get("agent_id") or "?"
+            v = row(role)["reviews"]
+            v[rev["verdict"]] = v.get(rev["verdict"], 0) + 1
+    for u in aisef_runtime.read_usage(ap.aisef_dir(project)):
+        if not in_window(u.get("at")):
+            continue
+        if u.get("task_id") and not in_feature((tasks.get(u["task_id"]) or {}).get("feature_id")):
+            continue
+        role = (u.get("agent_type") or "").split(":")[-1]
+        if not role:
+            continue
+        r = row(role)
+        r["runs"] += 1
+        if isinstance(u.get("usage"), dict):
+            r["tokens"] += aisef_runtime.billable_tokens(u["usage"])
+    by_role = {}
+    for role, r in sorted(rows.items()):
+        by_role[role] = {"tasks": r["tasks"], "dispatches": r["dispatches"],
+                         "first_pass_validation_rate": _ratio(sum(r["first_pass"]), len(r["first_pass"])),
+                         "reviews": dict(sorted(r["reviews"].items())), "runs": r["runs"], "billable_tokens": r["tokens"]}
+    active = [c.get("agent_id") for c in _load_dir(project, "contracts/agents")
+              if c.get("status") == "active" and c.get("agent_id") not in ("orchestrator", None)]
+    used = {k for k, v in by_role.items() if v["tasks"] or v["reviews"] or v["runs"]}
+    return {"by_role": by_role, "active_unused": sorted(set(active) - used)}
 
 
 def _by_context_mode(per, tokens_per_task):
@@ -324,6 +372,21 @@ def format_metrics(m):
                 _fmt(g["lead_time_median"]), _fmt(g["tokens_median"])))
         if sum(g["tasks"] for g in cm.values()) < 20:
             lines.append("  (menos de 20 tarefas: amostra pequena para decidir sobre o grafo)")
+    ag = m.get("agents") or {}
+    if ag.get("by_role") or ag.get("active_unused"):
+        lines += ["", "Agentes (C-04: uso por papel)"]
+        for role, r in ag["by_role"].items():
+            parts = []
+            if r["tasks"]:
+                parts.append("%d tarefa(s), %d despacho(s), 1a validacao %s" % (
+                    r["tasks"], r["dispatches"], _pct(r["first_pass_validation_rate"])))
+            if r["reviews"]:
+                parts.append("revisoes " + ", ".join("%s %d" % kv for kv in r["reviews"].items()))
+            if r["runs"]:
+                parts.append("%d execucao(oes), %d tokens" % (r["runs"], r["billable_tokens"]))
+            lines.append("  %-24s %s" % (role, "; ".join(parts) or "-"))
+        if ag.get("active_unused"):
+            lines.append("  ativos sem uso            " + ", ".join(ag["active_unused"]))
     c = m.get("consistency")
     if c is not None:
         lines += ["", "Consistencia (aisef-check)",

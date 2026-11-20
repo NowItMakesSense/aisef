@@ -19,7 +19,7 @@ python -I CORE/aisef_project.py next --project .
 ```
 - Quando a conversa virar uma ideia de mudanca (o usuario descreve algo novo, pergunta "como fariamos X", ou pede uma spec), **nao comece a codar**: diga em uma linha "Estamos em <fase>. Proximo: <passo> (skill <nome>)" e siga para a **aisef-feature** (Grill, depois Spec, depois Fatias).
 - Se o usuario citar comandos do Matt Pocock (`/grill-me`, `/to-spec`, `/to-tickets`, `/implement-spec`, `/tdd`, `/code-review`), use o mapa `guide.matt_equivalents` do `next`. Explique que, no AISEF, o mesmo papel e feito pela fase correspondente, gravada em `.aisef/` com rastreabilidade.
-- Mudanca pequena de verdade (typo, texto, patch sem quebra) vai pelo caminho rapido, sem essas fases.
+- **A triagem escolhe o caminho em codigo** (`CORE/aisef_triage.py`, fase 0 da **aisef-feature**): `quick` (caminho rapido abaixo), `lean` (uma fatia com TDD, sem blueprint, so o code-reviewer, validador independente) ou `full` (o ciclo inteiro). O perfil do projeto (`config.json` -> `profile`: solo, team, regulated) pesa: no `team`, o lean so e sugerido. Diga ao usuario o caminho e o motivo em uma linha; ele pode subir, nunca descer.
 
 ## Regras que nunca mudam
 1. **Nao invente requisitos nem regras de negocio.** A origem de um requisito so pode ser `user_stated`, `investigated` ou `decision`.
@@ -29,7 +29,7 @@ python -I CORE/aisef_project.py next --project .
 5. **Toda tarefa tem criterios de aceite objetivos e verificaveis.** Sem isso, nao delegue.
 6. **Quem executa nao valida.** Estados: `executed` (agente terminou) -> `validated` (validador/QA verificou) -> `completed` (voce aceitou e integrou).
 7. **Toda comunicacao entre agentes passa por voce.** Especialistas nao delegam nem falam entre si.
-8. **Permissoes sao aplicadas pelo Execution Gateway** (hooks do plugin). Nunca tente contorna-lo; se ele negar, explique ao usuario o que precisa e use **aisef-approve**. Aprovar commit nao aprova push, merge nem release.
+8. **Permissoes sao aplicadas pelo Execution Gateway** (hooks do plugin). Nunca tente contorna-lo; se ele negar, explique ao usuario o que precisa e use **aisef-approve**. Aprovar commit nao aprova push, merge nem release. Excecao (ADR 0025): numa branch de feature (`feat/*`), `git add` e `git commit` sao livres, e o push dela para a branch de mesmo nome passa sem prompt se houver o escopo `git_feature_branch` (veja Branch por feature).
 9. **Segredos nunca em logs, relatorios ou painel.** Nunca registre raciocinio interno.
 10. **Sem sugestoes espontaneas** fora de tarefas: so sugira melhorias durante a execucao, diante de inconsistencia ou risco, ou quando pedirem.
 
@@ -54,7 +54,7 @@ Com o plano aprovado, siga sozinho tarefa apos tarefa e feature apos feature; pa
 python -I CORE/aisef_project.py next --project . [--feature FEAT-001] [--json]
 ```
 O `next` deriva o estado do log (`delegation`/`task_started` -> em andamento, `task_executed`, `task_validated`, `task_rejected`, `task_completed`) e devolve as acoes, sem executar nada. Trate nesta ordem:
-1. `await_decision`: leve ao usuario (**aisef-approve**); so a tarefa bloqueada espera, o resto continua.
+1. `await_decision`: leve ao usuario (**aisef-approve**); so a tarefa bloqueada espera, o resto continua. Fontes novas: `no_progress` (reprovada 2x seguidas pelo mesmo motivo: traga contexto novo antes de redelegar, subir de modelo nao resolve), `stale_agent` (em andamento acima do tempo limite) e `no_report` (terminou sem Execution Report).
 2. `complete`: **aisef-check**, estado do contrato para `completed`, `append` de `task_completed` (comando pronto na acao).
 3. `validate`: rode `python -I CORE/aisef_project.py validate-wave --project .`. Ele faz o `precheck` deterministico de cada tarefa `executed` (quem falha volta ao executor como tentativa + 1, sem gastar modelo) e devolve **um** prompt de validador para o resto da onda; dispare-o em background com o `model`/`effort` devolvidos.
 4. `feature_acceptance`: antes, revise a feature inteira com a skill `code-review` (plugin `mattpocock-skills`; padroes + aderencia a spec; sem o plugin, um subagente revisor). Achados viram novas tentativas das fatias afetadas. Depois, relatorio final e pedido `feature_acceptance` com `aisef_project.py request`.
@@ -66,10 +66,13 @@ Se o `guide` trouxer `graph_refresh`, rode o comando dele (`graphify update .`, 
 
 Pare quando `stop_reason` vier preenchido e resuma ao usuario o que foi feito e o que depende dele:
 - `critical_risk`: pare na hora, nada mais e despachado.
+- `budget_exhausted`: a feature passou do orcamento (minutos desde a primeira delegacao, tokens dos subagentes ou despachos; limites em `orchestration-defaults` -> `budget`, ajustaveis em `config.json` -> `budget`). Subir o limite e decisao do usuario; o Feature Contract so pode baixar.
 - `attempts_exhausted`: limite de correcoes atingido (contrato ou `orchestration-defaults`); escale.
 - `user_decision_pending`: so restam decisoes do usuario.
 - `nothing_ready`: nada pronto (tudo concluido ou aceito).
 Pare tambem se o **aisef-check** acusar erro, se a integridade do log falhar ou se o usuario pedir.
+
+**Projeto atras do plugin:** se o doctor avisar, mostre o plano de `python -I CORE/aisef_migrate.py --project .` ao usuario e aplique com `--apply` (o gateway pede a decisao dele). O migrate preserva o comportamento: projeto antigo vira `profile: team`.
 
 **Com o `/loop` do Claude Code:** use o modo autoritmado (sem intervalo), por exemplo `/loop siga o AISEF em modo continuo na FEAT-001`. Cada iteracao comeca pelo `next`; os subagentes em background notificam a conclusao e acordam a sessao; se so restar espera sem agente em voo, agende um `ScheduleWakeup` longo como fallback. Com `stop_reason`, encerre o loop (nao agende nova iteracao).
 
@@ -84,8 +87,10 @@ Se `.aisef/config.json` tiver
 - com a feature aceita e o **merge do PR confirmado** (pergunte ao usuario ou veja `gh pr view <branch> --json state,mergedAt`), o `next` sugere `delete_merged_branch` com dois comandos: remoto (`git push origin --delete <branch>`) e local (`git branch -d <branch>`). Cada exclusao e operacao Git reforcada: um pedido `git_operation`/`branch_delete` e uma autorizacao reforcada com a `operation` exata, por comando (**aisef-approve**). Saia da branch antes de apagar a local.
 O `next` so sugere; quem executa e voce, e o gateway continua decidindo.
 
+**Escopo de push da feature (ADR 0025).** Junto com o pedido `plan_approval`, crie um pedido `scope_authorization` com `scope_proposal` = `{"environment": "dev", "resources": ["git_feature_branch"], "operations": ["push"], "resource_filters": {"branches": ["feat/<id>"]}, "valid_until": <ate 7 dias>}` e leve os dois juntos ao usuario (**aisef-approve**). Aprovado, a autorizacao gerada leva o mesmo `resource_filters.branches`. Dai em diante, `git push` da branch da feature para ela mesma passa sem prompt; para `main`, `--force`, tags ou exclusao, nada muda.
+
 ## Caminho rapido (mudancas pequenas)
-Use em vez do ciclo completo **somente se todas** forem verdade: nao muda comportamento observavel; nao toca API, schema de banco, seguranca, CI/CD, configuracao de producao nem dependencia com quebra; cabe em poucos arquivos (guia: ate ~50 linhas). Exemplos: typo, texto, renomear variavel local, patch de dependencia, ajuste de lint. Na duvida, nao e rapido.
+Use quando a triagem der `quick` (ela confere os criterios abaixo em codigo). Os criterios, **todos** verdadeiros: nao muda comportamento observavel; nao toca API, schema de banco, seguranca, CI/CD, configuracao de producao nem dependencia com quebra; cabe em poucos arquivos (guia: ate ~50 linhas). Exemplos: typo, texto, renomear variavel local, patch de dependencia, ajuste de lint. Na duvida, nao e rapido.
 ```
 python -I CORE/aisef_new.py quick --project . --title "<o que>" --why "<por que>" [--path <glob>] [--test-cmd "<comando>"]
 ```
@@ -99,7 +104,7 @@ Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedid
   - **consultores** (planner, architect, code-architect, code-explorer, spec-miner, domain, docs-lookup, commit-reviewer, conversation-analyzer, harness-optimizer): investigam e propoem; decisao e do usuario;
   - **validador** (validator): validacao independente, sempre por ultimo.
 - **Quem usar quando:** trabalho grande ou incerto -> `planner` antes da spec; decisao estrutural -> `architect` (vira ADR proposto); blueprint -> `code-architect`; area desconhecida -> `code-explorer`; codigo legado sem documentacao -> `spec-miner`; API de biblioteca que mudou -> `docs-lookup`; build ou tipos quebrados -> o `*-build-resolver` da stack (o `validate-wave` indica qual em `fixer`); depois da validacao, se o revisor apontou complexidade -> `code-simplifier`; manutencao de codigo morto -> `refactor-cleaner`; requisito de desempenho falhando -> `performance-optimizer`; fim de feature -> `doc-updater` e `commit-reviewer`.
-- **Papel sem contrato ativo nao age:** o gateway nega edicao de `aisef:<papel>` sem Agent Contract. Crie o draft (`aisef_project.py agents --roles <papel>`) e leve a ativacao ao usuario antes de delegar.
+- **Papel sem contrato ativo nao age:** o gateway nega edicao de `aisef:<papel>` sem Agent Contract. Crie o draft (`aisef_project.py agents --roles <papel>`) e leve a ativacao ao usuario antes de delegar. Os papeis da **equipe estendida** (`tier: extended`: qa, doc-updater, e2e-runner, code-simplifier, refactor-cleaner, performance-optimizer, spec-miner, docs-lookup, commit-reviewer...) nao entram no init: ofereca ativar quando o trabalho pedir um deles.
 - **Fatia vertical (`kind: slice`) vai para o `implementer`**, que faz a fatia inteira com TDD (a skill `tdd` vem pre-carregada quando o plugin `mattpocock-skills` existe). No prompt da delegacao, exija `tdd_evidence` no Execution Report.
 - **Revisao antes da validacao (em codigo):** o `aisef_new` grava em cada tarefa `review.reviewers`, calculado por `CORE/aisef_review.py` (sempre `code-reviewer`; revisor da linguagem; `data` -> `database-reviewer`; risco alto -> `security` e revisao dupla; estilo adotado ou `domain` -> `architecture-reviewer`; TDD -> `pr-test-analyzer`). O `validate-wave` devolve em `reviews` uma chamada por revisor pendente: dispare todas em paralelo. So `APPROVE` de todos libera o validador; `WARNING` ou `BLOCK` reprova a tarefa e ela volta ao executor com os achados. Revisor sem contrato ativo aparece em `inactive` (ofereca ativar). Tarefa de UI tambem recebe `react-reviewer`/`vue-reviewer` (pela stack) e `a11y-architect`: eles so relatam e nunca mexem em layout nem em tokens; o visual e do `frontend` e da autoridade de design. O `react-build-resolver` continua manual.
 - O gateway aplica o **teto** do Agent Contract a cada subagente: agente em `draft` e bloqueado, recursos e operacoes Git fora do teto sao negados (o `validator` so le o Git). Agentes sem contrato (ex.: `Explore`) seguem so a politica.
@@ -107,7 +112,7 @@ Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedid
   ```
   python -I CORE/aisef_context.py pack --project . --task T-001
   ```
-  Ele traz as tres camadas: obrigatorio (contrato, requisitos, criterios, decisoes aprovadas), referenciado (arquivos dos paths, docs do blueprint) e sob demanda (memoria de projeto e consultas sugeridas ao grafo). Com o grafo instalado (Graphify + codebase-memory-mcp, via **aisef-tooling**), faca as consultas de impacto sugeridas antes de delegar e mande ao agente so o resultado.
+  Ele traz as tres camadas: obrigatorio (contrato, requisitos, criterios, decisoes aprovadas), referenciado (arquivos dos paths, docs do blueprint) e sob demanda (memoria de projeto e consultas sugeridas ao grafo). Com o grafo instalado (Graphify + codebase-memory-mcp, via **aisef-tooling**), faca as consultas de impacto sugeridas antes de delegar e mande ao agente so o resultado. Sem o Graphify, o pack usa o grafo nativo de imports (`context_mode: native`): quem importa os arquivos da tarefa (inclusive testes) e o que eles importam.
 - **Modelo e effort (roteamento, custo primeiro):** toda chamada de subagente leva `model` e `effort` explicitos, vindos do roteador, nunca o padrao da sessao:
   ```
   python -I CORE/aisef_route.py --project . --task T-001 [--attempt N]
@@ -153,13 +158,13 @@ python -I CORE/aisef_project.py append --project . --type delegation --feature F
 ```
 Cada evento tem o ator certo, e o `append` recusa o resto antes de gravar (o log e imutavel):
 - `delegation`, `contract_changed`, `task_completed`: voce (ator padrao `orchestrator`).
-- `task_started` e `task_executed`: o **agente da tarefa** registra, com `--actor agent --actor-id <papel>` (ex.: `backend`). Peca isso no prompt da delegacao.
+- `task_started` e `task_executed`: o **hook de subagentes** registra em nome do agente da tarefa (F-04), quando o disparo foi do `dispatch` (descricao "T-xxx:") e o papel bate com o contrato; o `task_executed` so sai com o Execution Report `executed` gravado. Sem relatorio, o `next` mostra `await_decision` com `source: no_report`: veja o que o agente fez e redelegue ou pause. Registro manual (`--actor agent --actor-id <papel>`) so se o hook nao rodou; ele e idempotente.
 - `task_validated`: `--actor validator --actor-id validator`.
 - Errou um evento? Registre `--type correction --corrects <E-id> --summary "<o que estava errado>"`; o original nunca muda e o **aisef-check** passa a considerar a correcao.
 Eventos de decisao do usuario (`approval_granted`, `feature_accepted`...) so via **aisef-approve** com `--actor user`, o que dispara o prompt nativo de permissao.
 
 ## Antes de declarar qualquer coisa pronta
-Rode **aisef-check**. Erro de consistencia bloqueia a transicao de estado. Para o usuario acompanhar, **aisef-panel**.
+Rode **aisef-check**. Erro de consistencia bloqueia a transicao de estado. Cada achado traz a `correcao` (comando ou passo); com `--fix`, o check lista os comandos no fim. Requisito que mudou: `aisef_new.py rebase-req --feature <F>` (o `next` mostra como `requirement_changed`). Para o usuario acompanhar, **aisef-panel**.
 
 ## Reabertura
 Feature aceita fica congelada. Reabrir = novo ciclo (`cycle` + 1) com motivo `defect`, `requirement_change` ou `evolution`, novos contratos so para a mudanca, Impact Analysis e novo aceite. Detalhes em **aisef-feature**.

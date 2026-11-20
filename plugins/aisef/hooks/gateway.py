@@ -27,7 +27,9 @@ POLICY_PATH = os.path.join(CORE, "permission-policy.v0.1.json")
 PATTERNS_PATH = os.path.join(HERE, "sensitive_patterns.json")
 LEVELS = ["allow", "approve_scope", "approve_operation", "approve_reinforced", "deny"]
 
-GIT_RE = re.compile(r"(?:^|[;&|(]\s*|\s)git(?:\s+-C\s+\S+)?\s+([a-z-]+)([^;&|]*)", re.I)
+# opcoes globais antes do subcomando (-C dir, -c chave=valor, --no-pager, --git-dir=x, -p...) sao puladas (F-02):
+# sem isso, `git -c a=b push --force` virava "subcomando nao classificado" e so perguntava
+GIT_RE = re.compile(r"(?:^|[;&|(]\s*|\s)git(?:\s+(?:-[Cc]\s+\S+|--[a-z][a-z-]*(?:=\S+)?|-[a-zA-Z]))*\s+([a-z][a-z-]*)([^;&|]*)", re.I)
 DEPLOY_RE = re.compile(
     r"\b(?:terraform\s+(?:apply|destroy)|tofu\s+apply|pulumi\s+up|kubectl\s+(?:apply|delete|rollout)|"
     r"helm\s+(?:install|upgrade|uninstall)|serverless\s+deploy|sls\s+deploy|fly\s+deploy|vercel\s+.*--prod|"
@@ -36,8 +38,8 @@ DEPLOY_DESTRUCTIVE_RE = re.compile(
     r"\b(?:terraform\s+destroy|tofu\s+destroy|pulumi\s+destroy|kubectl\s+delete|helm\s+uninstall)\b", re.I)
 # Remocao recursiva no sh, no PowerShell (Remove-Item e os aliases ri/rm/del/rd aceitam -r, -Rec, -Recurse) e no cmd.
 RM_RECURSIVE_RE = re.compile(
-    r"\brm\s+(?:-[a-z]*r[a-z]*|--recursive)\b|"
-    r"\b(?:Remove-Item|ri|rm|del|erase|rmdir|rd)\b[^;&|]*\s-r(?:e(?:c(?:u(?:r(?:s(?:e)?)?)?)?)?)?\b|"
+    r"(?<!git\s)\brm\s+(?:-[a-z]*r[a-z]*|--recursive)\b|"  # git rm -r e Git (tirar do indice), nao rm -r
+    r"(?<!git\s)\b(?:Remove-Item|ri|rm|del|erase|rmdir|rd)\b[^;&|]*\s-r(?:e(?:c(?:u(?:r(?:s(?:e)?)?)?)?)?)?\b|"
     r"\b(?:rmdir|rd|del|erase)\s+(?:[^;&|]*\s)?/s\b", re.I)
 CONTAINER_DESTRUCTIVE_RE = re.compile(
     r"\b(?:docker|podman)\s+(?:volume\s+(?:rm|prune)|system\s+prune|compose\s+down\s+[^;&|]*(?:-v\b|--volumes))", re.I)
@@ -182,13 +184,92 @@ def norm(path):
     return (path or "").replace("\\", "/")
 
 
+# S-02 (0.13): a chave privada de assinatura e as ancoras do head ficam em ~/.aisef (ou AISEF_HOME), fora do repo.
+# Nenhum agente le, copia ou escreve ali; os scripts do AISEF leem a chave por dentro, sem o caminho no comando.
+HOME_SECRET_VAR_RE = re.compile(
+    r"(?:~|\$\{?HOME\}?|\$env:(?:HOME|USERPROFILE)|%USERPROFILE%|%HOMEPATH%)[/\\]+\.aisef[/\\]+(?:keys|anchors)\b|"
+    r"(?:\$\{?AISEF_HOME\}?|\$env:AISEF_HOME|%AISEF_HOME%)[/\\]+(?:keys|anchors)\b", re.I)
+
+
+def _home_secret_dirs():
+    base = os.environ.get("AISEF_HOME") or os.path.join(os.path.expanduser("~"), ".aisef")
+    out = []
+    for sub in ("keys", "anchors"):
+        for p in {os.path.join(base, sub), os.path.realpath(os.path.join(base, sub))}:
+            out.append(norm(p).rstrip("/").lower() + "/")
+    return out
+
+
+def home_secret_ref(text, cwd=None, is_path=False):
+    """O texto (comando ou caminho) aponta para a chave privada ou as ancoras do AISEF?"""
+    if not text:
+        return False
+    if HOME_SECRET_VAR_RE.search(text):
+        return True
+    dirs = _home_secret_dirs()
+    low = norm(text).lower()
+    if any(d in low + "/" for d in dirs):
+        return True
+    cands = [text] if is_path else [t.strip("\"'") for t in text.split() if "/" in t or "\\" in t]
+    for c in cands[:20]:
+        try:
+            real = norm(os.path.realpath(os.path.join(cwd or os.getcwd(), os.path.expanduser(c)))).lower() + "/"
+        except (OSError, ValueError):
+            continue
+        if any(real.startswith(d) for d in dirs):  # inclui link simbolico para dentro dessas pastas
+            return True
+    return False
+
+
 def load_patterns(path=PATTERNS_PATH):
     raw = load_json(path)
     return {
         "cmd": [(re.compile(r["regex"], re.I), r["label"], r["category"]) for r in raw["commands"]],
         "path": re.compile(raw["paths"]["regex"], re.I),
         "safe": re.compile(raw["paths"]["allow"], re.I),
+        "mcp_code": re.compile((raw.get("mcp_code_execution") or {}).get("regex") or r"(?!)", re.I),
     }
+
+
+def mcp_runs_code(tool, patterns):
+    """A ferramenta MCP executa codigo ou comandos? (pelo nome curto, depois do ultimo __)."""
+    return bool(patterns["mcp_code"].search(tool.rsplit("__", 1)[-1]))
+
+
+def mcp_allowed(tool, config, patterns):
+    """mcp_allow do config.json: nome exato sempre vale; glob nao cobre ferramenta que executa codigo (F-01)."""
+    code = mcp_runs_code(tool, patterns)
+    for pat in config.get("mcp_allow", []):
+        if pat == tool or (not code and fnmatch.fnmatchcase(tool, pat)):
+            return True
+    return False
+
+
+def mcp_trust(project, tool, now, patterns, max_days=7):
+    """Confianca do usuario numa ferramenta MCP (authorizations/*.json, kind mcp_tool, F-01): ativa, no prazo
+    (no maximo `max_days`), com glob que casa. Ferramenta que executa codigo so com allow_code_execution."""
+    code = mcp_runs_code(tool, patterns)
+    for path in glob.glob(os.path.join(project, ".aisef", "authorizations", "*.json")):
+        try:
+            a = load_json(path)
+        except (OSError, ValueError):
+            continue
+        if a.get("kind") != "mcp_tool" or a.get("status") != "active":
+            continue
+        if code and a.get("allow_code_execution") is not True:
+            continue
+        if not any(fnmatch.fnmatchcase(tool, g) for g in a.get("tools", [])):
+            continue
+        try:
+            start = datetime.datetime.fromisoformat(a["validity"]["valid_from"])
+            end = datetime.datetime.fromisoformat(a["validity"]["valid_until"])
+        except (KeyError, ValueError, TypeError):
+            continue
+        if (end - start).total_seconds() > max_days * 86400 + 1:
+            continue
+        if start <= now <= end:
+            return a.get("authorization_id", os.path.basename(path))
+    return None
 
 
 def is_sensitive_path(path, patterns):
@@ -212,8 +293,42 @@ def write_resource(path, patterns):
     return "repo_code", "codigo"
 
 
-def classify_bash(cmd, patterns, env):
-    """Retorna lista de (recurso, acao, ambiente, destrutivo, rotulo). Vazia = repo_code em dev."""
+def git_context(cmd, cwd, config):
+    """F-03: branch atual e se ela e de feature. Com cd, pushd, git -C/--git-dir/--work-tree no comando, a branch
+    efetiva e desconhecida: vale a regra antiga (mais restritiva)."""
+    if "git" not in cmd:
+        return None
+    sys.path.insert(0, CORE) if CORE not in sys.path else None
+    import aisef_git
+    g = config.get("git") if isinstance(config.get("git"), dict) else {}
+    prefix, base = g.get("branch_prefix") or "feat/", g.get("base_branch") or "main"
+    moved = bool(re.search(r"(?:^|[;&|(]\s*)(?:cd|pushd|Set-Location|sl|chdir)\s|\bgit\s+(?:[^;&|]*\s)?(?:-C\s|--git-dir|--work-tree)", cmd))
+    branch = None if moved else aisef_git.current_branch(cwd)
+    return {"branch": branch, "feature": aisef_git.is_feature_branch(branch, prefix, base), "prefix": prefix, "base": base,
+            "push_targets": [], "aisef_git": aisef_git}
+
+
+def classify_bash(cmd, patterns, env, shell="sh", ctx=None):
+    """Retorna lista de (recurso, acao, ambiente, destrutivo, rotulo). Vazia = repo_code em dev.
+
+    S-01 (0.13): alem da linha original, classifica os textos que o shell_parse tira dela (segmentos sem aspas,
+    conteudo de bash -c, eval, $(...), crases, heredoc que alimenta um shell). O pior nivel vence, entao nada
+    afrouxa. Comando que vem de variavel ou que nao fecha aspas vira pergunta."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    import shell_parse
+    an = shell_parse.analyze(cmd, shell)
+    found = _classify_text(cmd, patterns, env, ctx)
+    for text in an["texts"]:
+        found += _classify_text(text, patterns, env, ctx)
+    for why in an["dynamic"]:
+        found.append(("unclassified", "execute", env, False, why + ": o gateway nao sabe o que vai rodar"))
+    if an["unparsed"]:
+        found.append(("unclassified", "execute", env, False, "aspas ou parenteses sem fechar: o gateway nao consegue ler o comando"))
+    return list(dict.fromkeys(found))
+
+
+def _classify_text(cmd, patterns, env, ctx=None):
     found = []
     for rx, label, category in patterns["cmd"]:
         if rx.search(cmd):
@@ -232,16 +347,31 @@ def classify_bash(cmd, patterns, env):
                    "merge-base", "name-rev") or (sub in GIT_DRY_RUN_OK and GIT_DRY_RUN_RE.search(rest)) or (sub == "branch" and not re.search(r"\s-(?:d|D|-delete)\b", rest)):
             op = "status_log_diff"
         elif sub == "commit":
-            op = "history_rewrite" if "--amend" in rest else "commit"
+            if "--amend" in rest:
+                op = "history_rewrite"
+            elif ctx and ctx["feature"] and env in ("dev", "staging"):
+                op = "commit_feature"  # F-03: commit na branch de feature e livre em dev e staging
+            else:
+                op = "commit"
         elif sub == "push":
             if re.search(r"\s(?:-f|--force(?:-with-lease)?)\b|\s\+\S", rest):
                 op = "force_push"
             elif re.search(r"\s(?:--delete|-d)\b|\s:\S", rest):
                 op = "branch_delete"
-            elif "--tags" in rest:
+            elif "--tags" in rest or "--all" in rest or "--mirror" in rest:
                 op = "release_publish"
             else:
                 op = "push"
+                targets = ctx["aisef_git"].push_targets(rest.split(), ctx["branch"]) if ctx else None
+                if targets and all(s == d and ctx["aisef_git"].is_feature_branch(d, ctx["prefix"], ctx["base"])
+                                   for s, d in targets):
+                    # F-03: a branch de feature para ela mesma vai pelo escopo da feature (git_feature_branch)
+                    ctx["push_targets"] += [d for _s, d in targets]
+                    found.append(("git_feature_branch", "push", env, False,
+                                  "git push da branch de feature %s" % ", ".join(d for _s, d in targets)))
+                    continue
+        elif (sub == "add" or sub == "switch" or (sub == "checkout" and re.search(r"\s-[bB]\s", rest + " "))):
+            op = "local_staging"  # F-03: preparar o commit e trocar/criar branch local nao muda o remoto
         elif sub in ("merge", "pull", "cherry-pick"):
             op = "merge"
         elif sub in ("rebase", "filter-branch", "filter-repo", "replace") or (sub == "reset" and "--hard" in rest):
@@ -284,6 +414,14 @@ def classify_bash(cmd, patterns, env):
     if re.search(r"aisef_project\.py\s+mode\b[^;&|]*--set\s+(?!ask\b)", cmd):
         # entrar no Ask so restringe (livre); sair dele devolve poder de execucao: decisao do usuario
         found.append(("aisef_decision", "write", env, False, "sair do modo Ask (decisao do usuario)"))
+    if re.search(r"aisef_setup\.py\b[^;&|]*--apply\b", cmd):
+        found.append(("aisef_decision", "write", env, False, "setup do AISEF: agentes, regras e docs (decisao do usuario)"))
+    if re.search(r"aisef_practices\.py\s+apply\b|aisef_project\.py\s+practices\b[^;&|]*--apply\b", cmd):
+        found.append(("aisef_decision", "write", env, False, "instalar boas praticas em .claude/rules (decisao do usuario)"))
+    if re.search(r"aisef_mcp\.py\s+(?:trust|revoke)\b", cmd):
+        found.append(("aisef_decision", "write", env, False, "confianca numa ferramenta MCP (decisao do usuario)"))
+    if re.search(r"aisef_migrate\.py\b[^;&|]*--apply\b", cmd):
+        found.append(("aisef_decision", "write", env, False, "migrate do projeto AISEF (decisao do usuario)"))
     if re.search(r"aisef_learn\.py\s+accept\b", cmd):
         found.append(("aisef_decision", "write", env, False, "aprovacao de licao aprendida (decisao do usuario)"))
     if re.search(r"aisef_project\.py\s+(?:decide\b|append\b[^;&|]*--actor\s+user\b|agents\b[^;&|]*--activate\b|settings\b[^;&|]*--apply\b|rotate-key\b)", cmd):
@@ -302,7 +440,11 @@ def is_pending_request(tool, path, inp):
     return isinstance(doc, dict) and doc.get("status") == "pending" and "decision" not in doc and "resulting_ref" not in doc
 
 
-def scope_covers(project, resource, env, now, max_days=None):
+def scope_covers(project, resource, env, now, max_days=None, branches=None):
+    """Autorizacao de escopo ativa que cobre o recurso. Para git_feature_branch (F-03), as branches do push precisam
+    casar com resource_filters.branches; sem o filtro, nao cobre."""
+    if resource == "git_feature_branch" and not branches:
+        return None
     for path in glob.glob(os.path.join(project, ".aisef", "authorizations", "*.json")):
         try:
             a = load_json(path)
@@ -312,6 +454,10 @@ def scope_covers(project, resource, env, now, max_days=None):
             continue
         if resource not in a.get("resources", []):
             continue
+        if resource == "git_feature_branch":
+            pats = (a.get("resource_filters") or {}).get("branches") or []
+            if not pats or not all(any(fnmatch.fnmatchcase(b, p) for p in pats) for b in branches):
+                continue
         v = a.get("validity", {})
         try:
             start = datetime.datetime.fromisoformat(v["valid_from"])
@@ -416,9 +562,15 @@ def enforce_ceiling(contract, tool, items, env):
         if resource == "aisef_decision":
             raise Decision("deny", "agente %s nao registra decisoes do usuario" % aid)
         if resource == "git":
-            if action not in ceiling.get("git_operations", ["status_log_diff"]):
-                raise Decision("deny", "agente %s nao pode solicitar %s (teto Git: %s)"
-                               % (aid, label, ", ".join(ceiling.get("git_operations", ["status_log_diff"]))))
+            ops = ceiling.get("git_operations", ["status_log_diff"])
+            # F-03: quem pode commitar pode preparar o commit e commitar na branch de feature (contratos antigos valem)
+            ok = action in ops or (action in ("commit_feature", "local_staging") and "commit" in ops)
+            if not ok:
+                raise Decision("deny", "agente %s nao pode solicitar %s (teto Git: %s)" % (aid, label, ", ".join(ops)))
+        elif resource == "git_feature_branch":
+            if "push" not in ceiling.get("git_operations", []):
+                raise Decision("deny", "agente %s nao faz push (teto Git: %s); o orquestrador faz"
+                               % (aid, ", ".join(ceiling.get("git_operations", []))))
         elif resource not in allowed:
             raise Decision("deny", "agente %s nao tem %s no teto de permissao (%s)" % (aid, resource, label))
 
@@ -481,7 +633,7 @@ def ask_mode_block(tool, inp, config):
             return None  # sair do modo: segue para o prompt nativo
         if not read_only_command(cmd):
             return "modo Ask: so comandos de leitura (git status/log/diff, ls, cat, grep...); nada e executado"
-    if tool.startswith("mcp__") and not any(fnmatch.fnmatchcase(tool, pat) for pat in config.get("mcp_allow", [])):
+    if tool.startswith("mcp__") and not mcp_allowed(tool, config, load_patterns()):
         return "modo Ask: ferramenta MCP fora de mcp_allow"
     return None
 
@@ -493,6 +645,15 @@ def decide(data, project, policy, patterns, config, now):
         why = ask_mode_block(tool, inp, config)
         if why:
             raise Decision("deny", why)
+    cwd = data.get("cwd") or project
+    if tool in SHELL_TOOLS:
+        secret = home_secret_ref(inp.get("command", "") or "", cwd)
+    else:
+        secret = any(home_secret_ref(inp.get(k), cwd, is_path=True)
+                     for k in ("file_path", "path", "notebook_path", "pattern", "glob") if isinstance(inp.get(k), str))
+    if secret:
+        raise Decision("deny", "a chave privada de assinatura e as ancoras do AISEF (~/.aisef/keys e anchors) ficam fora do "
+                               "alcance dos agentes; os scripts do AISEF as usam por dentro")
     env = config.get("environment", "dev")
     if env not in ("dev", "staging", "prod"):
         env = "prod"  # defaults.unknown_environment
@@ -504,7 +665,10 @@ def decide(data, project, policy, patterns, config, now):
         if GIT_SKIP_HOOKS_RE.search(operation):
             raise Decision("deny", "pular hooks ou assinatura do Git (--no-verify, --no-gpg-sign) esconde problemas: "
                                    "corrija o que o hook acusa")
-        items = classify_bash(operation, patterns, env)
+        gctx = git_context(operation, cwd, config)
+        items = classify_bash(operation, patterns, env, "ps" if tool == "PowerShell" else "sh", gctx)
+        if inp.get("dangerouslyDisableSandbox") is True:  # F-08: sair do sandbox e decisao do usuario
+            items.append(("unclassified", "execute", env, False, "comando pedindo para rodar fora do sandbox"))
     else:
         paths = [norm(inp.get(k)) for k in ("file_path", "path", "notebook_path", "pattern", "glob") if isinstance(inp.get(k), str)]
         operation = tool + " " + " ".join(paths)
@@ -522,9 +686,14 @@ def decide(data, project, policy, patterns, config, now):
 
     if tool.startswith("mcp__"):
         # Servidor MCP pode escrever arquivos, acessar banco ou fazer deploy sem passar pelo Bash:
-        # so as ferramentas que o usuario liberou em config.json -> mcp_allow (globs) passam direto.
-        if not any(fnmatch.fnmatchcase(tool, pat) for pat in config.get("mcp_allow", [])):
-            items.append(("unclassified", "execute", env, False, "ferramenta MCP %s fora de mcp_allow" % tool))
+        # so as ferramentas que o usuario liberou em config.json -> mcp_allow (globs) ou numa confianca com prazo
+        # (authorizations, kind mcp_tool) passam direto. Ferramenta que executa codigo nao entra por glob (F-01).
+        max_days = policy.get("scope_authorization_schema_ref", {}).get("validity_max_days") or 7
+        if not mcp_allowed(tool, config, patterns) and not mcp_trust(project, tool, now, patterns, max_days):
+            hint = " (executa codigo: so por nome exato ou confianca com --allow-code-execution)" if mcp_runs_code(tool, patterns) else ""
+            items.append(("unclassified", "execute", env, False,
+                          "ferramenta MCP %s sem confianca do usuario%s; para confiar por ate %d dias: "
+                          "aisef_mcp.py trust --tool %s" % (tool, hint, max_days, tool)))
     elif tool == "WebFetch" and WEBFETCH_SECRET_RE.search(inp.get("url") or ""):
         raise Decision("deny", "a URL parece carregar um segredo (token/chave na query): possivel vazamento de dados")
 
@@ -546,8 +715,9 @@ def decide(data, project, policy, patterns, config, now):
             if destructive:
                 lvl = apply_t1(policy, lvl, eff_env)
             if lvl == "approve_scope":
+                branches = (gctx or {}).get("push_targets") if tool in SHELL_TOOLS and resource == "git_feature_branch" else None
                 auth = scope_covers(project, resource, eff_env, now,
-                                    policy.get("scope_authorization_schema_ref", {}).get("validity_max_days"))
+                                    policy.get("scope_authorization_schema_ref", {}).get("validity_max_days"), branches)
                 if auth:
                     scoped.append(auth)
                     lvl = "allow"

@@ -77,7 +77,8 @@
       "required": ["environment", "resources", "operations", "valid_until"],
       "properties": {
         "environment": { "enum": ["dev", "staging"] },
-        "resources": { "type": "array", "minItems": 1, "items": { "enum": ["repo_code", "config_ci_iac", "db_schema", "db_data", "deploy_infra"] } },
+        "resources": { "type": "array", "minItems": 1, "items": { "enum": ["repo_code", "config_ci_iac", "db_schema", "db_data", "deploy_infra", "git_feature_branch"] } },
+        "resource_filters": { "type": "object", "description": "Filtros que a autorizacao gerada deve levar (ex.: branches do git_feature_branch)." },
         "operations": { "type": "array", "minItems": 1, "items": { "type": "string" } },
         "dataset_classification": { "enum": ["synthetic", "anonymized_verified", "anonymized_unverified_or_real", null] },
         "row_read_included": { "type": "boolean" },

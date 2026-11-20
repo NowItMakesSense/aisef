@@ -5,7 +5,8 @@
   "description": "RASCUNHO v0.1. Autorizacao emitida pelo usuario e consumida pelo Permission Engine. Dois tipos: 'scope' (autoriza um escopo de trabalho em dev ou staging) e 'reinforced' (aprovacao de uso unico para uma operacao, usada em producao e operacoes destrutivas). O schema impoe as regras fixas da politica; a checagem contra a matriz completa (nivel exigido por recurso, ambiente e operacao) cabe ao Permission Engine em codigo.",
   "oneOf": [
     { "$ref": "#/$defs/scope_authorization" },
-    { "$ref": "#/$defs/reinforced_approval" }
+    { "$ref": "#/$defs/reinforced_approval" },
+    { "$ref": "#/$defs/mcp_tool_trust" }
   ],
 
   "$defs": {
@@ -34,8 +35,8 @@
 
         "resources": {
           "type": "array", "minItems": 1, "uniqueItems": true,
-          "items": { "enum": ["repo_code", "config_ci_iac", "db_schema", "db_data", "deploy_infra"] },
-          "description": "Arquivos sensiveis e Git nao entram em escopo: exigem aprovacao por operacao."
+          "items": { "enum": ["repo_code", "config_ci_iac", "db_schema", "db_data", "deploy_infra", "git_feature_branch"] },
+          "description": "Arquivos sensiveis e Git nao entram em escopo: exigem aprovacao por operacao. Excecao (F-03): git_feature_branch, o push da branch de feature para ela mesma, com resource_filters.branches."
         },
         "resource_filters": {
           "type": "object",
@@ -45,7 +46,9 @@
             "schemas": { "type": "array", "items": { "type": "string" } },
             "tables": { "type": "array", "items": { "type": "string" } },
             "agents": { "type": "array", "items": { "type": "string" }, "description": "Agentes que podem usar esta autorizacao." },
-            "tasks": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+            "tasks": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+            "branches": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 },
+                          "description": "git_feature_branch: branches (ou globs) cujo push o escopo cobre." }
           }
         },
 
@@ -140,7 +143,7 @@
         {
           "$comment": "Em staging, o escopo nao cobre DDL nem deploy: a matriz exige aprovacao por operacao.",
           "if": { "properties": { "environment": { "const": "staging" } }, "required": ["environment"] },
-          "then": { "properties": { "resources": { "items": { "enum": ["repo_code", "config_ci_iac", "db_data"] } } } }
+          "then": { "properties": { "resources": { "items": { "enum": ["repo_code", "config_ci_iac", "db_data", "git_feature_branch"] } } } }
         },
         {
           "$comment": "Autorizacao revogada exige os dados da revogacao.",
@@ -225,6 +228,35 @@
           "then": { "not": { "required": ["consumed"] } }
         }
       ]
+    },
+
+    "mcp_tool_trust": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Confianca do usuario em ferramentas MCP do projeto (0.13, F-01): o gateway deixa passar sem perguntar ate valid_until (no maximo validity_max_days da politica). Ferramenta que executa codigo (sensitive_patterns.json -> mcp_code_execution) so com allow_code_execution: true. Renovar e criar outra.",
+      "required": ["schema_version", "kind", "authorization_id", "project_id", "tools", "allow_code_execution", "validity",
+                   "status", "granted_by", "granted_at", "history"],
+      "properties": {
+        "schema_version": { "const": "0.1.0" },
+        "kind": { "const": "mcp_tool" },
+        "authorization_id": { "$ref": "#/$defs/id" },
+        "project_id": { "$ref": "#/$defs/id" },
+        "tools": { "type": "array", "minItems": 1, "uniqueItems": true,
+                   "items": { "type": "string", "pattern": "^mcp__[A-Za-z0-9_.*?-]+(__[A-Za-z0-9_.*?-]+)?$" },
+                   "description": "Nomes ou globs de ferramentas MCP (ex.: mcp__github__get_*)." },
+        "allow_code_execution": { "type": "boolean" },
+        "validity": { "type": "object", "additionalProperties": false, "required": ["valid_from", "valid_until"],
+                      "properties": { "valid_from": { "type": "string", "format": "date-time" },
+                                      "valid_until": { "type": "string", "format": "date-time" } } },
+        "status": { "enum": ["active", "revoked", "expired"] },
+        "granted_by": { "const": "user" },
+        "granted_at": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string" },
+        "history": { "type": "array", "minItems": 1, "items": {
+          "type": "object", "additionalProperties": false, "required": ["event", "at"],
+          "properties": { "event": { "enum": ["granted", "revoked", "expired"] }, "at": { "type": "string", "format": "date-time" },
+                          "note": { "type": "string" } } } }
+      }
     }
   }
 }

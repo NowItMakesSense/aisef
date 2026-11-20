@@ -8,6 +8,7 @@ Casos para `claude plugin eval`. Cada um verifica se o Claude escolhe a skill ce
 | `negative` | `trigger` | Uma pergunta sem relação não carrega nenhuma skill do AISEF. |
 | `quick-choice` | `trigger`, `choice` | Para um typo, o plano é o caminho rápido (`aisef_new.py quick`), não o ciclo completo. |
 | `feature-choice` | `trigger`, `choice` | Para uma feature, o plano usa o gerador por brief, quebra em fatias verticais com testes primeiro e para na aprovação do plano. |
+| `triage-choice` | `trigger`, `choice` | No perfil `solo`, uma mudança de comportamento pequena num arquivo passa pela triagem em código (`aisef_triage.py`) e segue o caminho enxuto: uma fatia com TDD, sem blueprint. |
 | `spec-guidance` | `trigger`, `choice` | Depois de uma conversa, pedir uma spec ("tipo o /to-spec") carrega a `aisef-feature`, que diz a fase e o passo a passo: Grill, Spec com seams, fatias verticais e aprovação. |
 | `tooling-choice` | `trigger`, `choice` | Pedir sugestões de ferramentas carrega a `aisef-tooling`, e o plano busca em fontes prontas (find-skills, MCP Registry, marketplaces) e não instala nada sem a escolha do usuário. |
 | `tooling-suggest` | `shell` | Executa de fato a busca, grava `.aisef/tooling.md` e não roda nenhum comando de instalação. |

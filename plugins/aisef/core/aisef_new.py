@@ -22,8 +22,11 @@ Brief de feature (so os campos marcados com * sao obrigatorios):
                  "test_cmd": "pytest -q", "risk": "low", "resources": ["repo_code"],
                  "complexity": "normal"}]}
     ("complexity": trivial | normal | complex, opcional; entra no Task Contract e alimenta o roteador aisef_route.py)
+    "triage": a saida de aisef_triage.py --json (opcional). Com path lean: exatamente uma fatia, TDD e so o
+    code-reviewer; o contrato guarda a triagem e o check acusa quem descer abaixo do calculado.
 """
 import argparse
+import glob
 import json
 import os
 import sys
@@ -148,8 +151,37 @@ def task_doc(t, feature_id, feature_version, env, now):
     return doc
 
 
+LEAN_REVIEWERS = ["code-reviewer"]
+
+
+def apply_triage(brief):
+    """Caminho da triagem (aisef_triage.py) no brief. lean: uma fatia com TDD e so o code-reviewer (C-01).
+    Recusa descer abaixo do calculado e recusa lean com forma de full."""
+    tri = brief.get("triage")
+    if not tri:
+        return None
+    order = ("quick", "lean", "full")
+    if tri.get("path") not in order or tri.get("computed") not in order:
+        raise SystemExit("triage invalida: use a saida de aisef_triage.py --json (computed, path, profile, reasons)")
+    if order.index(tri["path"]) < order.index(tri["computed"]):
+        raise SystemExit("triage: o calculo deu %s; descer para %s nao e permitido (so subir)" % (tri["computed"], tri["path"]))
+    if tri["path"] == "quick":
+        raise SystemExit("triage deu quick: use `aisef_new.py quick`, nao um Feature Contract")
+    if tri["path"] == "lean":
+        tasks = brief.get("tasks") or []
+        if len(tasks) != 1:
+            raise SystemExit("caminho lean tem exatamente uma fatia (o brief tem %d tarefa(s)); com mais, e full" % len(tasks))
+        t = tasks[0]
+        t.setdefault("kind", "slice")
+        if t["kind"] != "slice":
+            raise SystemExit("caminho lean: a tarefa e uma fatia vertical (kind slice), com TDD")
+        t.setdefault("review", {"reviewers": list(LEAN_REVIEWERS)})
+    return {k: tri[k] for k in ("computed", "path", "profile", "reasons", "note", "forced_by_user") if k in tri}
+
+
 def feature_docs(brief, project, now):
     need(brief, "id", "title", "objective", "problem", "requirements", "scope_in", "tasks")
+    triage = apply_triage(brief)
     cfg = ap.load_config(project)
     fid = brief["id"]
     reqs = []
@@ -208,6 +240,7 @@ def feature_docs(brief, project, now):
         "scope": {"included": brief["scope_in"], "excluded": brief.get("scope_out", [])},
         "architectural_decisions": [], "dependencies": {}, "constraints": [],
         **({"spec": {k: v for k, v in spec.items() if v not in (None, [], "")}} if spec else {}),
+        **({"triage": triage} if triage else {}),
         "risks": [{"id": "RISK-%s-%d" % (fid, i + 1), "description": r[0], "severity": r[1],
                    **({"mitigation": r[2]} if len(r) > 2 else {})} for i, r in enumerate(brief.get("risks", []))],
         "acceptance_criteria": criteria,
@@ -354,6 +387,8 @@ def cmd_blueprint(project, b):
 
 def cmd_quick(project, title, why, paths, test_cmd):
     """Caminho rapido: tarefa de manutencao na feature permanente FEAT-MAINT (plano aprovado uma vez)."""
+    if ap.load_config(project).get("profile") == "regulated":
+        raise SystemExit("perfil regulated nao tem caminho rapido: use a triagem (aisef_triage.py), que dara lean ou full")
     now = ap.now_iso()
     root = ap.aisef_dir(project)
     fpath = os.path.join(root, "contracts", "features", MAINT_FEATURE + ".json")
@@ -400,9 +435,100 @@ def cmd_quick(project, title, why, paths, test_cmd):
     print("criada: %s (%s)" % (tid, task["state"]["status"]))
 
 
+REBASE_OK = ("draft", "ready", "rejected", "blocked")  # tarefa que ainda nao comecou (ou voltou ao executor)
+
+
+def rebase_plan(project, feature_id):
+    """F-07: o que o rebase-req faria. Devolve {feature_version, changed, tasks: [...], blueprints: [...], blocked: [...]}.
+    Tarefa com requisito desatualizado e nao iniciada: nova versao. Demais tarefas: so acertar feature_contract_version.
+    Tarefa iniciada ou concluida com requisito desatualizado: bloqueada (reabrir). Blueprint que cita requisito que mudou:
+    bloqueado (nova versao do blueprint); o resto: acertar a base."""
+    root = ap.aisef_dir(project)
+    fpath = os.path.join(root, "contracts", "features", feature_id + ".json")
+    if not os.path.exists(fpath):
+        raise SystemExit("feature %s nao existe" % feature_id)
+    with open(fpath, encoding="utf-8") as fh:
+        feat = json.load(fh)
+    fv = feat["contract_version"]
+    current = {r["id"]: r["version"] for r in feat["requirements"]}
+    out = {"feature": feat, "feature_path": fpath, "feature_version": fv, "changed": set(), "tasks": [], "blueprints": [],
+           "blocked": []}
+    for item in feat["task_plan"]:
+        tpath = os.path.join(root, "contracts", "tasks", item["task_id"] + ".json")
+        if not os.path.exists(tpath):
+            continue
+        with open(tpath, encoding="utf-8") as fh:
+            t = json.load(fh)
+        stale = [x["id"] for x in t["requirements"]["requirement_ids"] if x["id"] in current and x["version"] != current[x["id"]]]
+        out["changed"].update(stale)
+        status = (t.get("state") or {}).get("status")
+        if stale and status not in REBASE_OK:
+            out["blocked"].append("%s (%s) usa %s em versao antiga: reabra a feature para mudar uma tarefa ja iniciada "
+                                  "(aisef-feature, Reabertura)" % (t["task_id"], status, ", ".join(stale)))
+        elif stale or t["feature_contract_version"] != fv or item["contract_version"] != t["contract_version"]:
+            out["tasks"].append({"path": tpath, "task": t, "stale": stale})
+    for bpath in sorted(glob.glob(os.path.join(root, "blueprints", "*.json"))):
+        with open(bpath, encoding="utf-8") as fh:
+            b = json.load(fh)
+        if b.get("feature_id") != feature_id or b.get("feature_contract_version") == fv or \
+                (b.get("state") or {}).get("status") == "superseded":
+            continue
+        cited = sorted(r for r in out["changed"] if r in json.dumps(b))
+        if cited:
+            out["blocked"].append("%s cita %s, que mudou: crie a nova versao do blueprint (aisef_new.py blueprint)"
+                                  % (b["blueprint_id"], ", ".join(cited)))
+        else:
+            out["blueprints"].append({"path": bpath, "blueprint": b})
+    return out
+
+
+def cmd_rebase(project, feature_id, dry_run=False):
+    """Leva tarefas e blueprint a versao atual do Feature Contract e dos requisitos, com um contract_changed."""
+    pl = rebase_plan(project, feature_id)
+    fv, feat, now = pl["feature_version"], pl["feature"], ap.now_iso()
+    current = {r["id"]: r["version"] for r in feat["requirements"]}
+    lines = []
+    for x in pl["tasks"]:
+        t = x["task"]
+        if x["stale"]:
+            for ref in t["requirements"]["requirement_ids"]:
+                if ref["id"] in current:
+                    ref["version"] = current[ref["id"]]
+            t["contract_version"] += 1
+            lines.append("%s v%d: %s na versao atual" % (t["task_id"], t["contract_version"], ", ".join(x["stale"])))
+        else:
+            lines.append("%s: base na v%d da feature" % (t["task_id"], fv))
+        t["feature_contract_version"] = fv
+        for item in feat["task_plan"]:
+            if item["task_id"] == t["task_id"]:
+                item["contract_version"] = t["contract_version"]
+    for x in pl["blueprints"]:
+        x["blueprint"]["feature_contract_version"] = fv
+        lines.append("%s: base na v%d da feature (nao cita requisito que mudou)" % (x["blueprint"]["blueprint_id"], fv))
+    if not dry_run and (pl["tasks"] or pl["blueprints"]):
+        problems = []
+        for x in pl["tasks"]:
+            problems += ["%s: %s" % (x["task"]["task_id"], p) for p in ap.validate(x["task"], "task-contract.schema.v0.1.json")]
+        problems += ap.validate(feat, "feature-contract.schema.v0.1.json")
+        if problems:
+            raise SystemExit("nada foi gravado:\n - " + "\n - ".join(problems[:20]))
+        for x in pl["tasks"]:
+            ap.write_json(x["path"], x["task"])
+        for x in pl["blueprints"]:
+            ap.write_json(x["path"], x["blueprint"])
+        ap.write_json(pl["feature_path"], feat)
+        ap.append(project, {"event_type": "contract_changed", "actor": {"type": "orchestrator", "id": "orchestrator"},
+                            "feature_id": feature_id,
+                            "summary": "rebase para a v%d de %s: %s" % (fv, feature_id, "; ".join(lines))[:900],
+                            "subject": {"kind": "feature_contract", "id": feature_id, "version": fv}})
+    return lines, pl["blocked"]
+
+
 def main(argv):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("command", choices=["feature", "blueprint", "quick", "example"])
+    p.add_argument("command", choices=["feature", "blueprint", "quick", "example", "rebase-req"])
+    p.add_argument("--feature", help="rebase-req: feature cujas tarefas e blueprint vao para a versao atual")
+    p.add_argument("--dry-run", action="store_true", help="rebase-req: so mostra")
     p.add_argument("what", nargs="?")
     p.add_argument("--project", default=os.getcwd())
     p.add_argument("--brief")
@@ -415,6 +541,16 @@ def main(argv):
         print(json.dumps(EXAMPLES[a.what or "feature"], ensure_ascii=False, indent=1))
         return 0
     project = os.path.abspath(a.project)
+    if a.command == "rebase-req":
+        if not a.feature:
+            p.error("--feature e obrigatorio")
+        lines, blocked = cmd_rebase(project, a.feature, a.dry_run)
+        print(("plano (nada gravado):" if a.dry_run else "feito:") if lines else "nada a atualizar")
+        for x in lines:
+            print("  - " + x)
+        for x in blocked:
+            print("  ! " + x)
+        return 1 if blocked else 0
     if a.command == "quick":
         if not (a.title and a.why):
             p.error("--title e --why sao obrigatorios")

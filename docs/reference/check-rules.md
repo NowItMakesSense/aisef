@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**156 regras** em 27 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**164 regras** em 30 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -39,6 +39,24 @@ Agent Contracts ativos, papel, teto de recursos e de ambiente.
 Requisitos, critérios e arquitetura da feature.
 
 `FEAT-ARCH-UNKNOWN`, `FEAT-CRITERION-REQ`, `FEAT-REQ-NO-CRITERION`
+
+## Triagem (`TRIAGE-*`)
+
+Caminho quick, lean ou full escolhido em código, sem rebaixar.
+
+`TRIAGE-LEAN-SHAPE`, `TRIAGE-OVERRIDDEN-DOWN`
+
+## Orçamento (`BUDGET-*`)
+
+Limites da feature no modo contínuo só podem baixar os do projeto.
+
+`BUDGET-RAISED`
+
+## Perfil (`PROFILE-*`)
+
+Perfil regulated: sem caminho rápido, TDD e blueprint em risco alto.
+
+`PROFILE-BLUEPRINT`, `PROFILE-QUICK`, `PROFILE-TDD`
 
 ## Plano de tarefas (`PLAN-*`)
 
@@ -146,7 +164,7 @@ Pedidos, decisões e eventos consistentes.
 
 Escopo e reforçada válidas, no prazo e na operação certa.
 
-`AUTH-CYCLE`, `AUTH-DATASET`, `AUTH-ENV`, `AUTH-EXPIRED`, `AUTH-FEATURE`, `AUTH-HISTORY`, `AUTH-MISSING`, `AUTH-NOT-SCOPABLE`, `AUTH-POLICY-VERSION`, `AUTH-REDUNDANT`, `AUTH-REINFORCED-EXPIRED`, `AUTH-REINFORCED-VALIDITY`, `AUTH-RESOURCE`, `AUTH-SCOPE-TOO-LONG`, `AUTH-STATUS`, `AUTH-TASK`
+`AUTH-CYCLE`, `AUTH-DATASET`, `AUTH-ENV`, `AUTH-EXPIRED`, `AUTH-FEATURE`, `AUTH-GIT-BRANCH`, `AUTH-HISTORY`, `AUTH-MISSING`, `AUTH-NOT-SCOPABLE`, `AUTH-POLICY-VERSION`, `AUTH-REDUNDANT`, `AUTH-REINFORCED-EXPIRED`, `AUTH-REINFORCED-VALIDITY`, `AUTH-RESOURCE`, `AUTH-SCOPE-TOO-LONG`, `AUTH-STATUS`, `AUTH-TASK`
 
 ## Log de auditoria (`LOG-*`)
 
@@ -158,7 +176,7 @@ Atores, ordem e referências dos eventos.
 
 Opções do config.json.
 
-`CONFIG-GIT`, `CONFIG-GRAPHIFY`
+`CONFIG-GIT`, `CONFIG-GRAPHIFY`, `CONFIG-PROFILE`
 
 ## Memória de projeto (`KNW-*`)
 

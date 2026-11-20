@@ -21,6 +21,8 @@ Regras (codigo -> o que verifica):
     PLAN-*          plano de tarefas x contratos de tarefa (existencia, versao, feature, dependencias, papel)
     RTM-*           rastreabilidade: requisito x tarefa x criterio, nos dois sentidos
     FEAT-*          criterios de aceite da feature, referencias arquiteturais, estado x tarefas
+    TRIAGE-*        caminho da triagem (aisef_triage.py): TRIAGE-OVERRIDDEN-DOWN quando o caminho efetivo fica
+                    abaixo do calculado; TRIAGE-LEAN-SHAPE quando o lean nao e uma fatia com TDD
     TASK-*          referencias da tarefa (requisitos, criterios, ciclo)
     DEP-*           dependencias inexistentes, ciclos, entre features
     PAR-*           paralelismo: conflito de arquivos entre tarefas simultaneas
@@ -31,9 +33,14 @@ Regras (codigo -> o que verifica):
                     arquitetural, estilo pendente de decisao, violacoes da regra de dependencia
     CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
     CONFIG-GRAPHIFY opcoes do Graphify no config.json (enabled, backend none|ollama|auto, paths e graph relativos)
+    CONFIG-PROFILE  perfil de cerimonia no config.json (solo, team, regulated)
+    BUDGET-RAISED   Feature Contract com budget acima do limite do projeto (L-01: o contrato so baixa)
+    PROFILE-*       perfil regulated: PROFILE-QUICK (sem caminho rapido), PROFILE-TDD (toda tarefa executora com TDD),
+                    PROFILE-BLUEPRINT (feature com tarefa de risco alto tem blueprint)
     VAL-*           validacao independente (existe validador, validador diferente do executor); VAL-REVIEW-MISSING: validada sem o
                     APPROVE de todos os revisores ativos de review.reviewers
     PERM-* / AUTH-* permissoes da tarefa x politica e autorizacoes (existe, escopo, ambiente, validade)
+                    AUTH-GIT-BRANCH: escopo de push (git_feature_branch) sem branches ou com branch que nao e de feature
     BP-*            blueprint x feature (versao, requisitos, componentes, endpoints, entidades, decisoes aprovadas, cobertura)
     STATE-*         estado da tarefa/feature x relatorios e eventos de auditoria
     REPORT-*        relatorio x contrato (versao, criterios, evidencias, arquivos dentro do escopo, tentativas)
@@ -86,18 +93,56 @@ def parse_time(s):
     return datetime.datetime.fromisoformat(s)
 
 
+# F-07: como corrigir cada regra. `cmd` e um comando pronto (CORE = pasta core do plugin); `hint` e o passo a fazer.
+# Regras sem entrada aqui saem sem correcao sugerida. Nas regras de versao, o comando e por feature.
+REBASE = "python -I <CORE>/aisef_new.py rebase-req --project . --feature %s"
+FIX_HINTS = {
+    "VAL-NO-VALIDATOR": {"cmd": "python -I <CORE>/aisef_project.py agents --project . --roles validator",
+                         "hint": "cria o draft do validator; a ativacao e decisao do usuario (agents --activate)"},
+    "AGENT-PATH-CEILING": {"hint": "divida a tarefa ou troque o assigned_agent por um papel com esse recurso no teto"},
+    "DESIGN-MISSING": {"hint": "rode a skill aisef-design para propor e aprovar a autoridade de design"},
+    "STATE-UNAPPROVED-PLAN": {"hint": "leve o plan_approval da feature ao usuario (aisef-approve) antes de executar"},
+    "STATE-PLAN-NO-EVENT": {"hint": "registre a decisao pelo aisef-approve (decide), que grava o approval_granted do usuario"},
+    "STATE-NO-START-EVENT": {"hint": "o agente da tarefa registra: aisef_project.py append --type task_started --actor agent --actor-id <papel> --task <T>"},
+    "STATE-NO-REPORT": {"hint": "o executor grava o Execution Report em reports/RPT-*.json; sem ele, a tarefa volta a in_progress"},
+    "STATE-NO-VALIDATION": {"cmd": "python -I <CORE>/aisef_project.py validate-wave --project .",
+                            "hint": "valide antes de concluir (validador independente)"},
+    "STATE-NO-COMPLETE-EVENT": {"hint": "registre: aisef_project.py append --type task_completed --task <T> (orquestrador)"},
+    "STATE-DEP-INCOMPLETE": {"hint": "pause a tarefa (task_paused) ate a dependencia concluir"},
+    "STATE-FEATURE-TASKS": {"hint": "conclua as tarefas pendentes ou volte o estado da feature"},
+    "STATE-CLOSED-NO-ACCEPT": {"hint": "o aceite e do usuario: pedido feature_acceptance pelo aisef-approve"},
+    "TRIAGE-OVERRIDDEN-DOWN": {"hint": "suba o caminho no contrato (path) ate o calculado; descer nao e permitido"},
+    "CONFIG-PROFILE": {"hint": "use solo, team ou regulated em config.json -> profile"},
+}
+
+
 class Report:
     def __init__(self):
         self.findings = []
 
-    def add(self, severity, rule, where, message):
-        self.findings.append({"severity": severity, "rule": rule, "where": where, "message": message})
+    def add(self, severity, rule, where, message, fix=None):
+        f = {"severity": severity, "rule": rule, "where": where, "message": message}
+        fix = fix or FIX_HINTS.get(rule)
+        if fix:
+            f["fix"] = dict(fix)
+        self.findings.append(f)
 
-    def err(self, rule, where, message):
-        self.add("error", rule, where, message)
+    def err(self, rule, where, message, fix=None):
+        self.add("error", rule, where, message, fix)
 
-    def warn(self, rule, where, message):
-        self.add("warning", rule, where, message)
+    def warn(self, rule, where, message, fix=None):
+        self.add("warning", rule, where, message, fix)
+
+    def fixes(self, core=None):
+        """Comandos de correcao sem repeticao, na ordem dos achados (com <CORE> trocado pelo caminho real)."""
+        out = []
+        for f in self.findings:
+            c = (f.get("fix") or {}).get("cmd")
+            if c:
+                c = c.replace("<CORE>", core) if core else c
+                if c not in out:
+                    out.append(c)
+        return out
 
     def codes(self):
         return {f["rule"] for f in self.findings}
@@ -149,6 +194,17 @@ def overlaps(a, b):
         return True
     pa, pb = a.rstrip("*").rstrip("/"), b.rstrip("*").rstrip("/")
     return bool(pa) and bool(pb) and (pa.startswith(pb + "/") or pb.startswith(pa + "/") or pa == pb)
+
+
+def aisef_project_git_settings(aisef_root):
+    """Opcoes git do config.json (prefixo e branch base), com os padroes. aisef_root e a pasta .aisef."""
+    import aisef_project
+    try:
+        with open(os.path.join(aisef_root, "config.json"), encoding="utf-8") as fh:
+            cfg = json.load(fh)
+    except (OSError, ValueError):
+        cfg = {}
+    return aisef_project.git_settings(cfg if isinstance(cfg, dict) else {})[0]
 
 
 def write_like_levels(policy, resource, env):
@@ -219,7 +275,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             if v not in known_roles:
                 rep.err("AGENT-ROLE-UNKNOWN", "agente " + aid, "valida o papel %s, que nao existe no catalogo" % v)
     approvals = {i: d for i, (_, d) in by["approvals"].items()}
-    auths = {i: d for i, (_, d) in by["authorizations"].items()}
+    auths = {i: d for i, (_, d) in by["authorizations"].items() if d.get("kind") != "mcp_tool"}
+    mcp_trusts = {i: d for i, (_, d) in by["authorizations"].items() if d.get("kind") == "mcp_tool"}
     reports = [d for _, d in docs["reports"]]
     events = {e["sequence"]: e for e in log}
     ev_by_task, ev_by_feature = {}, {}
@@ -247,6 +304,13 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         if a["status"] == "approved" and rr and rr["kind"] == "architectural_decision":
             arch_decisions[(rr["id"], rr.get("version", 1))] = a
 
+    try:
+        with open(os.path.join(project, "config.json"), encoding="utf-8") as fh:
+            profile = (json.load(fh) or {}).get("profile") or "team"
+    except (OSError, ValueError, AttributeError):
+        profile = "team"
+    if profile == "regulated" and MAINT_FEATURE in feats:
+        rep.err("PROFILE-QUICK", "feature " + MAINT_FEATURE, "perfil regulated nao tem caminho rapido: mova as tarefas para uma feature")
     for fid, f in feats.items():
         where = "feature " + fid
         reqs = {}
@@ -260,6 +324,39 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         active = {i: r for i, r in reqs.items() if r["status"] == "active"}
         rule_ids = {b["id"] for b in f.get("business_rules", [])}
 
+        if profile == "regulated" and fid != MAINT_FEATURE:  # L-04: perfil regulated
+            ftasks = [tasks.get(i["task_id"]) for i in f["task_plan"]]
+            ftasks = [t for t in ftasks if t is not None]
+            for t in ftasks:
+                if t["assigned_agent"].get("role") in aisef_catalog.validatable_roles() and                         not (t.get("tests") or {}).get("tdd_required"):
+                    rep.err("PROFILE-TDD", where, "perfil regulated: %s sem TDD (tests.tdd_required)" % t["task_id"])
+            high = [t["task_id"] for t in ftasks if (t.get("risk") or {}).get("level") in ("high", "critical")]
+            if high and not any(b[1]["feature_id"] == fid for b in by["blueprints"].values()):
+                rep.err("PROFILE-BLUEPRINT", where, "perfil regulated: risco alto em %s exige Engineering Blueprint"
+                        % ", ".join(high))
+        try:
+            import aisef_budget
+            with open(os.path.join(project, "config.json"), encoding="utf-8") as fh:
+                _cfg = json.load(fh)
+        except (OSError, ValueError, ImportError):
+            _cfg = {}
+        for k in aisef_budget.raised(_cfg if isinstance(_cfg, dict) else {}, f):  # L-01
+            rep.err("BUDGET-RAISED", where, "budget.%s acima do limite do projeto: subir e decisao do usuario" % k,
+                    {"hint": "baixe o valor no Feature Contract ou peca ao usuario para subir config.json -> budget.%s" % k})
+        tri = f.get("triage")
+        if tri:  # C-01: caminho escolhido em codigo (aisef_triage.py)
+            order = ("quick", "lean", "full")
+            if order.index(tri["path"]) < order.index(tri["computed"]):
+                rep.err("TRIAGE-OVERRIDDEN-DOWN", where, "caminho %s abaixo do calculado (%s: %s)"
+                        % (tri["path"], tri["computed"], "; ".join(tri["reasons"])))
+            if tri["path"] == "lean":
+                plan = [tasks.get(i["task_id"]) for i in f["task_plan"]]
+                if len(plan) != 1 or any(t is not None and t.get("kind") != "slice" for t in plan):
+                    rep.err("TRIAGE-LEAN-SHAPE", where, "caminho lean tem exatamente uma fatia (kind slice); o plano tem %d tarefa(s)"
+                            % len(plan))
+                elif plan[0] is not None and not (plan[0].get("tests") or {}).get("tdd_required"):
+                    rep.err("TRIAGE-LEAN-SHAPE", where, "caminho lean exige TDD na fatia %s" % plan[0]["task_id"])
+
         plan_ids = []
         for item in f["task_plan"]:
             tid = item["task_id"]
@@ -271,9 +368,11 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             if t["feature_id"] != fid:
                 rep.err("PLAN-FEATURE", where, "%s pertence a %s, nao a esta feature" % (tid, t["feature_id"]))
             if t["contract_version"] != item["contract_version"]:
-                rep.err("PLAN-VERSION", where, "%s: plano espera v%d, contrato esta em v%d" % (tid, item["contract_version"], t["contract_version"]))
+                rep.err("PLAN-VERSION", where, "%s: plano espera v%d, contrato esta em v%d" % (tid, item["contract_version"], t["contract_version"]),
+                        {"cmd": REBASE % fid, "hint": "alinha o plano as versoes atuais das tarefas"})
             if t["feature_contract_version"] != f["contract_version"]:
-                rep.err("PLAN-FEATURE-VERSION", where, "%s foi emitida para a v%d do Feature Contract; a atual e v%d" % (tid, t["feature_contract_version"], f["contract_version"]))
+                rep.err("PLAN-FEATURE-VERSION", where, "%s foi emitida para a v%d do Feature Contract; a atual e v%d" % (tid, t["feature_contract_version"], f["contract_version"]),
+                        {"cmd": REBASE % fid, "hint": "leva as tarefas a versao atual da feature; tarefa iniciada pede reabertura"})
             if set(item.get("depends_on", [])) != set(t.get("dependencies", {}).get("depends_on", [])):
                 rep.err("PLAN-DEPS", where, "%s: dependencias do plano diferem das do contrato da tarefa" % tid)
             if item.get("role") and t["assigned_agent"].get("role") and item["role"] != t["assigned_agent"]["role"]:
@@ -310,7 +409,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                     continue
                 refs = {(x["id"], x["version"]) for x in t["requirements"]["requirement_ids"]}
                 if (rid, req["version"]) not in refs:
-                    rep.err("RTM-TASK-NOT-LINKED", where, "%s: a tarefa %s nao declara este requisito (nesta versao)" % (rid, tid))
+                    rep.err("RTM-TASK-NOT-LINKED", where, "%s: a tarefa %s nao declara este requisito (nesta versao)" % (rid, tid),
+                            {"cmd": REBASE % fid, "hint": "atualiza a tarefa para a versao atual do requisito"})
                 crit_found |= {c["id"] for c in t["acceptance_criteria"]}
             for cid in e["criterion_ids"]:
                 if cid not in crit_found:
@@ -358,7 +458,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             rep.err("BP-FEATURE", where, "feature %s nao existe" % b["feature_id"])
             continue
         if b["feature_contract_version"] != f["contract_version"] and b["state"]["status"] != "superseded":
-            rep.err("BP-FEATURE-VERSION", where, "baseado na v%d do Feature Contract; a atual e v%d" % (b["feature_contract_version"], f["contract_version"]))
+            rep.err("BP-FEATURE-VERSION", where, "baseado na v%d do Feature Contract; a atual e v%d" % (b["feature_contract_version"], f["contract_version"]),
+                    {"cmd": REBASE % b["feature_id"], "hint": "acerta a base do blueprint; se ele cita o requisito que mudou, crie a nova versao do blueprint"})
         active = {r["id"] for r in f["requirements"] if r["status"] == "active"}
         allr = {r["id"] for r in f["requirements"]}
         comps = {c["id"] for c in b["architecture"]["components"]}
@@ -509,6 +610,9 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             rep.err("CONFIG-GIT", "config.json", problem)
         for problem in aisef_project.graphify_settings(cfg if isinstance(cfg, dict) else {})[1]:
             rep.err("CONFIG-GRAPHIFY", "config.json", problem)
+        prof = (cfg if isinstance(cfg, dict) else {}).get("profile")
+        if prof is not None and prof not in aisef_project.PROFILES:
+            rep.err("CONFIG-PROFILE", "config.json", "profile %r invalido (use %s)" % (prof, ", ".join(aisef_project.PROFILES)))
 
     # ------------------------------------------------------------------ tarefas
     validators =[a for a in agents.values() if a["role"] == "validator" and a["status"] == "active"]
@@ -526,7 +630,8 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                 elif r["status"] != "active":
                     rep.err("TASK-REQ-SUPERSEDED", where, "requisito %s foi substituido" % x["id"])
                 elif r["version"] != x["version"]:
-                    rep.err("TASK-REQ-VERSION", where, "%s na v%d, requisito atual v%d" % (x["id"], x["version"], r["version"]))
+                    rep.err("TASK-REQ-VERSION", where, "%s na v%d, requisito atual v%d" % (x["id"], x["version"], r["version"]),
+                            {"cmd": REBASE % t["feature_id"], "hint": "tarefa ainda nao iniciada: nova versao com o requisito atual; iniciada ou concluida: reabra a feature (aisef-feature)"})
             if t.get("reopen_cycle", 1) > f["cycle"]["number"]:
                 rep.err("TASK-CYCLE", where, "ciclo %d maior que o da feature (%d)" % (t["reopen_cycle"], f["cycle"]["number"]))
         crit_ids = [c["id"] for c in t["acceptance_criteria"]]
@@ -876,6 +981,17 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
             rep.err("AUTH-FEATURE", where, "feature %s nao existe" % au["feature_id"])
         elif au.get("kind") == "scope" and au["cycle"] > feats[au["feature_id"]]["cycle"]["number"]:
             rep.err("AUTH-CYCLE", where, "ciclo maior que o da feature")
+        if au.get("kind") == "scope" and "git_feature_branch" in au["resources"]:  # F-03
+            import aisef_git
+            gcfg = aisef_project_git_settings(project)
+            pats = (au.get("resource_filters") or {}).get("branches") or []
+            if not pats:
+                rep.err("AUTH-GIT-BRANCH", where, "git_feature_branch sem resource_filters.branches: o escopo nao diria qual branch")
+            for b in pats:
+                probe = b.replace("*", "x").replace("?", "x")
+                if not aisef_git.is_feature_branch(probe, gcfg["branch_prefix"], gcfg["base_branch"]):
+                    rep.err("AUTH-GIT-BRANCH", where, "%s nao e branch de feature (prefixo %s, nunca %s nem protegidas)"
+                            % (b, gcfg["branch_prefix"], gcfg["base_branch"]))
         if au.get("kind") == "scope":
             if au["status"] == "active" and parse_time(au["validity"]["valid_until"]) < now:
                 rep.err("AUTH-EXPIRED", where, "expirou em %s mas segue 'active'" % au["validity"]["valid_until"])
@@ -905,6 +1021,19 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                 rep.err("AUTH-REINFORCED-VALIDITY", where, "janela real de %.0f min excede validity_minutes (%d)" % (span, au["validity_minutes"]))
             if au["status"] == "approved" and parse_time(au["expires_at"]) < now:
                 rep.err("AUTH-REINFORCED-EXPIRED", where, "aprovada e vencida sem uso: deveria estar 'expired'")
+
+    for aid, au in mcp_trusts.items():  # F-01: confianca em ferramentas MCP, com prazo
+        where = "confianca MCP " + aid
+        if au["status"] == "active" and parse_time(au["validity"]["valid_until"]) < now:
+            rep.warn("AUTH-EXPIRED", where, "venceu em %s; o gateway ja nao a usa (renove com aisef_mcp.py trust)"
+                     % au["validity"]["valid_until"])
+        if au["history"][0]["event"] != "granted":
+            rep.err("AUTH-HISTORY", where, "primeiro evento do historico deve ser 'granted'")
+        max_days = (policy or {}).get("scope_authorization_schema_ref", {}).get("validity_max_days") or 7
+        days = (parse_time(au["validity"]["valid_until"]) - parse_time(au["validity"]["valid_from"])).total_seconds() / 86400
+        if days > max_days + 1e-6:
+            rep.err("AUTH-SCOPE-TOO-LONG", where, "validade de %.1f dias excede o maximo da politica (%d); o gateway a ignora"
+                    % (days, max_days))
 
     # ------------------------------------------------------------------ log
     last = None
@@ -989,11 +1118,19 @@ def main(argv):
     ap.add_argument("--now")
     ap.add_argument("--json")
     ap.add_argument("--strict", action="store_true")
+    ap.add_argument("--fix", action="store_true", help="lista no fim os comandos de correcao sugeridos (F-07)")
     a = ap.parse_args(argv[1:])
     rep = check(a.project, a.schemas, a.policy, a.defaults, a.now)
     for f in sorted(rep.findings, key=lambda x: (x["severity"] != "error", x["rule"])):
         print("[%s] %s | %s | %s" % ("ERRO " if f["severity"] == "error" else "AVISO", f["rule"], f["where"], f["message"]))
+        if f.get("fix"):
+            fx = f["fix"]
+            print("        correcao: %s" % "; ".join(x for x in (fx.get("cmd", "").replace("<CORE>", HERE), fx.get("hint")) if x))
     print("%d erro(s), %d aviso(s)" % (rep.count("error"), rep.count("warning")))
+    if a.fix and rep.fixes():
+        print("\nComandos de correcao (rode na ordem e confira de novo):")
+        for c in rep.fixes(HERE):
+            print("  " + c)
     if a.json:
         with open(a.json, "w", encoding="utf-8") as fh:
             json.dump(rep.findings, fh, ensure_ascii=False, indent=2)

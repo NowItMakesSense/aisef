@@ -13,6 +13,18 @@ CORE = `<skill-dir>/../../core`. Método: o do Matt Pocock (grill → spec → t
 
 Base: `.aisef/discovery.md`. Faltou algo? Volte à **aisef-discovery**; nunca preencha com suposição.
 
+## Fase 0: Triagem (o código escolhe o caminho)
+Antes do Grill, estruture o pedido e rode a triagem. Investigue o código para estimar caminhos, arquivos e linhas; não chute.
+```
+python -I CORE/aisef_triage.py --project . --paths <globs> --changes <tipos> --files N --lines N [--slices N] [--risk low|medium|high] --json
+```
+Tipos de mudança: `behavior`, `bugfix`, `ui`, `refactor` (normais); `typo`, `text`, `docs`, `lint`, `rename_local`, `dependency_patch`, `config_local`, `test_only` (sem comportamento); `api`, `schema`, `security`, `ci`, `infra`, `dependency_breaking`, `public_contract`, `cross_module` (sempre full).
+
+Diga ao usuário em uma linha o que saiu ("Caminho: lean, porque ..."). Ele pode **subir** o caminho (`--force full`); descer não existe. Depois:
+- **quick**: caminho rápido da skill **aisef** (`aisef_new.py quick`), sem estas fases.
+- **lean**: Grill curto (só os ramos que faltam), Spec curta (`solution`, uma história, `test_seams` confirmados), **uma** fatia com TDD, **sem blueprint**. Ponha a saída `--json` da triagem em `"triage"` no brief: o gerador fixa o `code-reviewer` como único revisor e recusa mais de uma fatia. O validador independente continua.
+- **full**: as fases abaixo, completas. Também vale pôr a triagem em `"triage"`, para o contrato guardar o motivo.
+
 ## Fase 1: Grill (entender antes de escrever)
 Entreviste o usuário **uma pergunta por vez**, até fechar cada ramo da ideia: comportamento esperado, exceções, limites, o que fica fora. Antes de cada pergunta, investigue o que dá para descobrir sozinho.
 - Use a skill `grilling` do plugin `mattpocock-skills`, se estiver instalada. Para vocabulário do domínio, use a `domain-modeling` (`GLOSSARY.md` e ADRs).
@@ -54,7 +66,7 @@ O comando gera o Feature Contract com a spec, um Task Contract por fatia (com `t
 Depois, leve o plano ao usuário com **aisef-approve**. O `decide` aprovado marca o contrato como `approved_for_execution` e as fatias como `ready`.
 
 ## Fase 4: Engineering Blueprint
-Vem depois do plano aprovado. `python -I CORE/aisef_new.py example blueprint` mostra o brief: componentes, endpoints, entidades com flags `pk`/`pii`/`secret`/`fk:ENT.campo`, migrações com rollback, ameaças e níveis de teste.
+Só no caminho **full**. Vem depois do plano aprovado. `python -I CORE/aisef_new.py example blueprint` mostra o brief: componentes, endpoints, entidades com flags `pk`/`pii`/`secret`/`fk:ENT.campo`, migrações com rollback, ameaças e níveis de teste.
 ```
 python -I CORE/aisef_new.py blueprint --project . --brief <brief.json>
 ```

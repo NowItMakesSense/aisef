@@ -12,8 +12,10 @@ O pacote tem as tres camadas do Task Contract:
   referenced  arquivos existentes que casam com scope.paths_allowed (com limite) e docs citados;
   on_demand   entradas de conhecimento relevantes; com o Graphify ligado e o grafo gerado, o que o grafo liga a tarefa
               (decisoes, docs, quem depende do codigo dela), lido direto do graph.json; e, se houver graph MCP no
-              .mcp.json, consultas sugeridas. `pack --no-graph` desliga o grafo (para medir o efeito, G-05).
-Somente leitura: o pack nao altera nada. `remember` e o unico comando que grava (em .aisef/knowledge/).
+              .mcp.json, consultas sugeridas. Sem o Graphify, usa o grafo nativo de imports (G-06, quem importa e o que
+              e importado pelos arquivos da tarefa). `pack --no-graph` desliga o grafo (para medir o efeito, G-05).
+O pack nao altera o projeto: so grava o cache do grafo nativo em .aisef/runtime/graph.json (fora do Git), quando um
+arquivo de codigo mudou. `remember` e o unico comando que grava conhecimento (em .aisef/knowledge/).
 Somente stdlib; jsonschema so e importado quando `remember` precisa validar.
 """
 import argparse
@@ -315,7 +317,7 @@ def _graphify_related(project, files, ids):
     except Exception:
         return None
     if not (st["enabled"] and st["exists"]):
-        return None
+        return _native_related(project, files, ids)
     g = aisef_graph.load(os.path.join(project, st["graph"]))
     if g is None:
         return {"graph": st["graph"], "error": "graph.json ilegivel ou grande demais", "items": [], "seeds": 0, "truncated": 0}
@@ -323,6 +325,18 @@ def _graphify_related(project, files, ids):
     out.update(aisef_graph.graph_info(project, st["graph"]) or {"path": st["graph"]})
     out["stale"] = st["stale"]
     out["newer_source"] = st["newer_source"]
+    return out
+
+
+def _native_related(project, files, ids):
+    """Grafo nativo de imports (G-06), quando nao ha Graphify: so raio de impacto e dependencias do codigo."""
+    rel = aisef_graph.ensure_native(project)
+    g = aisef_graph.load(os.path.join(project, rel)) if rel else None
+    if g is None:
+        return None
+    out = aisef_graph.related(g, files, ids)
+    out.update(aisef_graph.graph_info(project, rel) or {"path": rel})
+    out.update({"source": "native", "stale": False, "newer_source": None})
     return out
 
 
@@ -399,8 +413,10 @@ def build_pack(project, task_id, limit=DEFAULT_LIMIT, graph=True):
     if related and related.get("stale"):
         warnings.append("grafo do Graphify velho (%s mudou depois dele): regenere com `graphify update .`"
                         % related.get("newer_source"))
-    context_mode = "graphify" if related and related.get("items") is not None and not related.get("error") else (
-        "mcp" if servers else "none")
+    if related and related.get("items") is not None and not related.get("error"):
+        context_mode = "native" if related.get("source") == "native" else "graphify"
+    else:
+        context_mode = "mcp" if servers else "none"
 
     architecture = _architecture_for(project, patterns + [f for f in files[:200]])
     design = _design_for(project, task)
@@ -532,8 +548,8 @@ def render_pack(p):
     g = o["graph"]
     rel = g.get("related")
     if rel:
-        L.append("- grafo do Graphify (%s, gerado em %s%s): %d no(s) da tarefa" % (
-            rel.get("path"), (rel.get("built_at") or "?")[:16], ", VELHO" if rel.get("stale") else "", rel.get("seeds", 0)))
+        L.append("- %s (%s, gerado em %s%s): %d no(s) da tarefa" % (
+            "grafo nativo de imports" if rel.get("source") == "native" else "grafo do Graphify", rel.get("path"), (rel.get("built_at") or "?")[:16], ", VELHO" if rel.get("stale") else "", rel.get("seeds", 0)))
         names = {"decision": "decisao", "doc": "doc", "impact": "depende da tarefa", "dependency": "a tarefa depende"}
         for it in rel.get("items", []):
             L.append("    - [%s] %s (%s%s) via %s" % (names.get(it["kind"], it["kind"]), it["label"], it.get("file") or "?",

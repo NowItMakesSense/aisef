@@ -5,7 +5,7 @@ description: 'Inicia o AISEF num projeto, novo ou ja existente. Cria .aisef/ (co
 
 # aisef-init
 
-CORE = `<skill-dir>/../../core`. Python = `$AISEF_PYTHON`, senao `python3`/`python` (precisa da biblioteca `cryptography` para assinar o log; sem ela o log fica so com cadeia de hash e o init avisa).
+CORE = `<skill-dir>/../../core`. Python = `$AISEF_PYTHON`, senao `python3`/`python` (precisa das bibliotecas `jsonschema` e `cryptography`; sem a `cryptography` o init **recusa** e diz o comando exato: o `AISEF_PYTHON` de outro Python que ja as tenha, ou o `pip install` no Python dos hooks. Repasse ao usuario e rode o init de novo).
 
 ## 1. Detecte o caso
 - Ja existe `.aisef/config.json`: nao reinicie. Rode a skill **aisef-check** (o script e `CORE/check_project.py --project .aisef --policy CORE/permission-policy.v0.1.json --defaults CORE/orchestration-defaults.v0.1.json`; sem `--policy` aparece o aviso POLICY-SKIPPED) e siga com a skill **aisef**.
@@ -19,12 +19,13 @@ CORE = `<skill-dir>/../../core`. Python = `$AISEF_PYTHON`, senao `python3`/`pyth
 | `project_id` | Identificador curto (ex.: `PRJ-LOJA`) | padrao `^[A-Za-z0-9][A-Za-z0-9._:-]{1,95}$` |
 | `name` | Nome do projeto | |
 | `environment` | Esta maquina/sessao trabalha em `dev`, `staging` ou `prod`? | Padrao `dev`. Na duvida, a politica trata como `prod`. |
+| `profile` | Quanta cerimonia? `solo` (Recomendado: a triagem escolhe entre caminho rapido, enxuto e completo), `team` (ciclo completo por padrao) ou `regulated` (sem caminho rapido; TDD sempre; blueprint em risco alto) | Padrao `solo`. O gateway e o log assinado sao iguais nos tres. Mudar depois e editar `profile` no `config.json` (o gateway pede a sua aprovacao). |
 
 Reaproveite o que o usuario ja disse. O resto (stack, dominio, requisitos) e assunto da **aisef-discovery**, nao daqui. Em projeto existente, investigue antes de perguntar o nome.
 
 ## 3. Crie
 ```
-python -I CORE/aisef_project.py init --project . --project-id <ID> --name "<nome>" --environment <env>
+python -I CORE/aisef_project.py init --project . --project-id <ID> --name "<nome>" --environment <env> --profile <perfil>
 ```
 Isso cria `.aisef/{contracts/{features,tasks,agents},blueprints,approvals,authorizations,reports,audit,keys}`, `config.json` e o evento genesis. A chave **privada** e o head assinado ficam em `~/.aisef/` (fora do repositorio). Nunca leia nem copie esses arquivos.
 
@@ -36,31 +37,35 @@ python -I CORE/aisef_project.py detect --project .
 ```
 Grava `.aisef/architecture.json` (stacks, estilos com confianca e evidencia, violacoes da regra de dependencia, praticas e recomendacoes) e cria os drafts dos agentes da stack detectada (revisor e corretor de build da linguagem). Mostre o resumo ao usuario dizendo que e **heuristica**; confirmar o estilo e adota-lo fica para a **aisef-discovery**. Em projeto novo, rode o mesmo comando depois que a stack existir.
 
-## 4. Ative os agentes (decisao do usuario)
-O init criou os Agent Contracts dos papeis `always` do catalogo (`CORE/agents/catalog.v0.1.json`) em `.aisef/contracts/agents/*.json`, com `status: "draft"`; o `detect` acrescentou os da stack. Agente em draft e bloqueado pelo gateway, e agente sem contrato nao edita. Mostre a equipe agrupada por tipo (`python -I CORE/aisef_catalog.py list`):
-- **executores**: implementer, backend, frontend, database, devops, doc-updater, e2e-runner;
-- **avaliadores** (so relatam): qa, security, code-reviewer, architecture-reviewer, database-reviewer e os demais revisores;
-- **corretores** (diff minimo): code-simplifier, refactor-cleaner, performance-optimizer e os corretores de build da stack;
-- **consultores**: planner, architect, code-architect, code-explorer, spec-miner, domain e outros;
-- o `validator`, so com Git de leitura.
+## 4. Setup em lote (uma decisao do usuario)
+O init criou os Agent Contracts do **nucleo** do catalogo (`CORE/agents/catalog.v0.1.json`: papeis `always` sem `tier: extended`) em `.aisef/contracts/agents/*.json`, com `status: "draft"`; o `detect` acrescentou os da stack e, com estilo de arquitetura detectado, o `architecture-reviewer`. Agente em draft e bloqueado pelo gateway, e agente sem contrato nao edita.
 
-Mostre o teto de cada grupo (recursos, Git, ambiente maximo) e pergunte se aprova (AskUserQuestion: todos, so os essenciais `implementer,validator,qa,security,code-reviewer`, escolher, nenhum agora). Papeis `manual` (React, Vue, acessibilidade, saude) so entram se o usuario pedir: `agents --roles react-reviewer`. Com o OK:
+Mostre o plano do setup, que junta o que antes eram quatro pedidos:
 ```
-python -I CORE/aisef_project.py agents --project . --activate [--roles backend,qa]
+python -I CORE/aisef_setup.py --project .
 ```
-O comando abre o prompt nativo de permissao (a decisao e do usuario) e registra a aprovacao no log.
+- **agents**: ativar os drafts. Mostre a equipe agrupada por tipo e o teto de cada grupo (recursos, Git, ambiente maximo) (`python -I CORE/aisef_catalog.py list --tier core`):
 
-## 5. Segunda camada de protecao (pergunte antes)
-O gateway e um hook; se ele falhar ou for desligado, as regras nativas do Claude Code continuam valendo. Mostre o que falta com `python -I CORE/aisef_project.py settings --project .` e, com o OK do usuario, grave com `--apply` (mescla em `.claude/settings.json` sem apagar nada; abre o prompt nativo). As regras incluem `env.DO_NOT_TRACK=1` (desliga a telemetria das CLIs de busca, como `npx skills`; um valor do usuario e respeitado), pedem aprovacao para instalar skill, plugin ou MCP e incluem `disableBypassPermissionsMode`; mesmo sem elas, em modo bypass o gateway nega tudo o que pediria aprovacao. Ferramentas MCP pedem aprovacao ate o usuario libera-las em `.aisef/config.json` -> `"mcp_allow": ["mcp__servidor__ferramenta", "mcp__docs__*"]` (so leitura e o que ele confia). Recomende tambem o sandbox do Claude Code (`/sandbox`): o gateway le comandos por padroes e reduz o risco, mas nao e uma fronteira de seguranca.
+  - **executores**: implementer, backend, frontend, database, devops;
+  - **avaliadores** (so relatam; o roteamento de revisao chama em toda tarefa): code-reviewer, database-reviewer, pr-test-analyzer, security e os revisores da stack;
+  - **corretores** (diff minimo): os corretores de build da stack;
+  - **consultores**: planner, architect, code-explorer;
+  - o `validator`, so com Git de leitura.
 
-## 6. Documente para outras ferramentas (pergunte antes de editar)
-Proponha acrescentar `CORE/templates/AGENTS.aisef.md` ao `AGENTS.md` do projeto (crie se nao existir; ferramentas como Codex, Cursor e Gemini leem esse arquivo) e uma linha no `CLAUDE.md`:
-```
-Este projeto usa o AISEF (plugin aisef): estado em .aisef/, regras em AGENTS.md (secao AISEF).
-```
-Mostre o texto e so grave com OK. Nunca sobrescreva arquivos existentes em silencio.
+  Diga que existe a **equipe estendida** (qa, doc-updater, e2e-runner, code-simplifier, refactor-cleaner, performance-optimizer, spec-miner, docs-lookup, commit-reviewer e outros, `aisef_catalog.py list --tier extended`), que entra quando o usuario pede ou quando o trabalho pedir: `agents --roles doc-updater` cria o draft. Papeis `manual` (React build, saude) tambem so por pedido.
+- **settings**: regras nativas de segunda camada em `.claude/settings.json` (mescla, nunca apaga). Se o gateway falhar ou for desligado, elas continuam valendo. Incluem `env.DO_NOT_TRACK=1` (desliga a telemetria das CLIs de busca, como `npx skills`; um valor do usuario e respeitado), pedem aprovacao para instalar skill, plugin ou MCP e incluem `disableBypassPermissionsMode`; mesmo sem elas, em modo bypass o gateway nega tudo o que pediria aprovacao.
+- **practices**: boas praticas da stack e do estilo em `.claude/rules/aisef/` (nao sobrescreve arquivo mudado no projeto).
+- **sandbox** (so em Linux, macOS e WSL2; o plano nao mostra no Windows nativo): liga `sandbox.enabled` no `.claude/settings.json`. O sandbox isola os comandos; o gateway decide o que pode rodar; o log prova o que rodou. Com ele ligado, o gateway pergunta quando um comando pede para sair do sandbox (`dangerouslyDisableSandbox`). Se o usuario recusar, grave `"sandbox_reminder": false` no `.aisef/config.json` (a edicao pede aprovacao) e o doctor para de lembrar. No Windows nativo, so diga que o sandbox existe no WSL2.
+- **docs**: a secao AISEF (`CORE/templates/AGENTS.aisef.md`) no `AGENTS.md`, que Codex, Cursor e Gemini leem, e uma linha no `CLAUDE.md`. Acrescenta, nunca sobrescreve.
 
-## 7. Pesquisa de ferramentas (pergunte antes)
+Pergunte **uma vez** (AskUserQuestion, `multiSelect: true`, todos marcados como recomendados) o que aplicar. Com a escolha, **um** comando, que abre **um** prompt nativo e registra a decisao no log:
+```
+python -I CORE/aisef_setup.py --project . --apply --only <itens escolhidos> [--roles <agentes, se ele limitou>]
+```
+
+Ferramentas MCP pedem aprovacao ate o usuario confiar nelas. Dois jeitos: por ate 7 dias, renovavel, com `python -I CORE/aisef_mcp.py trust --project . --tool mcp__servidor__ferramenta[,glob]` (decisao do usuario; o proprio prompt do gateway mostra o comando), ou sem prazo em `.aisef/config.json` -> `"mcp_allow"`. Ferramenta que executa codigo ou comandos (execute_*, *_eval, run_*, sql...) nunca entra por glob: so pelo nome exato no `mcp_allow` ou com `--allow-code-execution`.
+
+## 5. Pesquisa de ferramentas (pergunte antes)
 A **aisef-tooling** sugere skills, plugins e MCPs para o projeto e pesquisa skills com a skill `find-skills`
 (`vercel-labs/skills`). Se ela ainda nao estiver em `.claude/skills/` nem em `~/.claude/skills/`, ofereca instalar no
 projeto (AskUserQuestion). Com o OK:
@@ -93,7 +98,7 @@ O gateway abre o prompt nativo. Nao rode o `/setup-matt-pocock-skills` (tracker 
   `.aisef/config.json` -> `mcp_allow` so as ferramentas de leitura listadas na secao 6 (a edicao pede aprovacao).
   Nenhum dos dois e requisito para seguir.
 
-## 8. Proximo passo
+## 6. Proximo passo
 - Projeto existente: rode **aisef-discovery** no modo "projeto existente".
 - Projeto novo: rode **aisef-discovery** no modo "projeto novo".
 

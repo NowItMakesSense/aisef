@@ -28,7 +28,8 @@
     "db_schema": "Tabelas, colunas, indices, constraints, procedures, migrations",
     "db_data": "Registros, dados pessoais, de clientes e financeiros",
     "deploy_infra": "Deploy e aplicacao de infraestrutura",
-    "git": "Operacoes Git"
+    "git": "Operacoes Git",
+    "git_feature_branch": "Push de uma branch de feature para ela mesma (F-03): coberto pelo escopo da feature"
   },
 
   "matrix": {
@@ -56,9 +57,15 @@
     "deploy_infra": {
       "execute": { "dev": "approve_scope", "staging": "approve_operation", "prod": "approve_reinforced" }
     },
+    "git_feature_branch": {
+      "$note": "F-03 (ADR 0025): so o push de uma branch de feature (git.branch_prefix) para a branch de mesmo nome. Push para main, outra branch, --force, --tags ou --delete continuam como operacao Git.",
+      "push": { "dev": "approve_scope", "staging": "approve_scope", "prod": "approve_reinforced" }
+    },
     "git": {
       "status_log_diff": "allow",
       "commit":          "approve_operation",
+      "commit_feature":  "allow",
+      "local_staging":   "allow",
       "push":            "approve_operation",
       "pull_request":    "approve_operation",
       "merge":           "approve_operation",
@@ -66,7 +73,7 @@
       "force_push":      "approve_reinforced",
       "history_rewrite": "approve_reinforced",
       "branch_delete":   "approve_reinforced",
-      "$rule": "Aprovar commit nao aprova push, pull request, merge ou release. Cada operacao exige sua propria aprovacao."
+      "$rule": "Aprovar commit nao aprova push, pull request, merge ou release. Cada operacao exige sua propria aprovacao. F-03 (ADR 0025): commit_feature (commit numa branch de feature, em dev ou staging) e local_staging (add, switch, checkout -b) sao livres; o push da branch de feature e o recurso git_feature_branch."
     }
   },
 
