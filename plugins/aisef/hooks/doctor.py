@@ -10,6 +10,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "core"))
 import userlibs  # noqa: E402,F401  (o diagnostico enxerga o mesmo que os hooks)
 
 
+
+def _aisef_root(project):
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+        import aisef_git
+        return aisef_git.aisef_root(project)
+    except Exception:
+        return project
+
 def problems(project):
     found = []
     if sys.version_info < (3, 10):
@@ -113,6 +122,7 @@ def main():
     except Exception:
         data = {}
     project = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
+    project = _aisef_root(project)  # L-02a: worktree grava no .aisef do repositorio principal
     if not os.path.exists(os.path.join(project, ".aisef", "config.json")):
         return
     found = problems(project)

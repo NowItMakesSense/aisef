@@ -7,9 +7,19 @@ import os
 import sys
 
 
+
+def _aisef_root(project):
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+        import aisef_git
+        return aisef_git.aisef_root(project)
+    except Exception:
+        return project
+
 def main():
     data = json.load(sys.stdin)
     project = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
+    project = _aisef_root(project)  # L-02a: worktree grava no .aisef do repositorio principal
     path = os.path.join(project, ".aisef", "session", "mode.json")
     if not os.path.exists(os.path.join(project, ".aisef", "config.json")) or not os.path.exists(path):
         return

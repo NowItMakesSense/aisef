@@ -97,6 +97,8 @@ def main(argv):
     ap.add_argument("--roles", default="", help="agents: lista separada por virgula (padrao: todos)")
     a = ap.parse_args(argv)
     project = os.path.abspath(a.project)
+    import aisef_git
+    project = aisef_git.aisef_root(project)  # L-02a: dentro de um worktree, vale o .aisef principal
 
     if a.command == "init":
         if not a.project_id:

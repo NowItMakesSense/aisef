@@ -19,6 +19,15 @@ PREFERRED = {"codebase-memory": ("search_graph", "trace_path", "get_file_outline
              "graphify": ("query_graph", "get_neighbors", "shortest_path")}
 
 
+
+def _aisef_root(project):
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+        import aisef_git
+        return aisef_git.aisef_root(project)
+    except Exception:
+        return project
+
 def message(servers, tool, tool_input):
     lines = []
     for s in servers:
@@ -77,6 +86,7 @@ def nudge_context(data, project):
 def main():
     data = json.load(sys.stdin)
     project = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
+    project = _aisef_root(project)  # L-02a: worktree grava no .aisef do repositorio principal
     text = nudge_context(data, project)
     if text:
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": text}}))

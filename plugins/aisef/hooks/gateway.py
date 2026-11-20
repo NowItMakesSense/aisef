@@ -30,6 +30,15 @@ POLICY_PATH = os.path.join(CORE, "permission-policy.v0.1.json")
 LEVELS = ["allow", "approve_scope", "approve_operation", "approve_reinforced", "deny"]
 
 
+
+def _aisef_root(project):
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+        import aisef_git
+        return aisef_git.aisef_root(project)
+    except Exception:
+        return project
+
 def emit(decision, reason):
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "PreToolUse", "permissionDecision": decision,
@@ -399,6 +408,7 @@ def main():
     except Exception:
         emit("deny", "AISEF: entrada do hook ilegivel (falha fechada)")
     project = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
+    project = _aisef_root(project)  # L-02a: worktree grava no .aisef do repositorio principal
     config_path = os.path.join(project, ".aisef", "config.json")
     if not os.path.exists(config_path):
         sys.exit(0)  # projeto sem AISEF: o gateway nao interfere
