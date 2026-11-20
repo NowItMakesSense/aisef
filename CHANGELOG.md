@@ -1,6 +1,13 @@
 # Changelog
 
 ## 0.15.0 (em andamento): times e mercado ([plano](docs/plan/plano-0.13-0.15.md))
+- **Exportação OpenTelemetry (T-03).** Novo `core/aisef_otel.py export --out traces.json`, que gera OTLP/JSON sem modelo e sem rede, para enviar a um coletor OTLP/HTTP ou importar num backend:
+  - um trace por feature, com id estável entre exportações;
+  - span raiz da feature, com as decisões do usuário e do gateway como eventos;
+  - um span `invoke_agent <papel>` por tentativa, seguindo as convenções GenAI do OTel (`gen_ai.operation.name`, `gen_ai.agent.name`, `gen_ai.request.model`, `gen_ai.usage.*` vindos do `usage.jsonl`) mais `aisef.*` (tarefa, tentativa, nível e resultado, com status de erro na reprovada);
+  - spans filhos `execute_tool <ferramenta>` para as chamadas do subagente, do log e da telemetria.
+
+  As convenções GenAI ainda estão em desenvolvimento no OTel; `gen_ai.provider.name` não é usado porque saiu dos spans internos de agente. Testes em `core/test_otel.py` (12).
 - **Pacote de evidência por feature (T-02).** Novo `core/aisef_evidence.py build --feature --out` junta, numa pasta:
   - Feature Contract (requisitos, spec, RTM, triagem), Task Contracts, Execution Reports e os pedidos do Approval Center;
   - os eventos assinados da feature, completos, e as chaves públicas;
