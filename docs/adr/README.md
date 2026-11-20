@@ -29,3 +29,4 @@ Cada decisão tem data, contexto, o que foi decidido e as consequências. Para m
 | [0023](0023-triagem-em-codigo-e-caminho-enxuto.md) | Triagem em código e caminho enxuto | 2026-11-20 |
 | [0024](0024-confianca-mcp-com-prazo.md) | Confiança em ferramentas MCP, com prazo | 2026-11-20 |
 | [0025](0025-git-por-risco.md) | Git por risco: commit livre na branch de feature, push pelo escopo | 2026-11-20 |
+| [0026](0026-log-por-pessoa.md) | Um log de auditoria por pessoa | 2026-11-20 |

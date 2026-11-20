@@ -70,8 +70,22 @@ def render(rules):
     return "\n".join(lines)
 
 
+def roadmap_gaps():
+    """H-02: versoes do CHANGELOG que o docs/roadmap.md nao cita (o roadmap nao pode ficar para tras)."""
+    root = ROOT
+    with open(os.path.join(root, "CHANGELOG.md"), encoding="utf-8") as fh:
+        versions = re.findall(r"^## (\d+\.\d+\.\d+)", fh.read(), re.M)
+    with open(os.path.join(root, "docs", "roadmap.md"), encoding="utf-8") as fh:
+        roadmap = fh.read()
+    return [v for v in versions if not re.search(r"\|\s*~?~?%s~?~?\s*\|" % re.escape(v), roadmap)]
+
+
 def main(argv):
     text = render(collect())
+    gaps = roadmap_gaps()
+    if gaps:
+        print("docs/roadmap.md DESATUALIZADO: faltam as versoes %s do CHANGELOG" % ", ".join(gaps))
+        return 1
     if "--check" in argv:
         try:
             with open(OUT, encoding="utf-8") as fh:

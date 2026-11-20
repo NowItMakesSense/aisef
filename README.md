@@ -2,16 +2,29 @@
 
 <p align="center"><b>English</b> · <a href="README.pt-BR.md">Português</a></p>
 
-<h3 align="center">A 66-agent engineering team for Claude Code that reads your architecture, follows your best practices, reviews itself before it asks you, and can prove every step.</h3>
+<h3 align="center">The evidence trail for AI-assisted engineering. Rules enforced in code, every step in a signed log, every requirement traced to its proof, and a package your auditor can verify on their own.</h3>
 
-AISEF is a Claude Code plugin that turns a plain-language request into a specified feature: broken into vertical slices, implemented test-first by agents running in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log.
+AISEF is a Claude Code plugin for teams that must show what the AI did, not just ship faster. A plain-language request becomes a specified feature: triaged in code, split into vertical slices, built test-first by agents in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log that CI can verify on each pull request.
 
-| **66** | **11** | **33** | **156** | **1,249** | **~0.2 s** |
-|---|---|---|---|---|---|
-| specialist agents, switched on by your stack | architecture styles detected, with recommendations | best-practice rules installed into your project | consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
+| **166** | **1,818** | **138** | **66** | **~0.2 s** |
+|---|---|---|---|---|
+| consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 48 of them bypass attempts, none get through | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
 <p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="The AISEF live panel: execution map, a pending decision, a task drawer and a subagent drawer, parallel lanes"></p>
 <p align="center"><sub>The live panel on demo data: who is running, who is waiting and why, which subagent each agent spawned, and the lanes over time.</sub></p>
+
+## What only AISEF covers
+
+| Need | What AISEF gives you |
+|---|---|
+| **Rules that hold** | An Execution Gateway decides allow, ask or deny on every tool call, in code. It reads commands token by token (`bash -c`, `eval`, `$(...)`, inline code), keeps the signing key out of reach, and caps each agent with its own permission ceiling. |
+| **A log nobody can quietly edit** | Each event is hash-chained and signed with Ed25519; the head lives outside the repository. In a team, each person writes to their own stream with their own key, so merges never conflict and every approval carries the signature of whoever gave it. |
+| **Every requirement traced to its proof** | Requirement → slice → acceptance criterion → test → evidence, checked by 166 rules. `aisef_sysgraph.py` answers "what does this requirement touch?" without a model. |
+| **Proof on every pull request** | The `aisef-verify` GitHub Action fails the PR if the log was tampered with, if the log shrank since the base branch, if `aisef-check` finds an error, or if the PR touches a task nobody validated. |
+| **Evidence your auditor can verify** | `aisef_evidence.py` packs a feature (contracts, reports, approvals, signed events, public keys) with a controls table for SOC 2 CC8.1 and ISO/IEC 27001:2022 A.8.32 and A.5.3. The package verifies itself, without the project. |
+| **Observability you already use** | `aisef_otel.py` exports each feature as OpenTelemetry traces (OTLP/JSON) with the GenAI conventions: one span per agent attempt, one per tool call. |
+
+AISEF is for teams in regulated settings and for anyone who has to show how an AI-made change was authorized, tested and approved. If you only want the fastest possible agent, plain Claude Code is cheaper; the "Measured" section below has the numbers.
 
 ## The toolbox
 
@@ -19,16 +32,21 @@ Everything below ships in one plugin, runs locally with the Python standard libr
 
 | | Tool | What it gives you | How you reach it |
 |---|---|---|---|
-| 👥 | **Agent team** | 66 specialists: executors, reviewers, fixers and advisors. Each one has a signed permission ceiling. | automatic delegation, `aisef:<agent>` |
+| 🧭 | **Triage in code** | Picks the path for each change (quick, lean or full) from sensitive paths, change kinds, size and risk. The lean path is one TDD slice with no blueprint. Profiles (solo, team, regulated) set the defaults. You can move up a path, never down. | `aisef_triage.py` |
+| 👥 | **Agent team** | 66 specialists: executors, reviewers, fixers and advisors, each with a signed permission ceiling. A new project starts with the core team plus your stack; the rest join on request. | automatic delegation, `aisef:<agent>` |
 | 🧭 | **Architecture radar** | It finds your stack and your style (Clean, hexagonal, DDD, CQRS, modular monolith, microservices, MVC, vertical slices…). It checks the dependency rule and module boundaries from your imports, then recommends improvements. | `aisef_project.py detect` |
-| 📚 | **Best-practice library** | 33 rules: common ones (Clean Code, SOLID, testing, security, Git), one per architecture style with a "when not to use it" section, and one per language. | `aisef_setup.py --apply` (no init) |
+| 📚 | **Best-practice library** | 33 rules: common ones (Clean Code, SOLID, testing, security, Git), one per architecture style with a "when not to use it" section, and one per language. | `aisef_setup.py --apply` (during init) |
 | 🔍 | **Review gate** | Reviewers are picked in code for each task: general, language, database, security, architecture and tests. All of them must approve before the validator runs. High-risk tasks get two independent reviews. | automatic in every wave |
 | ✅ | **verify-loop** | Build → types → lint → tests → secrets in the diff → diff summary, ending in PASS or FAIL, with evidence saved for the task. | `aisef_project.py verify-loop` |
 | 🛡️ | **Execution Gateway** | Every tool call gets allow, ask or deny, enforced in code. Each Git operation needs its own approval. No `--no-verify`. Databases and deploys are denied. Agents cannot loosen lint configs. | always on (hook) |
-| 🧾 | **Signed audit log** | Every operation, and every blocked attempt, goes into a hash-chained log signed with Ed25519. The head is kept outside the repository. | `aisef-check` |
+| 🧾 | **Signed audit log** | Lifecycle, decisions, shell commands and every blocked or questioned call go into a hash-chained log signed with Ed25519; file edits go to a hash-chained telemetry. One stream per person in a team. | `aisef-check`, `aisef_streams.py` |
+| ✔️ | **CI verification** | The `aisef-verify` Action checks the log, the consistency rules and the tasks touched by each pull request, with a job summary. | `.github/actions/aisef-verify` |
+| 📦 | **Evidence package** | A self-verifying package per feature, with SOC 2 and ISO 27001 controls mapped to the evidence. | `aisef_evidence.py build` |
+| 🔭 | **OpenTelemetry export** | Features as traces with GenAI attributes, for the observability stack you already run. | `aisef_otel.py export` |
 | 🗳️ | **Approval Center** | Each decision shows its impact, diff, rollback and risk. Only you decide, through the native prompt. | `aisef-approve` |
 | 📊 | **Live panel** | Execution map, who spawned whom, decisions waiting for you, traceability, parallel lanes. | `aisef-panel` |
-| 💸 | **Model router** | Haiku → Sonnet → Opus, chosen by risk and complexity. Each failed attempt moves one level up. | automatic |
+| 💸 | **Model router and budget** | Haiku → Sonnet → Opus, chosen by risk and complexity. The continuous loop stops on a feature budget (time, tokens, dispatches), on the same failure twice, and on a stalled agent. | automatic |
+| 🌳 | **Worktree per slice** | Slices that touch the same file run side by side, each in its own worktree; the merge goes through the feature scope and a conflict becomes a new attempt. | `parallel.mode = worktree` |
 | 🧠 | **Reviewed learning** | Lessons drawn from errors already on record. They apply only after you approve them and lose confidence when they stop helping. | `aisef_learn.py` |
 | 🎨 | **Design authority** | One approved typography, palette and component set per project, checked in the code. | `aisef-design` |
 | ❓ | **Ask mode** | Answers questions without changing anything, researching the web with cited sources. | `/aisef:ask` |
@@ -36,7 +54,7 @@ Everything below ships in one plugin, runs locally with the Python standard libr
 
 ## Meet the team
 
-Agents load only when they apply. Language and framework agents switch on when the radar detects their stack, so a Python project never pays for the Swift reviewer.
+Agents load only when they apply. A new project starts with the core team (13 subagents: the builders, the reviewers that run on every task, the validator and three advisors) plus the language and framework agents the radar detects, so a Python project starts with 15 and never pays for the Swift reviewer. The extended team joins when you ask or when the work calls for it.
 
 | Kind | What they do | Agents |
 |---|---|---|
@@ -90,6 +108,7 @@ The review gate adds about 13% per slice, which is within run-to-run noise. On a
 
 ## What's new
 
+- **0.15.0, for teams and auditors.** The `aisef-verify` GitHub Action on every pull request, a self-verifying evidence package per feature with SOC 2 and ISO 27001 controls, OpenTelemetry export with the GenAI conventions, one audit log per person (merges never conflict, approvals signed by whoever gave them), and a roadmap checked against the changelog.
 - **0.14.0, the system as a graph, the flow as data, slices in their own worktrees.**
   - no core or hook module is over 500 lines anymore; `aisef_project` keeps the same API, and the check runs a registry of rule groups;
   - `aisef_sysgraph.py` answers impact questions without a model: which tasks, criteria, tests, files and evidence a requirement touches, and why a task exists;
@@ -215,7 +234,7 @@ Based on each project's README and official docs as of 2026-11-18. "Instruction"
 
 | Gap | How AISEF covers it | Limit |
 |---|---|---|
-| Governance at tool-call time | The gateway decides allow, ask or deny on every call, with a per-agent ceiling | It reads commands by pattern: it reduces risk, it does not isolate. Pair it with `/sandbox` |
+| Governance at tool-call time | The gateway decides allow, ask or deny on every call, with a per-agent ceiling | It reads commands by tokens and patterns: it reduces risk, it does not isolate. Pair it with the native sandbox, which the init turns on where it exists |
 | Tamper-evident log | Each event carries the previous hash and an Ed25519 signature; the head lives outside the repo | It does not protect against someone holding your machine's private key |
 | Requirement to evidence | The RTM links requirement → slice → criterion → test → evidence, and the check flags gaps | The quick maintenance path has lighter traceability |
 | Validation with separate privileges | The validator only reads Git, never validates its own work and runs at an equal or higher level, preferably on another model | A large wave on one validator should be split |

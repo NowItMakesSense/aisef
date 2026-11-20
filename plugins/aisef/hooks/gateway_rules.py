@@ -349,6 +349,8 @@ def _classify_text(cmd, patterns, env, ctx=None):
         found.append(("aisef_decision", "write", env, False, "instalar boas praticas em .claude/rules (decisao do usuario)"))
     if re.search(r"aisef_mcp\.py\s+(?:trust|revoke)\b", cmd):
         found.append(("aisef_decision", "write", env, False, "confianca numa ferramenta MCP (decisao do usuario)"))
+    if re.search(r"aisef_streams\.py\s+enable\b", cmd):
+        found.append(("aisef_decision", "write", env, False, "ligar o log por pessoa (decisao do usuario)"))
     if re.search(r"aisef_migrate\.py\b[^;&|]*--apply\b", cmd):
         found.append(("aisef_decision", "write", env, False, "migrate do projeto AISEF (decisao do usuario)"))
     if re.search(r"aisef_learn\.py\s+accept\b", cmd):

@@ -152,7 +152,7 @@ A licao entra **so no pacote da tarefa relevante**, com a confianca e marcada co
 **Contexto:** o doctor reinjeta o estado (fase, tarefas em andamento, decisoes pendentes) depois de `/compact` e `/resume`. Quando o `next` trouxer `guide.compact_hint`, sugira `/compact` ao usuario: e um marco de fase sem agente em voo.
 
 ## Auditoria
-O hook registra cada operacao automaticamente. Registre voce os marcos (contrato criado, delegacao, estado, decisao):
+O hook registra cada operacao automaticamente. Em time, ligue o **log por pessoa** (`python -I CORE/aisef_streams.py enable --project .`, decisao do usuario; ADR 0026): cada pessoa grava no proprio stream, com a propria chave, e o merge do Git nao conflita no log. Registre voce os marcos (contrato criado, delegacao, estado, decisao):
 
 ```
 python -I CORE/aisef_project.py append --project . --type delegation --feature FEAT-001 --task T-001 --summary "T-001 delegada ao backend (sonnet/medium)"

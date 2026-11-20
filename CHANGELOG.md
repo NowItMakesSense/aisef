@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.15.0: times e auditores ([plano](docs/plan/plano-0.13-0.15.md))
+- **Um log por pessoa (T-04 + T-05, [ADR 0026](docs/adr/0026-log-por-pessoa.md)).** Com `aisef_streams.py enable` (decisão do usuário), o log atual vira o stream do dono, sem reescrever nada.
+  - **Stream de cada pessoa:** fica em `.aisef/audit/streams/<id>/`, com cadeia, `log_id`, chave Ed25519, ids de evento e `head.json` próprios. A identidade vem do `AISEF_USER` ou do e-mail do Git.
+  - **Merge sem conflito:** cada pessoa só anexa aos próprios arquivos, então o merge do Git não conflita no log.
+  - **Decisões:** aprovações e aceites saem assinados pela chave de quem decidiu.
+  - **Leitura:** os leitores recebem os streams juntos, em ordem de tempo.
+  - **Verificação:** o `verify`, o painel e a Action verificam stream a stream; o check usa a posição para a ordem das correções e confere o tempo dentro de cada stream. Na PR, apagar ou cortar o stream de alguém é pego.
+  - **Sem streams, nada muda.** Teste com git de verdade, duas pessoas e um merge em `core/test_streams.py` (17).
+- **Exportação OpenTelemetry (T-03).** Novo `core/aisef_otel.py export --out traces.json`, que gera OTLP/JSON sem modelo e sem rede, para enviar a um coletor OTLP/HTTP ou importar num backend:
+  - um trace por feature, com id estável entre exportações;
+  - span raiz da feature, com as decisões do usuário e do gateway como eventos;
+  - um span `invoke_agent <papel>` por tentativa, seguindo as convenções GenAI do OTel (`gen_ai.operation.name`, `gen_ai.agent.name`, `gen_ai.request.model`, `gen_ai.usage.*` vindos do `usage.jsonl`) mais `aisef.*` (tarefa, tentativa, nível e resultado, com status de erro na reprovada);
+  - spans filhos `execute_tool <ferramenta>` para as chamadas do subagente, do log e da telemetria.
+
+  As convenções GenAI ainda estão em desenvolvimento no OTel; `gen_ai.provider.name` não é usado porque saiu dos spans internos de agente. Testes em `core/test_otel.py` (12).
+- **Pacote de evidência por feature (T-02).** Novo `core/aisef_evidence.py build --feature --out` junta, numa pasta:
+  - Feature Contract (requisitos, spec, RTM, triagem), Task Contracts, Execution Reports e os pedidos do Approval Center;
+  - os eventos assinados da feature, completos, e as chaves públicas;
+  - o resultado do verify do log e do aisef-check;
+  - uma tabela de controles com o status calculado e onde está cada evidência: SOC 2 CC8.1 (gestão de mudanças) e ISO/IEC 27001:2022 A.8.32 (gestão de mudanças) e A.5.3 (segregação de funções).
+
+  O pacote se verifica sozinho, sem o projeto (`verify --pack`): o `manifest.json` tem o sha256 de cada arquivo, e cada evento tem o hash recalculado e a assinatura Ed25519 conferida com a chave do pacote. Um evento adulterado é pego mesmo que o manifesto seja refeito. É material para o auditor, não certificação. Testes em `core/test_evidence.py` (12).
+- **GitHub Action `aisef-verify` (T-01).** Composite action em `.github/actions/aisef-verify/`, que roda o novo `core/aisef_ci.py`, só com as chaves públicas. A Action falha quando:
+  - o log assinado não confere (cadeia de hash, Ed25519 e o `head.json` versionado);
+  - o aisef-check acusa erro (com `strict`, também aviso);
+  - no modo PR, o log não contém mais o último evento da branch base com o mesmo hash. Isso pega o corte do fim do log com um `head.json` antigo restaurado, que tem assinatura válida;
+  - no modo PR, a PR toca uma tarefa (pelo contrato ou por um arquivo do escopo) que está executada e não validada.
+
+  O resumo em markdown vai para o job summary. O CI do próprio repositório roda a Action sobre o projeto de demonstração. Testes com git de verdade em `core/test_ci.py` (11). Para usar em outro repositório: `uses: NowItMakesSense/aisef/.github/actions/aisef-verify@main`, com `fetch-depth: 0` no checkout.
+- **README reposicionado (D-02).** Em inglês e em português, o README abre pela trilha de evidência: o que só o AISEF cobre (regra aplicada em código, log assinado e por pessoa, rastreabilidade até a prova, verificação em cada PR, pacote para o auditor, OpenTelemetry) e para quem ele é. A equipe de agentes virou uma seção, com núcleo e estendido, e os números foram atualizados (166 regras, 1.818 verificações, 138 casos do gateway).
+- **Roadmap em ordem e conferido (H-02).** `docs/roadmap.md` separa as próximas versões das entregues, em ordem, e o `tools/gen_docs.py --check` (que roda no `run_tests.py`) falha quando uma versão do CHANGELOG não aparece no roadmap.
+
 ## 0.14.0: grafo do sistema, workflow declarativo, log em camadas e worktrees ([plano](docs/plan/plano-0.13-0.15.md))
 - **Worktree por fatia (L-02).** Com `config.json` → `"parallel": {"mode": "worktree"}`, fatias com arquivos em comum entram na mesma onda, cada uma no seu worktree (`.aisef/worktrees/<T>`, branch `slice/<feature>/<T>`, fora do Git). O `next` e o `dispatch` trazem o comando de criar o worktree, e o prompt manda o agente trabalhar e commitar lá. O `complete` traz os comandos de integrar. No gateway:
   - são livres (`worktree_local`): `git worktree`, `git branch -d` de `slice/*` já integrada, `git merge --abort` e trazer a branch da feature para a fatia;

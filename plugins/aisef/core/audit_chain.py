@@ -123,12 +123,34 @@ def log_segments(audit_dir):
     return segs
 
 
-def read_log_dir(audit_dir):
-    """O log inteiro (todos os segmentos concatenados): a cadeia continua de um segmento para o outro."""
+def read_stream(audit_dir):
+    """Um stream inteiro (todos os segmentos concatenados): a cadeia continua de um segmento para o outro."""
     log = []
     for seg in log_segments(audit_dir):
         log.extend(read_log(seg))
     return log
+
+
+def stream_dirs(audit_dir):
+    """T-05: o stream do dono (a propria pasta audit/) e um por pessoa em audit/streams/<pessoa>/."""
+    out = [audit_dir]
+    sdir = os.path.join(audit_dir, "streams")
+    if os.path.isdir(sdir):
+        out += [os.path.join(sdir, d) for d in sorted(os.listdir(sdir)) if os.path.isdir(os.path.join(sdir, d))]
+    return out
+
+
+def read_log_dir(audit_dir):
+    """O log do projeto. Com um stream so (o caso comum), e exatamente ele, em ordem. Com streams por pessoa (T-05),
+    os streams vem juntos em ordem de tempo; cada um mantem a propria cadeia, verificada a parte (read_stream)."""
+    dirs = stream_dirs(audit_dir)
+    if len(dirs) == 1:
+        return read_stream(audit_dir)
+    merged = []
+    for d in dirs:
+        merged.extend(read_stream(d))
+    merged.sort(key=lambda e: (e.get("timestamp") or "", str(e.get("log_id")), e.get("sequence", 0)))
+    return merged
 
 
 def selftest(schema_path=None):
