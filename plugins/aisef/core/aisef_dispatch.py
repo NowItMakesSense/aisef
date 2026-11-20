@@ -61,17 +61,15 @@ def executor_prompt(project, task, route, attempt, pack_text):
         "Voce e o agente `%s` do AISEF. Execute SO a tarefa %s (feature %s), tentativa %d." % (role, tid, fid, attempt),
         "Contrato: .aisef/contracts/tasks/%s.json. Trabalhe so dentro de scope.paths_allowed." % tid,
         "",
-        "1. Ao comecar, registre: %s append --project . --type task_started --actor agent --actor-id %s --feature %s "
-        "--task %s --summary \"%s iniciada\"" % (PY, role, fid, tid, tid),
-        "2. Faca a tarefa%s." % (" com TDD: um comportamento por vez, teste vermelho antes do verde, nos seams de "
+        "O inicio e o fim da tarefa (task_started, task_executed) sao registrados pelo hook do AISEF: nao rode append.",
+        "1. Faca a tarefa%s." % (" com TDD: um comportamento por vez, teste vermelho antes do verde, nos seams de "
                                  "tests.seams; registre cada ciclo em tdd_evidence.cycles" if tdd else ""),
-        "3. Antes de entregar, rode a verificacao: %s --project . --task %s (build, tipos, lint, testes, segredos no diff). "
+        "2. Antes de entregar, rode a verificacao: %s --project . --task %s (build, tipos, lint, testes, segredos no diff). "
         "FAIL e para corrigir; cite .aisef/evidence/VERIFY-%s.json nas evidencias." % (VERIFY, tid, tid),
-        "4. Grave o Execution Report em .aisef/reports/RPT-%s-%d.json (schema execution-report do plugin) e o "
-        "relatorio legivel, com execution_profile = {\"model\": \"%s\", \"effort\": \"%s\", \"level\": %d, \"attempt\": %d}."
+        "3. Por ultimo, grave o Execution Report em .aisef/reports/RPT-%s-%d.json (schema execution-report do plugin, "
+        "status executed) e o relatorio legivel, com execution_profile = {\"model\": \"%s\", \"effort\": \"%s\", "
+        "\"level\": %d, \"attempt\": %d}. Sem esse relatorio, a tarefa nao conta como executada."
         % (tid, attempt, route["model"], route["effort"], route["level"], attempt),
-        "5. Ao terminar, registre: %s append --project . --type task_executed --actor agent --actor-id %s --feature %s "
-        "--task %s --summary \"%s executada\"" % (PY, role, fid, tid, tid),
         "Achou algo fora do escopo ou uma decisao que nao e sua: pare a parte afetada e reporte em scope_discoveries.",
         "",
         "--- Pacote de contexto ---",

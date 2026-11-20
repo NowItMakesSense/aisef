@@ -279,6 +279,35 @@ def compute_next(project, feature=None, now=None, git_state=None):
                               "independent_work_continues": True,
                               "hint": "escale ao usuario: mudar o contrato, trocar de agente ou cancelar"})
 
+    # ---- agente terminou sem Execution Report (F-04: o hook marca no_report no runtime)
+    no_report = {}
+    try:
+        with open(os.path.join(ap.aisef_dir(project), "runtime", "agents.jsonl"), encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    ev = json.loads(line)
+                except ValueError:
+                    continue
+                if ev.get("event") == "no_report" and ev.get("task_id"):
+                    no_report[ev["task_id"]] = ev.get("after_seq")
+    except OSError:
+        pass
+    last_delegation = {}
+    for e in log:
+        if e.get("task_id") and e["event_type"] == "delegation":
+            last_delegation[e["task_id"]] = e.get("sequence", 0)
+    for tid, after_seq in sorted(no_report.items()):
+        t = tasks.get(tid)
+        if not t or not in_scope(t.get("feature_id")) or state[tid] != "in_progress" or tid in blocked:
+            continue
+        if not isinstance(after_seq, int) or after_seq < last_delegation.get(tid, 0):
+            continue  # o aviso e de uma tentativa anterior (houve delegacao depois dele)
+        block(tid, "agente terminou sem Execution Report")
+        decisions.append({"kind": "await_decision", "source": "no_report", "feature_id": t.get("feature_id"),
+                          "task_ids": [tid], "title": "%s: o agente terminou sem gravar o Execution Report" % tid,
+                          "independent_work_continues": True,
+                          "hint": "veja o que o agente fez e decida: redelegar (nova tentativa) ou pausar a tarefa"})
+
     # ---- requisito mudou (F-07): a tarefa nao segue com a versao antiga do requisito
     req_changed = []
     for tid, t in sorted(tasks.items()):

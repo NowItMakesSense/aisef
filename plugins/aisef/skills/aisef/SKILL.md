@@ -157,7 +157,7 @@ python -I CORE/aisef_project.py append --project . --type delegation --feature F
 ```
 Cada evento tem o ator certo, e o `append` recusa o resto antes de gravar (o log e imutavel):
 - `delegation`, `contract_changed`, `task_completed`: voce (ator padrao `orchestrator`).
-- `task_started` e `task_executed`: o **agente da tarefa** registra, com `--actor agent --actor-id <papel>` (ex.: `backend`). Peca isso no prompt da delegacao.
+- `task_started` e `task_executed`: o **hook de subagentes** registra em nome do agente da tarefa (F-04), quando o disparo foi do `dispatch` (descricao "T-xxx:") e o papel bate com o contrato; o `task_executed` so sai com o Execution Report `executed` gravado. Sem relatorio, o `next` mostra `await_decision` com `source: no_report`: veja o que o agente fez e redelegue ou pause. Registro manual (`--actor agent --actor-id <papel>`) so se o hook nao rodou; ele e idempotente.
 - `task_validated`: `--actor validator --actor-id validator`.
 - Errou um evento? Registre `--type correction --corrects <E-id> --summary "<o que estava errado>"`; o original nunca muda e o **aisef-check** passa a considerar a correcao.
 Eventos de decisao do usuario (`approval_granted`, `feature_accepted`...) so via **aisef-approve** com `--actor user`, o que dispara o prompt nativo de permissao.

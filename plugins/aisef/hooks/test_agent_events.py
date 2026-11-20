@@ -122,5 +122,93 @@ check("projeto sem .aisef: nada gravado", not os.path.exists(os.path.join(other,
 check("payload invalido nunca falha o hook", subprocess.run([sys.executable, "-I", os.path.join(HERE, "agent_events.py")],
       input="nao e json", capture_output=True, text=True).returncode == 0)
 
+print("--- ciclo de vida registrado pelo hook (F-04)")
+import audit_chain  # noqa: E402
+p4 = os.path.join(work, "p4")
+os.makedirs(p4)
+ap.init(p4, "PRJ-LC", "lc", "dev")
+a4 = ap.aisef_dir(p4)
+ap.write_json(os.path.join(a4, "contracts", "tasks", "T-500.json"),
+              {"task_id": "T-500", "feature_id": "FEAT-500", "contract_version": 1,
+               "assigned_agent": {"agent_id": "implementer", "agent_contract_version": 1, "role": "implementer"}})
+
+
+def lifecycle(proj):
+    return [(e["event_type"], e["actor"]["type"], e["actor"]["id"], (e.get("data") or {}).get("recorded_by"))
+            for e in audit_chain.read_log_dir(os.path.join(proj, ".aisef", "audit"))
+            if e.get("task_id") == "T-500"]
+
+
+def delegate(proj):
+    ap.append(proj, {"event_type": "delegation", "actor": {"type": "orchestrator", "id": "orchestrator"},
+                     "feature_id": "FEAT-500", "task_id": "T-500", "summary": "T-500 delegada"})
+
+
+delegate(p4)
+spawn(p4, "T-500: login")
+hook(p4, {"hook_event_name": "SubagentStart", "agent_id": "L1", "agent_type": "aisef:implementer"})
+lc = lifecycle(p4)
+check("start com ligacao exata: task_started do agente da tarefa, marcado como do hook",
+      lc[-1] == ("task_started", "agent", "implementer", "hook"), lc)
+hook(p4, {"hook_event_name": "SubagentStart", "agent_id": "L1", "agent_type": "aisef:implementer"})
+check("start repetido nao duplica (idempotente)", [x[0] for x in lifecycle(p4)].count("task_started") == 1, lifecycle(p4))
+hook(p4, {"hook_event_name": "SubagentStop", "agent_id": "L1", "agent_type": "aisef:implementer"})
+check("stop sem Execution Report: nada no log assinado", [x[0] for x in lifecycle(p4)] == ["delegation", "task_started"],
+      lifecycle(p4))
+rtev = [json.loads(x) for x in open(os.path.join(a4, "runtime", "agents.jsonl"), encoding="utf-8")]
+check("stop sem relatorio marca no_report no runtime (o next leva ao usuario)",
+      any(e["event"] == "no_report" and e["task_id"] == "T-500" for e in rtev))
+
+delegate(p4)
+spawn(p4, "T-500: login, tentativa 2")
+hook(p4, {"hook_event_name": "SubagentStart", "agent_id": "L2", "agent_type": "aisef:implementer"})
+ap.write_json(os.path.join(a4, "reports", "RPT-T-500-2.json"),
+              {"report_id": "RPT-T-500-2", "task_id": "T-500", "contract_version": 1, "status": "executed",
+               "agent": {"agent_id": "implementer", "role": "implementer"},
+               "timing": {"started_at": ap.now_iso(), "finished_at": ap.now_iso()}})
+tr = transcript(os.path.join(work, "t500.jsonl"), [amsg("m1", 100, 50)])
+hook(p4, {"hook_event_name": "SubagentStop", "agent_id": "L2", "agent_type": "aisef:implementer", "agent_transcript_path": tr})
+lc = lifecycle(p4)
+ex = [e for e in audit_chain.read_log_dir(os.path.join(a4, "audit")) if e["event_type"] == "task_executed"]
+check("stop com relatorio executado: task_executed do agente, com relatorio e tokens",
+      lc[-1] == ("task_executed", "agent", "implementer", "hook") and ex[-1]["data"]["report_id"] == "RPT-T-500-2"
+      and ex[-1]["data"]["billable_tokens"] == 150, ex[-1] if ex else lc)
+hook(p4, {"hook_event_name": "SubagentStop", "agent_id": "L2", "agent_type": "aisef:implementer", "agent_transcript_path": tr})
+check("stop repetido nao duplica", [x[0] for x in lifecycle(p4)].count("task_executed") == 1, lifecycle(p4))
+
+delegate(p4)
+spawn(p4, "T-500: outro papel", stype="aisef:backend")
+hook(p4, {"hook_event_name": "SubagentStart", "agent_id": "L3", "agent_type": "aisef:backend"})
+check("papel diferente do assigned_agent: nada gravado", lifecycle(p4)[-1][0] == "delegation", lifecycle(p4))
+spawn(p4, "T-500: A", parent="x1")
+spawn(p4, "T-500: B", parent="x2")
+hook(p4, {"hook_event_name": "SubagentStart", "agent_id": "L4", "agent_type": "aisef:implementer"})
+check("ligacao inferida (dois disparos de pais diferentes): nada gravado", lifecycle(p4)[-1][0] == "delegation", lifecycle(p4))
+import check_project as cp  # noqa: E402
+rules = {f["rule"] for f in cp.check(p4, policy_path=os.path.join(CORE, "permission-policy.v0.1.json")).findings
+         if f["rule"].startswith("LOG-") and "ACTOR" in f["rule"]}
+check("eventos do hook nao disparam regra LOG-* (ator certo)", not rules, sorted(rules))
+
+import aisef_next as nx  # noqa: E402
+p5 = os.path.join(work, "p5")
+os.makedirs(p5)
+ap.init(p5, "PRJ-NR", "nr", "dev")
+ap.write_json(os.path.join(ap.aisef_dir(p5), "contracts", "tasks", "T-500.json"),
+              {"task_id": "T-500", "feature_id": "FEAT-500", "contract_version": 1, "state": {"status": "ready"},
+               "requirements": {"requirement_ids": []},
+               "assigned_agent": {"agent_id": "implementer", "agent_contract_version": 1, "role": "implementer"}})
+delegate(p5)
+spawn(p5, "T-500: login")
+hook(p5, {"hook_event_name": "SubagentStart", "agent_id": "N1", "agent_type": "aisef:implementer"})
+hook(p5, {"hook_event_name": "SubagentStop", "agent_id": "N1", "agent_type": "aisef:implementer"})
+res = nx.compute_next(p5, git_state={"current": None, "branches": None})
+nr = [a for a in res["actions"] if a.get("source") == "no_report"]
+check("next: agente sem relatorio vira decisao no_report (nao fica esperando)", nr and nr[0]["task_ids"] == ["T-500"]
+      and not any(a["kind"] == "wait" and "T-500" in a["task_ids"] for a in res["actions"]), res["actions"])
+delegate(p5)
+res = nx.compute_next(p5, git_state={"current": None, "branches": None})
+check("next: nova delegacao apaga o aviso da tentativa anterior", not any(a.get("source") == "no_report" for a in res["actions"]),
+      res["actions"])
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

@@ -34,8 +34,8 @@ def match_parents(events):
     spawns = [dict(e, used=False) for e in events if e.get("event") == "spawn"]
     parents = {}
     for e in events:
-        if e.get("event") != "start":
-            continue
+        if e.get("event") != "start" or e.get("agent_id") in parents:
+            continue  # o mesmo agente comecando de novo nao consome outro disparo (F-04)
         r = role(e.get("agent_type"))
         cands = [s for s in spawns if not s["used"] and role(s.get("subagent_type")) == r
                  and (s.get("at") or "") <= (e.get("at") or "~")]
