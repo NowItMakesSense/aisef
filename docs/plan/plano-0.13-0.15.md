@@ -1,6 +1,6 @@
 # Plano: da nota 7,5 para 8,5 (0.13 → 0.15)
 
-> **Status:** aprovado, 2026-11-20 (decisões D2–D6 confirmadas pelo usuário).
+> **Status:** concluído em 2026-11-20 (0.13.0, 0.14.0 e 0.15.0). Pendentes: as duas telas do painel (F-09, G-07), que esperam a prévia aprovada, e o C-05, que depende de dados de uso real.
 > **Origem:** análise de 2026-11-20 sobre a 0.12.1 (nota geral 7,5).
 > **Relação com o [plano anterior](melhorias-0.11-0.14.md):** este plano **reordena** as tarefas que ainda estão abertas (F-*, L-*, T-*, G-05) e acrescenta tarefas novas (C-*, S-*, H-*, G-06/07, L-06, D-02). Os IDs antigos continuam valendo.
 > **Testes e medições ficam fora deste plano.** Como já decidido, o teste de uso real da 0.12 (M-05, portão de revisão, verify-loop, gateway) e as medições do benchmark acontecem depois, no projeto novo que você vai criar. Nenhuma tarefa daqui depende deles.
@@ -263,7 +263,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
 ### 0.15: Times e mercado
 
 ```
-[ ] D-02: Reposicionamento
+[x] D-02: Reposicionamento
+    Status: feito: README en e pt-BR pela trilha de evidencia
     Descrição: README em inglês e em português abrem pela tese "trilha de evidência para
       engenharia com IA": o que só o AISEF cobre (regra aplicada em código, log assinado,
       RTM até a evidência) e para quem é (times regulados e quem precisa provar o que a IA
@@ -272,13 +273,15 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
     Depende de: T-02
     Estimativa: 1 dia
 
-[ ] H-02: Documentação sincronizada
+[x] H-02: Documentação sincronizada
+    Status: feito: roadmap em ordem; gen_docs --check falha se faltar versao do CHANGELOG
     Descrição: roadmap.md em ordem de versão e com o que este plano mudou; gen_docs passa a
       conferir que o roadmap cita todas as versões do CHANGELOG.
     Depende de: nenhuma (pode sair a qualquer momento)
     Estimativa: 0,5 dia
 
-[ ] T-01, T-02, T-03, T-04, T-05 (do plano anterior, sem mudança de escopo)
+[x] T-01, T-02, T-03, T-04, T-05 (do plano anterior, sem mudança de escopo)
+    Status: feitos (aisef_ci + Action, aisef_evidence, aisef_otel, aisef_streams com ADR 0026)
     T-01 GitHub Action aisef-verify           3–4 dias
     T-02 Pacote de evidência (SOC 2, ISO)     2–3 dias
     T-03 Exportação OTel                      2 dias

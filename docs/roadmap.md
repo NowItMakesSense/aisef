@@ -8,7 +8,6 @@ O detalhe de cada versão está no [CHANGELOG](../CHANGELOG.md), e as decisões 
 
 | Versão | Entrega |
 |---|---|
-| 0.15.0 | Times e mercado: verificação no CI (`aisef-verify`), pacote de evidência por feature (SOC 2 CC8.1, ISO 27001 A.8.32), exportação OTel, um log por pessoa e o README reposicionado pela trilha de evidência |
 | depois | Painel: card de custo de atenção na tela Agora (F-09) e filtro "impacto de" na Rastreabilidade (G-07), a partir de uma prévia aprovada |
 | depois | Revisão do catálogo de agentes com dados de uso de projetos reais (C-05, `tools/agent_usage.py`) |
 | depois | Confirmar numa sessão real que o Claude Code entrega o `agent_id` de quem chama a ferramenta Agent; sem isso, a ligação pai → subagente continua marcada como inferida |
@@ -17,6 +16,7 @@ O detalhe de cada versão está no [CHANGELOG](../CHANGELOG.md), e as decisões 
 
 | Versão | Entrega |
 |---|---|
+| 0.15.0 | Times e auditores: Action `aisef-verify` em cada PR, pacote de evidência por feature (SOC 2 CC8.1, ISO 27001 A.8.32 e A.5.3), exportação OpenTelemetry, um log por pessoa, README pela trilha de evidência e roadmap conferido |
 | 0.14.0 | Módulos com até 500 linhas, grafo do sistema consultável (`aisef_sysgraph`), workflow declarativo (`workflow.v0.1.json`), log em camadas com telemetria, custo de atenção no `metrics`, worktree por fatia |
 | 0.13.0 | Triagem em código e caminho enxuto, perfis solo, team e regulated, catálogo em núcleo e estendido, gateway por tokens com corpus de contornos, Git por risco, MCP com prazo, orçamento e falta de progresso no loop, ciclo de vida pelo hook, `check --fix`, grafo nativo de imports |
 | 0.12.1 | Correções vindas do uso real (decisão de arquitetura do projeto, fronteira entre módulos, Git só de leitura) e README novo |
