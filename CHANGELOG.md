@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.15.0 (em andamento): times e mercado ([plano](docs/plan/plano-0.13-0.15.md))
+- **Roadmap em ordem e conferido (H-02).** `docs/roadmap.md` separa as próximas versões das entregues, em ordem, e o `tools/gen_docs.py --check` (que roda no `run_tests.py`) falha quando uma versão do CHANGELOG não aparece no roadmap.
+
 ## 0.14.0: grafo do sistema, workflow declarativo, log em camadas e worktrees ([plano](docs/plan/plano-0.13-0.15.md))
 - **Worktree por fatia (L-02).** Com `config.json` → `"parallel": {"mode": "worktree"}`, fatias com arquivos em comum entram na mesma onda, cada uma no seu worktree (`.aisef/worktrees/<T>`, branch `slice/<feature>/<T>`, fora do Git). O `next` e o `dispatch` trazem o comando de criar o worktree, e o prompt manda o agente trabalhar e commitar lá. O `complete` traz os comandos de integrar. No gateway:
   - são livres (`worktree_local`): `git worktree`, `git branch -d` de `slice/*` já integrada, `git merge --abort` e trazer a branch da feature para a fatia;
