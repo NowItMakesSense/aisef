@@ -6,7 +6,7 @@
 
 O AISEF é um plugin do Claude Code para times que precisam mostrar o que a IA fez, não só entregar mais rápido. Um pedido em linguagem natural vira uma feature especificada: triada em código, quebrada em fatias verticais, construída com testes primeiro por agentes em paralelo, revisada por especialistas, validada por outro agente e aceita por você. Toda chamada de ferramenta passa por uma política aplicada em código, e cada passo vai para um log assinado, à prova de adulteração, que o CI verifica em cada pull request.
 
-| **166** | **1.818** | **138** | **66** | **~0,2 s** |
+| **166** | **2.500+** | **138** | **66** | **~0,2 s** |
 |---|---|---|---|---|
 | regras de consistência no `aisef-check` | verificações automáticas, CI em Linux e Windows | casos do gateway, 48 deles tentativas de contorno, nenhuma passa | agentes especialistas (15 ativos num projeto Python novo) | custo do gateway por chamada no Windows ([medido](tools/bench_hooks.py)) |
 
@@ -106,8 +106,11 @@ O `tools/bench_outcomes.py` roda a mesma tarefa de três jeitos. Os testes ficam
 
 O portão de revisão acrescenta cerca de 13% por fatia, dentro da variação entre execuções. Numa tarefa tão pequena, o processo completo custa cerca de 11× o Claude Code puro. O que você paga é a spec, a evidência de TDD, a validação independente, a revisão e o registro assinado. O ganho de qualidade em features reais e maiores é o que vem sendo medido agora.
 
+Os recursos da 0.13 em diante têm cobertura no CI, incluindo um teste que roda o ciclo inteiro de uma feature nas 48 combinações de perfil, caminho, paralelismo, telemetria e log por pessoa. Eles ainda não rodaram num projeto real. A [tabela de maturidade](docs/reference/maturity.md) mostra o nível de cada um, se vem ligado e como voltar atrás.
+
 ## Novidades
 
+- **0.15.2, o que está provado e o que não está.** Uma tabela de maturidade separa o que já rodou em uso real do que só tem CI, com o padrão e o jeito de voltar atrás de cada recurso. Um teste novo roda o ciclo inteiro de uma feature nas 48 combinações de modos. Os números do README passam a ser conferidos contra o código.
 - **0.15.1, custo de atenção e impacto no painel.** A tela Agora mostra quantas vezes você precisou parar (aprovações e perguntas do gateway por tarefa concluída, aprovação de primeira, tokens por tarefa), e a Rastreabilidade ganha o filtro "Impacto de": digite um requisito, uma tarefa ou um arquivo e veja só os requisitos ligados a ele.
 - **0.15.0, para times e auditores.** A GitHub Action `aisef-verify` em cada pull request, um pacote de evidência por feature que se verifica sozinho, com os controles SOC 2 e ISO 27001, exportação OpenTelemetry com as convenções GenAI, um log de auditoria por pessoa (o merge nunca conflita e cada aprovação é assinada por quem a deu) e um roadmap conferido contra o CHANGELOG.
 - **0.14.0, o sistema como grafo, o fluxo como dado e as fatias em worktrees.**

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.2: maturidade, combinações de modos e números do README
+- **Teste de combinações de modos (H-04).** Novo `core/test_modes.py`, com git de verdade. Roda o ciclo inteiro de uma feature em 48 combinações: perfil (solo, team, regulated) × pedido (pequeno, com comportamento) × paralelismo (`paths`, `worktree`) × telemetria (`split`, `signed`) × log por pessoa (desligado, ligado). O ciclo passa por triagem, contrato ou caminho rápido, aprovação, despacho, edição pelo hook de auditoria, relatório com TDD, revisores, validação e conclusão. Depois rodam todos os leitores: check, verify do log, next, metrics, painel, grafo do sistema, OpenTelemetry, pacote de evidência e CI. Em cada combinação, o teste confere que:
+  - o log verifica e o check não acusa erro;
+  - cada evento cai onde o modo manda: no stream de quem executou ou no log do dono, na telemetria ou no log assinado;
+  - os leitores veem o mesmo ciclo;
+  - o caminho e a onda seguem o perfil e o paralelismo.
+
+  São 772 verificações, e nenhuma combinação mostrou defeito.
+- **Tabela de maturidade (`docs/reference/maturity.md`).** Para cada recurso da 0.13 em diante, a tabela diz se já rodou em uso real ou só no CI, se vem ligado e como voltar atrás. Por enquanto, todos estão no nível CI. O `gen_docs --check` falha quando o CHANGELOG cita um ID que não está na tabela.
+- **Números do README conferidos (H-03).** O `gen_docs --check` compara com o código, nos dois idiomas, as regras do check, os casos e contornos do corpus do gateway, os agentes (total, núcleo e projeto Python) e as boas práticas. A seção de novidades fica de fora. As verificações viram um piso arredondado (**2.500+**), que o `run_tests.py` compara com o total medido: o piso não pode passar do total nem ficar mais de 10% abaixo dele.
+
 ## 0.15.1: painel com custo de atenção e impacto
 - **Custo de atenção na tela Agora (F-09).** Novo card na coluna da direita com interrupções (pedidos ao Approval Center mais prompts do gateway), interrupções por tarefa concluída, taxa de aprovação na 1ª validação e mediana de tokens por tarefa concluída. Os dados saem do `build_panel.py` (`attention` no `panel-data`), com a mesma conta do `metrics`.
 - **Filtro "Impacto de" na Rastreabilidade (G-07).** Digite um requisito, uma tarefa ou um arquivo (aceita `\` e `./`) e a tela mostra só os requisitos ligados a ele, pelo escopo das tarefas e pelos arquivos que os relatórios mudaram (`files` em cada linha da RTM). O filtro sobrevive a recarregar.
