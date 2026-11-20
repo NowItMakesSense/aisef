@@ -25,6 +25,7 @@ SUITES = [
                             os.path.join(CORE, "authorization.schema.v0.1.json"), os.path.join(CORE, "approval-request.schema.v0.1.json")]),
     ("painel", [os.path.join(CORE, "test_panel.py"), os.path.join(work, "panel")]),
     ("painel: contraste AA dos tokens", [os.path.join(CORE, "test_panel_contrast.py")]),
+    ("gateway: corpus e contornos (F-02, S-01, S-02)", [os.path.join(HOOKS, "test_gateway_corpus.py")]),
     ("gateway + auditoria + Approval Center", [os.path.join(HOOKS, "test_gateway.py")]),
     ("geradores (briefs e caminho rapido)", [os.path.join(CORE, "test_generators.py")]),
     ("painel ao vivo (Agora, servidor local)", [os.path.join(CORE, "test_panel_live.py")]),
