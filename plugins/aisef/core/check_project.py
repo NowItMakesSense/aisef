@@ -21,6 +21,8 @@ Regras (codigo -> o que verifica):
     PLAN-*          plano de tarefas x contratos de tarefa (existencia, versao, feature, dependencias, papel)
     RTM-*           rastreabilidade: requisito x tarefa x criterio, nos dois sentidos
     FEAT-*          criterios de aceite da feature, referencias arquiteturais, estado x tarefas
+    TRIAGE-*        caminho da triagem (aisef_triage.py): TRIAGE-OVERRIDDEN-DOWN quando o caminho efetivo fica
+                    abaixo do calculado; TRIAGE-LEAN-SHAPE quando o lean nao e uma fatia com TDD
     TASK-*          referencias da tarefa (requisitos, criterios, ciclo)
     DEP-*           dependencias inexistentes, ciclos, entre features
     PAR-*           paralelismo: conflito de arquivos entre tarefas simultaneas
@@ -259,6 +261,20 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                 rep.err("REQ-HISTORY", where, "%s: historico %s incompativel com a versao %d" % (r["id"], hv, r["version"]))
         active = {i: r for i, r in reqs.items() if r["status"] == "active"}
         rule_ids = {b["id"] for b in f.get("business_rules", [])}
+
+        tri = f.get("triage")
+        if tri:  # C-01: caminho escolhido em codigo (aisef_triage.py)
+            order = ("quick", "lean", "full")
+            if order.index(tri["path"]) < order.index(tri["computed"]):
+                rep.err("TRIAGE-OVERRIDDEN-DOWN", where, "caminho %s abaixo do calculado (%s: %s)"
+                        % (tri["path"], tri["computed"], "; ".join(tri["reasons"])))
+            if tri["path"] == "lean":
+                plan = [tasks.get(i["task_id"]) for i in f["task_plan"]]
+                if len(plan) != 1 or any(t is not None and t.get("kind") != "slice" for t in plan):
+                    rep.err("TRIAGE-LEAN-SHAPE", where, "caminho lean tem exatamente uma fatia (kind slice); o plano tem %d tarefa(s)"
+                            % len(plan))
+                elif plan[0] is not None and not (plan[0].get("tests") or {}).get("tdd_required"):
+                    rep.err("TRIAGE-LEAN-SHAPE", where, "caminho lean exige TDD na fatia %s" % plan[0]["task_id"])
 
         plan_ids = []
         for item in f["task_plan"]:

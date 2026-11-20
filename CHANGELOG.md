@@ -12,6 +12,12 @@
   - projetos existentes não mudam: contratos já criados continuam;
   - `metrics` ganha a seção **Agentes**: tarefas, despachos e 1ª validação por executor, vereditos por revisor, execuções e tokens por papel, e os contratos ativos que nunca trabalharam;
   - novo `tools/agent_usage.py`: soma vários projetos e lista os papéis nunca usados (insumo da revisão do catálogo, C-05).
+- **Triagem em código e caminho enxuto (C-01, [ADR 0023](docs/adr/0023-triagem-em-codigo-e-caminho-enxuto.md)).** A escolha entre caminho rápido e ciclo completo saiu do modelo:
+  - novo `core/aisef_triage.py` devolve `quick`, `lean` ou `full` com os motivos. Força `full`: recurso sensível pela classificação do gateway, migração, auth, tipos `api`/`schema`/`security`/`ci`/`infra`/`dependency_breaking`/`public_contract`/`cross_module`, risco alto, mais de uma fatia, mais de 5 arquivos ou tamanho desconhecido;
+  - **caminho `lean`**: Feature Contract curto, uma fatia com TDD, sem blueprint, só o `code-reviewer`, validador independente e RTM completa. O brief leva a saída da triagem em `"triage"`, e o contrato a guarda;
+  - perfil no `config.json`: `solo` usa a triagem; `team` (padrão sem perfil) só sugere o lean; `regulated` desliga o caminho rápido;
+  - só se sobe de caminho: o `aisef_new` recusa descer, e o check ganha `TRIAGE-OVERRIDDEN-DOWN` e `TRIAGE-LEAN-SHAPE`;
+  - skills `aisef` e `aisef-feature` (nova fase 0, Triagem) e eval `triage-choice`. Testes em `core/test_triage.py` (54).
 - **Doctor que resolve o ambiente (C-02) e init só com log assinado (D5).**
   - novo `core/aisef_env.py`: quando falta `jsonschema` ou `cryptography`, procura outro Python que tenha as duas (PATH, sem o atalho da Microsoft Store, e `py -0p` no Windows) e diz o valor exato de `AISEF_PYTHON` para o `settings.json`; sem nenhum, mostra o `pip install` só do que falta, no Python dos hooks;
   - o doctor (SessionStart) usa esse diagnóstico;

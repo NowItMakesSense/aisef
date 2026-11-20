@@ -19,7 +19,7 @@ python -I CORE/aisef_project.py next --project .
 ```
 - Quando a conversa virar uma ideia de mudanca (o usuario descreve algo novo, pergunta "como fariamos X", ou pede uma spec), **nao comece a codar**: diga em uma linha "Estamos em <fase>. Proximo: <passo> (skill <nome>)" e siga para a **aisef-feature** (Grill, depois Spec, depois Fatias).
 - Se o usuario citar comandos do Matt Pocock (`/grill-me`, `/to-spec`, `/to-tickets`, `/implement-spec`, `/tdd`, `/code-review`), use o mapa `guide.matt_equivalents` do `next`. Explique que, no AISEF, o mesmo papel e feito pela fase correspondente, gravada em `.aisef/` com rastreabilidade.
-- Mudanca pequena de verdade (typo, texto, patch sem quebra) vai pelo caminho rapido, sem essas fases.
+- **A triagem escolhe o caminho em codigo** (`CORE/aisef_triage.py`, fase 0 da **aisef-feature**): `quick` (caminho rapido abaixo), `lean` (uma fatia com TDD, sem blueprint, so o code-reviewer, validador independente) ou `full` (o ciclo inteiro). O perfil do projeto (`config.json` -> `profile`: solo, team, regulated) pesa: no `team`, o lean so e sugerido. Diga ao usuario o caminho e o motivo em uma linha; ele pode subir, nunca descer.
 
 ## Regras que nunca mudam
 1. **Nao invente requisitos nem regras de negocio.** A origem de um requisito so pode ser `user_stated`, `investigated` ou `decision`.
@@ -85,7 +85,7 @@ Se `.aisef/config.json` tiver
 O `next` so sugere; quem executa e voce, e o gateway continua decidindo.
 
 ## Caminho rapido (mudancas pequenas)
-Use em vez do ciclo completo **somente se todas** forem verdade: nao muda comportamento observavel; nao toca API, schema de banco, seguranca, CI/CD, configuracao de producao nem dependencia com quebra; cabe em poucos arquivos (guia: ate ~50 linhas). Exemplos: typo, texto, renomear variavel local, patch de dependencia, ajuste de lint. Na duvida, nao e rapido.
+Use quando a triagem der `quick` (ela confere os criterios abaixo em codigo). Os criterios, **todos** verdadeiros: nao muda comportamento observavel; nao toca API, schema de banco, seguranca, CI/CD, configuracao de producao nem dependencia com quebra; cabe em poucos arquivos (guia: ate ~50 linhas). Exemplos: typo, texto, renomear variavel local, patch de dependencia, ajuste de lint. Na duvida, nao e rapido.
 ```
 python -I CORE/aisef_new.py quick --project . --title "<o que>" --why "<por que>" [--path <glob>] [--test-cmd "<comando>"]
 ```

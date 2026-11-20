@@ -26,3 +26,4 @@ Cada decisão tem data, contexto, o que foi decidido e as consequências. Para m
 | [0020](0020-catalogo-de-agentes-e-port-do-ecc.md) | Catálogo de agentes como fonte única e port da equipe do ECC | 2026-11-19 |
 | [0021](0021-deteccao-de-arquitetura-e-boas-praticas.md) | Detecção de arquitetura e boas práticas | 2026-11-19 |
 | [0022](0022-revisores-em-codigo-e-gates-do-ecc.md) | Revisores escolhidos em código e gates portados do ECC | 2026-11-19 |
+| [0023](0023-triagem-em-codigo-e-caminho-enxuto.md) | Triagem em código e caminho enxuto | 2026-11-20 |

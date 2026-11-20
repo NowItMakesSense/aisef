@@ -119,6 +119,20 @@
     },
 
     "constraints": { "type": "array", "items": { "type": "string" } },
+    "triage": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opcional (0.13, C-01). Caminho escolhido em codigo pelo aisef_triage.py: quick, lean ou full, com os motivos. computed e o que o calculo deu; path e o efetivo (perfil ou pedido do usuario). Descer abaixo do calculado e erro do check.",
+      "required": ["computed", "path", "profile", "reasons"],
+      "properties": {
+        "computed": { "enum": ["quick", "lean", "full"] },
+        "path": { "enum": ["quick", "lean", "full"] },
+        "profile": { "enum": ["solo", "team", "regulated"] },
+        "reasons": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 3 } },
+        "note": { "type": "string" },
+        "forced_by_user": { "type": "boolean" }
+      }
+    },
     "spec": {
       "type": "object",
       "additionalProperties": false,

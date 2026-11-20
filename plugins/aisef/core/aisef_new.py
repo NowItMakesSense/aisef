@@ -22,6 +22,8 @@ Brief de feature (so os campos marcados com * sao obrigatorios):
                  "test_cmd": "pytest -q", "risk": "low", "resources": ["repo_code"],
                  "complexity": "normal"}]}
     ("complexity": trivial | normal | complex, opcional; entra no Task Contract e alimenta o roteador aisef_route.py)
+    "triage": a saida de aisef_triage.py --json (opcional). Com path lean: exatamente uma fatia, TDD e so o
+    code-reviewer; o contrato guarda a triagem e o check acusa quem descer abaixo do calculado.
 """
 import argparse
 import json
@@ -148,8 +150,37 @@ def task_doc(t, feature_id, feature_version, env, now):
     return doc
 
 
+LEAN_REVIEWERS = ["code-reviewer"]
+
+
+def apply_triage(brief):
+    """Caminho da triagem (aisef_triage.py) no brief. lean: uma fatia com TDD e so o code-reviewer (C-01).
+    Recusa descer abaixo do calculado e recusa lean com forma de full."""
+    tri = brief.get("triage")
+    if not tri:
+        return None
+    order = ("quick", "lean", "full")
+    if tri.get("path") not in order or tri.get("computed") not in order:
+        raise SystemExit("triage invalida: use a saida de aisef_triage.py --json (computed, path, profile, reasons)")
+    if order.index(tri["path"]) < order.index(tri["computed"]):
+        raise SystemExit("triage: o calculo deu %s; descer para %s nao e permitido (so subir)" % (tri["computed"], tri["path"]))
+    if tri["path"] == "quick":
+        raise SystemExit("triage deu quick: use `aisef_new.py quick`, nao um Feature Contract")
+    if tri["path"] == "lean":
+        tasks = brief.get("tasks") or []
+        if len(tasks) != 1:
+            raise SystemExit("caminho lean tem exatamente uma fatia (o brief tem %d tarefa(s)); com mais, e full" % len(tasks))
+        t = tasks[0]
+        t.setdefault("kind", "slice")
+        if t["kind"] != "slice":
+            raise SystemExit("caminho lean: a tarefa e uma fatia vertical (kind slice), com TDD")
+        t.setdefault("review", {"reviewers": list(LEAN_REVIEWERS)})
+    return {k: tri[k] for k in ("computed", "path", "profile", "reasons", "note", "forced_by_user") if k in tri}
+
+
 def feature_docs(brief, project, now):
     need(brief, "id", "title", "objective", "problem", "requirements", "scope_in", "tasks")
+    triage = apply_triage(brief)
     cfg = ap.load_config(project)
     fid = brief["id"]
     reqs = []
@@ -208,6 +239,7 @@ def feature_docs(brief, project, now):
         "scope": {"included": brief["scope_in"], "excluded": brief.get("scope_out", [])},
         "architectural_decisions": [], "dependencies": {}, "constraints": [],
         **({"spec": {k: v for k, v in spec.items() if v not in (None, [], "")}} if spec else {}),
+        **({"triage": triage} if triage else {}),
         "risks": [{"id": "RISK-%s-%d" % (fid, i + 1), "description": r[0], "severity": r[1],
                    **({"mitigation": r[2]} if len(r) > 2 else {})} for i, r in enumerate(brief.get("risks", []))],
         "acceptance_criteria": criteria,
