@@ -9,6 +9,8 @@
   - nova seção `modules`: dependências entre módulos do monólito modular. Importar a aplicação de outro módulo é permitido; importar o domínio ou a infraestrutura de outro módulo é a violação `cross-module-internal`.
   
   Achados no deckloom.
+- Gateway: `git check-ignore`, `check-attr`, `ls-tree`, `rev-list`, `for-each-ref`, `cat-file`, `merge-base` e `name-rev` contam como Git só de leitura (citar `.aisef/keys/` num deles era negado), e também `git add`, `rm`, `clean` e `mv` com `-n`/`--dry-run`. Achado no deckloom.
+- `aisef_practices.py` sem subcomando mostra a previa (`list`, exit 0) em vez de sair com erro de argumento (exit 2).
 
 ## 0.12.0: equipe, boas práticas e arquitetura (trilha E, port do ECC; não lançado)
 - **Catálogo de agentes (E0, ADR 0020).** `core/agents/catalog.v0.1.json` é a fonte única dos papéis: tipo (`executor`, `fixer`, `evaluator`, `validator`, `advisor`, `orchestrator`), ativação (`always`, `manual`, `stack:`, `arch:`, `domain:`), nível padrão na Model Policy, ferramentas e teto do Agent Contract, e prompt em `core/agents/prompts/<id>.md`.
