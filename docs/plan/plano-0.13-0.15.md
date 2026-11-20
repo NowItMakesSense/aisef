@@ -63,7 +63,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
 ### 0.13: Custo, atrito, loop e gateway
 
 ```
-[ ] C-01: Triagem em código e caminho enxuto (lean)
+[x] C-01: Triagem em código e caminho enxuto (lean)
+    Status: feito (e9ecc23); o eval triage-choice existe, rodar fica para os testes
     Descrição:
       - Novo core/aisef_triage.py: recebe o pedido já estruturado pelo orquestrador
         (paths prováveis, tipos de mudança) e devolve quick | lean | full com os motivos.
@@ -97,7 +98,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
       continua passando no solo.
     Estimativa: 2 dias
 
-[ ] C-04: Uso dos agentes e catálogo em dois níveis
+[x] C-04: Uso dos agentes e catálogo em dois níveis
+    Status: feito (2b58904): núcleo de 13 subagentes; qa e doc-updater foram para o estendido
     Descrição:
       - O metrics ganha a seção "Agentes": despachos, tokens e taxa de aprovação por agente,
         a partir dos eventos delegation e do .aisef/runtime/usage.jsonl.
@@ -113,7 +115,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
       test_catalog cobre o tier; o metrics mostra a seção nos dados do demo.
     Estimativa: 2 dias
 
-[ ] G-06: Grafo de imports nativo (fallback do Graphify)
+[x] G-06: Grafo de imports nativo (fallback do Graphify)
+    Status: feito (d8e5d5f): 5.000 arquivos em ~1,2 s
     Descrição:
       - Extrair os regex de import do aisef_detect.py (linha 351) para core/aisef_imports.py,
         usado pelo detect e pelo grafo.
@@ -138,7 +141,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
       init-trigger confere); recusar um item não quebra os outros.
     Estimativa: 2 dias
 
-[ ] C-02: Doctor que resolve o ambiente
+[x] C-02: Doctor que resolve o ambiente
+    Status: feito (b91db17)
     Descrição: o doctor procura, entre os Pythons do PATH (e py -0p no Windows), um que tenha
       jsonschema e cryptography; se achar, diz o valor exato de AISEF_PYTHON; se não achar,
       mostra o pip install para o Python que o hook usa. Sem modo sem assinatura (D5).
