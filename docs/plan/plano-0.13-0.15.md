@@ -85,7 +85,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
       eval novo triage-choice (claude plugin eval) com pedidos de cada caminho.
     Estimativa: 3–4 dias
 
-[ ] L-04: Perfis de cerimônia (antecipada do plano anterior, ver D3)
+[x] L-04: Perfis de cerimônia (antecipada do plano anterior, ver D3)
+    Status: feito (b2a1d03): init com --profile (padrao solo); regulated com PROFILE-QUICK, PROFILE-TDD e PROFILE-BLUEPRINT
     Descrição: config.profile solo | team | regulated, implementado sobre a triagem da C-01,
       sem esperar o workflow declarativo (L-03):
         solo       triagem ligada; full só quando a triagem pedir;
@@ -132,7 +133,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
       test_context cobre os três modos.
     Estimativa: 2–3 dias
 
-[ ] C-03: Init com uma aprovação em lote
+[x] C-03: Init com uma aprovação em lote
+    Status: feito (2e2e531): aisef_setup.py; de quebra, o gateway passou a perguntar ao instalar boas praticas
     Descrição: o aisef-init junta num único pedido (approval-request do tipo setup_bundle)
       os agentes do núcleo e da stack, as regras nativas de segunda camada, as boas práticas
       do estilo detectado e o Graphify, com cada item desmarcável. Hoje cada um é um pedido.
@@ -150,14 +152,16 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
     Critério de aceite: test_doctor com PATH simulado (achou, não achou, vários Pythons).
     Estimativa: 1 dia
 
-[ ] F-01, F-03, F-06, F-07, F-08 (do plano anterior, sem mudança de escopo)
+[~] F-01, F-03, F-06, F-07, F-08 (do plano anterior, sem mudança de escopo)
+    Status: F-06 feito (b2a1d03); faltam F-01, F-03, F-07 e F-08
     F-01 MCP por escopo de ferramenta        2–3 dias
     F-03 Git por risco                        3–4 dias
     F-06 plugin_version e migrate             2–3 dias
     F-07 check --fix e rebase-req             3–4 dias
     F-08 Sandbox nativo recomendado           1 dia
 
-[ ] F-02 + S-01: Corpus do gateway e leitura por tokens
+[x] F-02 + S-01: Corpus do gateway e leitura por tokens
+    Status: feito: 138 casos, 48 contornos; achou git -c x=y push --force (so perguntava)
     Descrição:
       - F-02 como no plano anterior (corpus em hooks/corpus/*.jsonl, pelo menos 80 casos).
       - S-01: antes dos regex, o gateway divide o comando com shlex (modo posix no sh,
@@ -172,7 +176,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
       em ask ou deny; 0 regressões nos casos legítimos; bench_hooks com no máximo +20 ms.
     Estimativa: 4–5 dias
 
-[ ] S-02: A chave de assinatura fora do alcance dos agentes
+[x] S-02: A chave de assinatura fora do alcance dos agentes
+    Status: feito: Grep lia a chave e Edit reescrevia a ancora; agora tudo negado
     Descrição: conferir e garantir que o gateway nega Read, Grep, Glob e qualquer comando de
       shell que toque ~/.aisef/keys e ~/.aisef/anchors (inclusive por caminho relativo,
       variável de ambiente e link simbólico). Casos no corpus da S-01.
