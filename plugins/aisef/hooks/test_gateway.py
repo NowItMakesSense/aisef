@@ -61,6 +61,11 @@ case("redirecionar para o log de auditoria -> deny", "Bash", "deny", command="ec
 case("tee no log de auditoria -> deny", "Bash", "deny", command="cat a | tee .aisef/audit/log.jsonl")
 case("sed -i no log de auditoria -> deny", "Bash", "deny", command="sed -i 's/a/b/' .aisef/audit/log.jsonl")
 case("rm em .aisef/keys -> deny", "Bash", "deny", command="rm .aisef/keys/k.pem")
+case("git check-ignore em .aisef/keys -> allow", "Bash", "allow", command="git check-ignore -v .aisef/keys/x")
+case("cat .gitignore e git check-ignore em .aisef/keys -> allow", "Bash", "allow",
+     command="cat .aisef/.gitignore && git check-ignore .aisef/keys/x")
+case("git status com grep de .aisef/keys -> allow", "Bash", "allow", command="git status --porcelain -uall | grep .aisef/keys")
+case("git rm em .aisef/keys -> deny", "Bash", "deny", command="git rm .aisef/keys/x")
 case("git commit --no-verify -> deny", "Bash", "deny", command='git commit --no-verify -m "x"')
 case("git push --no-verify -> deny", "Bash", "deny", command="git push --no-verify origin main")
 case("git -c commit.gpgsign=false -> deny", "Bash", "deny", command='git -c commit.gpgsign=false commit -m "x"')

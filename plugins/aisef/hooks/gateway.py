@@ -228,7 +228,8 @@ def classify_bash(cmd, patterns, env):
     for m in GIT_RE.finditer(cmd):
         sub, rest = m.group(1).lower(), m.group(2)
         if sub in ("status", "log", "diff", "show", "blame", "fetch", "remote", "rev-parse", "ls-files", "describe",
-                   "shortlog", "grep") or (sub == "branch" and not re.search(r"\s-(?:d|D|-delete)\b", rest)):
+                   "shortlog", "grep", "check-ignore", "check-attr", "ls-tree", "rev-list", "for-each-ref", "cat-file",
+                   "merge-base", "name-rev") or (sub == "branch" and not re.search(r"\s-(?:d|D|-delete)\b", rest)):
             op = "status_log_diff"
         elif sub == "commit":
             op = "history_rewrite" if "--amend" in rest else "commit"
@@ -426,7 +427,8 @@ READONLY_CMDS = {"ls", "dir", "cat", "type", "head", "tail", "wc", "grep", "rg",
                  "more", "stat", "file", "which", "where", "get-content", "gc", "get-childitem", "gci", "select-string", "sls",
                  "get-location", "gl", "measure-object", "where-object", "select-object", "sort-object", "format-table",
                  "format-list", "get-item", "gi", "test-path", "sort", "uniq", "cut", "jq"}
-READONLY_GIT = {"status", "log", "diff", "show", "blame", "ls-files", "rev-parse", "describe", "shortlog", "grep", "remote"}
+READONLY_GIT = {"status", "log", "diff", "show", "blame", "ls-files", "rev-parse", "describe", "shortlog", "grep", "remote",
+                "check-ignore", "check-attr", "ls-tree", "rev-list", "for-each-ref", "cat-file", "merge-base", "name-rev"}
 READONLY_AISEF_RE = re.compile(r"(?:aisef_project\.py\s+(?:next|status|verify|waves|precheck|mode)\b(?![^;&|]*--set)|"
                                r"check_project\.py|design_check\.py\s+(?:scan|validate)|aisef_context\.py\s+(?:pack|graph)|"
                                r"aisef_learn\.py\s+list|aisef_route\.py)")

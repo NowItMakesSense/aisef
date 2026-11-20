@@ -9,6 +9,7 @@
   - nova seção `modules`: dependências entre módulos do monólito modular. Importar a aplicação de outro módulo é permitido; importar o domínio ou a infraestrutura de outro módulo é a violação `cross-module-internal`.
   
   Achados no deckloom.
+- Gateway: `git check-ignore`, `check-attr`, `ls-tree`, `rev-list`, `for-each-ref`, `cat-file`, `merge-base` e `name-rev` contam como Git só de leitura (citar `.aisef/keys/` num deles era negado). Achado no deckloom.
 - `aisef_practices.py` sem subcomando mostra a previa (`list`, exit 0) em vez de sair com erro de argumento (exit 2).
 
 ## 0.12.0: equipe, boas práticas e arquitetura (trilha E, port do ECC; não lançado)
