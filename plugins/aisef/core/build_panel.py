@@ -55,6 +55,8 @@ SOURCE_GLOBS = {
 
 
 # ----------------------------------------------------------------------------- leitura e validacao
+PROJECT_SCOPE = "(projeto)"  # pedido de nivel de projeto (architecture_decision sem feature)
+
 def load_sources(project, schemas_dir):
     try:
         import jsonschema
@@ -247,7 +249,7 @@ def derive(loaded, log, integrity):
         op = a.get("operation")
         return {
             "request_id": a["request_id"], "request_type": a["request_type"], "status": a["status"],
-            "title": a["title"], "summary": a["summary"], "feature_id": a["feature_id"],
+            "title": a["title"], "summary": a["summary"], "feature_id": a.get("feature_id") or PROJECT_SCOPE,
             "task_id": a.get("task_id"), "risk_level": a["risk"]["level"],
             "created_at": a["created_at"], "expires_at": a["expires_at"],
             "blocked_task_ids": list(a["blocks"]["blocked_task_ids"]),
@@ -275,7 +277,7 @@ def derive(loaded, log, integrity):
         discarded = [o for o in opts if chosen_id and o["option_id"] != chosen_id]
         rec = a.get("recommendation")
         decisions.append({
-            "request_id": a["request_id"], "feature_id": a["feature_id"], "title": a["title"],
+            "request_id": a["request_id"], "feature_id": a.get("feature_id") or PROJECT_SCOPE, "title": a["title"],
             "request_type": a["request_type"], "status": a["status"], "selected_option": selected,
             "discarded_alternatives": discarded,
             "recommendation": {"option_id": rec["option_id"], "rationale": rec["rationale"]} if rec else None,
@@ -303,7 +305,7 @@ def derive(loaded, log, integrity):
         if a["status"] != "pending":
             continue
         for r in a["risk"]["items"]:
-            risk_rows.append({"source": "approval", "source_id": a["request_id"], "feature_id": a["feature_id"],
+            risk_rows.append({"source": "approval", "source_id": a["request_id"], "feature_id": a.get("feature_id") or PROJECT_SCOPE,
                               "description": r["description"], "severity": r["severity"],
                               "mitigation": r.get("mitigation")})
     risk_rows.sort(key=lambda r: -SEVERITY[r["severity"]])

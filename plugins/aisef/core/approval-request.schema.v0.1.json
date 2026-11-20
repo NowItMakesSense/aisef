@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": [
     "schema_version", "request_id", "request_type", "status", "title", "summary",
-    "requested_by", "project_id", "feature_id", "created_at", "expires_at",
+    "requested_by", "project_id", "created_at", "expires_at",
     "presented", "risk", "blocks", "policy_version", "audit"
   ],
   "properties": {
@@ -35,7 +35,7 @@
     },
 
     "project_id": { "$ref": "#/$defs/id" },
-    "feature_id": { "$ref": "#/$defs/id" },
+    "feature_id": { "$ref": "#/$defs/id", "description": "Obrigatorio, exceto em architecture_decision de nivel de projeto (ex.: estilo de arquitetura adotado na discovery, antes de existir feature)." },
     "cycle": { "type": "integer", "minimum": 1 },
     "task_id": { "$ref": "#/$defs/id" },
 
@@ -266,6 +266,11 @@
   },
 
   "allOf": [
+    {
+      "$comment": "feature_id so pode faltar em architecture_decision (decisao de projeto).",
+      "if": { "properties": { "request_type": { "not": { "const": "architecture_decision" } } }, "required": ["request_type"] },
+      "then": { "required": ["feature_id"] }
+    },
     {
       "$comment": "Conteudo obrigatorio por tipo de pedido.",
       "if": { "properties": { "request_type": { "const": "plan_approval" } }, "required": ["request_type"] },

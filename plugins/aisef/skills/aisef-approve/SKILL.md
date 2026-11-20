@@ -17,7 +17,8 @@ python -I CORE/aisef_project.py request --project . --file <rascunho.json>
 Um pedido por decisao (`request_type`):
 - `plan_approval`, `scope_authorization`, `operation_approval`, `reinforced_approval`, `git_operation`, `architecture_decision`, `scope_change_decision`, `feature_acceptance`.
 - **Git: um pedido por operacao** (`git.operation`: `commit`, `push`, `pull_request`, `merge`, `release_publish`, `force_push`, `history_rewrite`, `branch_delete`). Aprovar commit nao cobre push, PR, merge nem release. Abrir PR (`gh pr create`) e `pull_request`, nao `operation_approval`.
-- `presented`: arquivos afetados, `diff_ref`, testes, impacto, rollback, justificativa, requisitos e evidencias. **Nunca valores de segredo**, so o nome do recurso.
+- `presented`: arquivos afetados, `diff_ref`, testes, impacto, rollback, justificativa, requisitos e evidencias. **Nunca valores de segredo**, so o nome do recurso. `evidence_ids` e obrigatorio, mas pode ser `[]`: quando houver, use ids que ja existem (o `event_id` do evento no log, ex.: o `E2` do `evidence_recorded` gravado pelo `detect`, ou o id de uma evidencia de relatorio). Nao invente id.
+- `feature_id`: obrigatorio, exceto em `architecture_decision` de **nivel de projeto** (ex.: adotar o estilo de arquitetura na discovery, antes de existir feature). Nesse caso, omita o campo.
 - `blocks`: o que fica bloqueado e se o trabalho independente continua.
 - `architecture_decision`: pelo menos 2 opcoes com impactos e riscos, mais recomendacao fundamentada.
 - `reinforced_approval` (producao, destrutivos em staging, force push, reescrita de historico, apagar branch): diff ou plano exato, impacto, rollback, justificativa, risco medio ou maior, validade de no maximo 30 minutos, uso unico, e a `operation` **exata** (o comando literal que sera executado).
