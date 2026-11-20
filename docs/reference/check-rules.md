@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**165 regras** em 31 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**166 regras** em 31 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -182,7 +182,7 @@ Atores, ordem e referências dos eventos.
 
 Opções do config.json.
 
-`CONFIG-GIT`, `CONFIG-GRAPHIFY`, `CONFIG-PROFILE`
+`CONFIG-GIT`, `CONFIG-GRAPHIFY`, `CONFIG-PARALLEL`, `CONFIG-PROFILE`
 
 ## Memória de projeto (`KNW-*`)
 

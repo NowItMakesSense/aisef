@@ -34,6 +34,7 @@ Regras (codigo -> o que verifica):
     CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
     CONFIG-GRAPHIFY opcoes do Graphify no config.json (enabled, backend none|ollama|auto, paths e graph relativos)
     CONFIG-PROFILE  perfil de cerimonia no config.json (solo, team, regulated)
+    CONFIG-PARALLEL modo de paralelismo no config.json (paths, worktree)
     TELEMETRY-CHAIN telemetria (.aisef/telemetry, F-05) com a cadeia de hash quebrada (aviso: nao e o log assinado)
     BUDGET-RAISED   Feature Contract com budget acima do limite do projeto (L-01: o contrato so baixa)
     PROFILE-*       perfil regulated: PROFILE-QUICK (sem caminho rapido), PROFILE-TDD (toda tarefa executora com TDD),

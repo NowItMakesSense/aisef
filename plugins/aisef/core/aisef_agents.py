@@ -46,7 +46,7 @@ def init(project, project_id, name=None, environment="dev", profile="solo"):
         "graphify": {"enabled": True, "backend": "none", "paths": ["docs", ".aisef"]},
         "profile": profile, "plugin_version": _plugin_version(), "audit": {"telemetry": "split"}})
     with open(os.path.join(root, ".gitignore"), "w", encoding="utf-8") as fh:
-        fh.write("# gerado pelo AISEF\n*.lock\n*.tmp\npanel/\nruntime/\n")
+        fh.write("# gerado pelo AISEF\n*.lock\n*.tmp\npanel/\nruntime/\nworktrees/\n")
     signed = False
     if aisef_base.HAS_CRYPTO:
         priv_path = private_key_path(project_id)

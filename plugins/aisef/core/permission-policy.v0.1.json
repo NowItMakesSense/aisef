@@ -59,13 +59,15 @@
     },
     "git_feature_branch": {
       "$note": "F-03 (ADR 0025): so o push de uma branch de feature (git.branch_prefix) para a branch de mesmo nome. Push para main, outra branch, --force, --tags ou --delete continuam como operacao Git.",
-      "push": { "dev": "approve_scope", "staging": "approve_scope", "prod": "approve_reinforced" }
+      "push": { "dev": "approve_scope", "staging": "approve_scope", "prod": "approve_reinforced" },
+      "merge": { "dev": "approve_scope", "staging": "approve_scope", "prod": "approve_reinforced" }
     },
     "git": {
       "status_log_diff": "allow",
       "commit":          "approve_operation",
       "commit_feature":  "allow",
       "local_staging":   "allow",
+      "worktree_local":  "allow",
       "push":            "approve_operation",
       "pull_request":    "approve_operation",
       "merge":           "approve_operation",
@@ -73,7 +75,7 @@
       "force_push":      "approve_reinforced",
       "history_rewrite": "approve_reinforced",
       "branch_delete":   "approve_reinforced",
-      "$rule": "Aprovar commit nao aprova push, pull request, merge ou release. Cada operacao exige sua propria aprovacao. F-03 (ADR 0025): commit_feature (commit numa branch de feature, em dev ou staging) e local_staging (add, switch, checkout -b) sao livres; o push da branch de feature e o recurso git_feature_branch."
+      "$rule": "Aprovar commit nao aprova push, pull request, merge ou release. Cada operacao exige sua propria aprovacao. F-03 (ADR 0025): commit_feature (commit numa branch de feature, em dev ou staging) e local_staging (add, switch, checkout -b) sao livres; o push da branch de feature e o recurso git_feature_branch. L-02: worktree_local (git worktree, git branch -d de slice/*, merge da feature na fatia e merge --abort) e livre; o merge da fatia na branch da feature e git_feature_branch/merge."
     }
   },
 

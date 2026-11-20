@@ -60,8 +60,33 @@ def _telemetry(cfg, project):
             "fica com ciclo de vida, decisoes, shell e o que o gateway negou ou perguntou)")
 
 
+def _worktrees_ignore(cfg, project):
+    """L-02: os worktrees das fatias ficam em .aisef/worktrees/, fora do Git."""
+    path = os.path.join(ap.aisef_dir(project), ".gitignore")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        text = ""
+    if "worktrees/" in text.split():
+        return None
+    return ".aisef/.gitignore: worktrees/ (L-02: worktrees das fatias fora do Git)"  # grava so no apply
+
+
+def _write_worktrees_ignore(project):
+    path = os.path.join(ap.aisef_dir(project), ".gitignore")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        text = ""
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(("" if not text or text.endswith("\n") else "\n") + "worktrees/\n")
+
+
 # (id, funcao). Ordem importa; plugin_version sempre por ultimo.
-MIGRATIONS = [("0.13-profile", _profile), ("0.14-telemetry", _telemetry), ("plugin-version", _plugin_version)]
+MIGRATIONS = [("0.13-profile", _profile), ("0.14-telemetry", _telemetry), ("0.14-worktrees-ignore", _worktrees_ignore),
+              ("plugin-version", _plugin_version)]
 
 
 def plan(project):
@@ -90,6 +115,8 @@ def apply(project):
     if not changes:
         return []
     ap.write_json(os.path.join(ap.aisef_dir(project), "config.json"), cfg)
+    if any(m == "0.14-worktrees-ignore" for m, _d in changes):
+        _write_worktrees_ignore(project)
     ap.append(project, {"event_type": "decision_recorded", "actor": {"type": "user", "id": "user"},
                         "summary": "migrate para %s: %s" % (cfg["plugin_version"], "; ".join(d for _m, d in changes)),
                         "data": {"migrations": [m for m, _d in changes]}})

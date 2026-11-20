@@ -93,6 +93,26 @@ def git_state(project):
     return {"current": cur.strip(), "branches": set((heads or "").split())}
 
 
+def slice_worktree_info(project, feature_id, task_id, gitcfg):
+    """L-02: onde a fatia roda e como criar o worktree (a partir da branch da feature, se ela existir)."""
+    path, branch = ap.slice_worktree(task_id), ap.slice_branch(feature_id, task_id)
+    exists = os.path.isdir(os.path.join(project, path))
+    base = (gitcfg.get("branch_prefix") or "feat/") + (feature_id or "").lower().replace("feat-", "")
+    return {"path": path, "branch": branch, "exists": exists, "feature_branch": base,
+            "create_cmd": None if exists else "git worktree add %s -b %s" % (path, branch),
+            "sync_cmd": "git -C %s merge %s" % (path, base)}
+
+
+def integrate_cmds(feature_id, task_id):
+    """L-02: integrar a fatia na branch da feature, rodado na raiz do projeto (na branch da feature)."""
+    path, branch = ap.slice_worktree(task_id), ap.slice_branch(feature_id, task_id)
+    return {"commands": ["git merge --no-ff %s -m \"integra %s\"" % (branch, task_id),
+                         "git worktree remove %s" % path, "git branch -d %s" % branch],
+            "on_conflict": ("git merge --abort e registre: aisef_project.py append --type task_rejected --task %s "
+                            "--data '{\"merge_conflict\": true}' --summary \"%s: conflito ao integrar\"; a nova tentativa "
+                            "traz a branch da feature para o worktree (sync_cmd) e resolve la" % (task_id, task_id))}
+
+
 def compute_next(project, feature=None, now=None, git_state=None):
     now = now or datetime.datetime.now(datetime.timezone.utc)
     cfg = ap.load_config(project)
@@ -110,6 +130,8 @@ def compute_next(project, feature=None, now=None, git_state=None):
 
     def in_scope(fid):
         return feature is None or fid == feature
+
+    worktree_mode = ap.parallel_mode(cfg) == "worktree"  # L-02
 
     # ---- estado efetivo a partir do log
     ev_state, rejections, started_at, last_started = {}, {}, {}, {}
@@ -314,7 +336,8 @@ def compute_next(project, feature=None, now=None, git_state=None):
         elif state[tid] == "validated":
             complete.append({"kind": "complete", "task_id": tid, "feature_id": t.get("feature_id"),
                              "append_cmd": _cmd("aisef_project.py", 'append --project . --type task_completed --feature %s '
-                                                '--task %s --summary "%s concluida e integrada"' % (t.get("feature_id"), tid, tid))})
+                                                '--task %s --summary "%s concluida e integrada"' % (t.get("feature_id"), tid, tid)),
+                             **({"integrate": integrate_cmds(t.get("feature_id"), tid)} if worktree_mode else {})})
         elif state[tid] == "in_progress":
             wait.append(tid)
 
@@ -331,7 +354,7 @@ def compute_next(project, feature=None, now=None, git_state=None):
         sim.append(c)
     deferred = []
     try:
-        waves = ap.compute_waves(sim, feature)
+        waves = ap.compute_waves(sim, feature, ignore_paths=worktree_mode)
         wave_error = None
     except ap.WaveError as e:
         waves, wave_error = {"waves": [], "deferred": []}, str(e)
@@ -341,7 +364,7 @@ def compute_next(project, feature=None, now=None, git_state=None):
     if waves["waves"]:
         for item in waves["waves"][0]["tasks"]:
             tid = item["task_id"]
-            clash = next((o["task_id"] for o in flying if ap.tasks_conflict(o, tasks[tid])), None)
+            clash = None if worktree_mode else next((o["task_id"] for o in flying if ap.tasks_conflict(o, tasks[tid])), None)
             if clash:
                 deferred.append({"task": tid, "reason": "conflito com %s, em andamento" % clash, "wave": 1})
                 continue
@@ -351,7 +374,8 @@ def compute_next(project, feature=None, now=None, git_state=None):
                 "task_id": tid, "feature_id": item["feature_id"], "title": item["title"], "role": item["role"],
                 "agent_id": item["agent_id"], "attempt": attempt, "paths": item["paths"],
                 "route_cmd": _cmd("aisef_route.py", "--project . --task %s%s" % (tid, " --attempt %d" % attempt if attempt > 1 else "")),
-                "pack_cmd": _cmd("aisef_context.py", "pack --project . --task %s" % tid)})
+                "pack_cmd": _cmd("aisef_context.py", "pack --project . --task %s" % tid),
+                **({"worktree": slice_worktree_info(project, item["feature_id"], tid, gitcfg)} if worktree_mode else {})})
     for tid, why in sorted(blocked.items()):
         if in_scope(tasks.get(tid, {}).get("feature_id")) and state.get(tid) not in DONE:
             deferred.append({"task": tid, "reason": why, "wave": None})

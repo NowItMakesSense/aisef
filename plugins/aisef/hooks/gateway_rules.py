@@ -226,6 +226,24 @@ def classify_bash(cmd, patterns, env, shell="sh", ctx=None):
     return list(dict.fromkeys(found))
 
 
+SLICE_REF_RE = re.compile(r"(?<![\w/.-])((?:slice|feat)/[\w./-]+)")
+
+
+def _slice_merge(ctx, rest):
+    """L-02: 'integrate' = fatia (slice/*) mergeada na branch de feature atual; 'local' = branch de feature mergeada
+    na fatia atual (dentro do worktree); None = outro merge (regra antiga)."""
+    branch = ctx.get("branch") or ""
+    refs = SLICE_REF_RE.findall(rest)
+    if not refs or not branch:
+        return None
+    feat = ctx["aisef_git"].is_feature_branch
+    if feat(branch, ctx["prefix"], ctx["base"]) and all(r.startswith("slice/") for r in refs):
+        return "integrate"
+    if branch.startswith("slice/") and all(feat(r, ctx["prefix"], ctx["base"]) for r in refs):
+        return "local"
+    return None
+
+
 def _classify_text(cmd, patterns, env, ctx=None):
     found = []
     for rx, label, category in patterns["cmd"]:
@@ -270,10 +288,23 @@ def _classify_text(cmd, patterns, env, ctx=None):
                     continue
         elif (sub == "add" or sub == "switch" or (sub == "checkout" and re.search(r"\s-[bB]\s", rest + " "))):
             op = "local_staging"  # F-03: preparar o commit e trocar/criar branch local nao muda o remoto
+        elif sub == "merge" and ctx and ("--abort" in rest or _slice_merge(ctx, rest) == "local"):
+            op = "worktree_local"  # L-02: abortar merge ou trazer a feature para a fatia, no worktree
+        elif sub == "merge" and ctx and _slice_merge(ctx, rest) == "integrate":
+            # L-02: integrar a fatia na branch da feature e coberto pelo mesmo escopo do push (git_feature_branch)
+            ctx["push_targets"].append(ctx["branch"])
+            found.append(("git_feature_branch", "merge", env, False, "git merge da fatia em %s" % ctx["branch"]))
+            continue
         elif sub in ("merge", "pull", "cherry-pick"):
             op = "merge"
         elif sub in ("rebase", "filter-branch", "filter-repo", "replace") or (sub == "reset" and "--hard" in rest):
             op = "history_rewrite"
+        elif sub == "worktree" and env in ("dev", "staging"):
+            op = "worktree_local"  # L-02: criar, listar e remover worktree local
+        elif sub == "branch" and re.search(r"\s-d\b", rest) and not re.search(r"\s(?:-D|--force|-f)\b", rest) and \
+                [n for n in rest.split() if not n.startswith("-")] and \
+                all(n.startswith("slice/") for n in rest.split() if not n.startswith("-")):
+            op = "worktree_local"  # L-02: apagar a branch da fatia ja integrada (-d so apaga o que foi mergeado)
         elif sub == "branch":
             op = "branch_delete"
         elif sub == "tag":

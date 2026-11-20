@@ -113,19 +113,38 @@ def apply_t1(policy, lvl, env):
     return stricter(lvl, "approve_reinforced")
 
 
-def git_context(cmd, cwd, config):
-    """F-03: branch atual e se ela e de feature. Com cd, pushd, git -C/--git-dir/--work-tree no comando, a branch
-    efetiva e desconhecida: vale a regra antiga (mais restritiva)."""
+MOVE_RE = re.compile(r"(?:^|[;&|(]\s*)(?:cd|pushd|Set-Location|sl|chdir)\s")
+GIT_C_RE = re.compile(r"""\bgit\s+-C\s+("[^"]+"|'[^']+'|[^\s;&|]+)""")
+
+
+def git_context(cmd, cwd, config, project=None):
+    """F-03: branch atual e se ela e de feature. L-02: um unico `cd <pasta> &&` no inicio ou um unico `git -C <pasta>`
+    apontando para dentro do projeto (ex.: o worktree da fatia) usa a branch dessa pasta. Qualquer outra mudanca de
+    pasta (varios cd, --git-dir, --work-tree, pasta fora do projeto) deixa a branch desconhecida: vale a regra antiga."""
     if "git" not in cmd:
         return None
     sys.path.insert(0, CORE) if CORE not in sys.path else None
     import aisef_git
     g = config.get("git") if isinstance(config.get("git"), dict) else {}
     prefix, base = g.get("branch_prefix") or "feat/", g.get("base_branch") or "main"
-    moved = bool(re.search(r"(?:^|[;&|(]\s*)(?:cd|pushd|Set-Location|sl|chdir)\s|\bgit\s+(?:[^;&|]*\s)?(?:-C\s|--git-dir|--work-tree)", cmd))
-    branch = None if moved else aisef_git.current_branch(cwd)
-    return {"branch": branch, "feature": aisef_git.is_feature_branch(branch, prefix, base), "prefix": prefix, "base": base,
-            "push_targets": [], "aisef_git": aisef_git}
+    m = CD_PREFIX_RE.match(cmd)
+    target = next((x for x in m.groups() if x), None) if m else None
+    rest = cmd[m.end():] if m else cmd
+    dash_c = {x.strip("\"'") for x in GIT_C_RE.findall(rest)}
+    moved = bool(MOVE_RE.search(rest) or re.search(r"--git-dir|--work-tree", cmd) or len(dash_c) > 1 or (target and dash_c))
+    target = target or (dash_c.pop() if len(dash_c) == 1 else None)
+    branch = None
+    if not moved:
+        where = cwd
+        if target:
+            where = os.path.realpath(os.path.join(cwd, target))
+            root = os.path.realpath(project or cwd)
+            if os.path.normcase(where) != os.path.normcase(root) and \
+                    not os.path.normcase(where).startswith(os.path.normcase(root) + os.sep):
+                where = None  # pasta fora do projeto: branch desconhecida
+        branch = aisef_git.current_branch(where) if where else None
+    feature = aisef_git.is_feature_branch(branch, prefix, base) or bool(branch and branch.startswith("slice/"))
+    return {"branch": branch, "feature": feature, "prefix": prefix, "base": base, "push_targets": [], "aisef_git": aisef_git}
 
 
 def is_pending_request(tool, path, inp):
@@ -263,7 +282,7 @@ def enforce_ceiling(contract, tool, items, env):
         if resource == "git":
             ops = ceiling.get("git_operations", ["status_log_diff"])
             # F-03: quem pode commitar pode preparar o commit e commitar na branch de feature (contratos antigos valem)
-            ok = action in ops or (action in ("commit_feature", "local_staging") and "commit" in ops)
+            ok = action in ops or (action in ("commit_feature", "local_staging", "worktree_local") and "commit" in ops)
             if not ok:
                 raise Decision("deny", "agente %s nao pode solicitar %s (teto Git: %s)" % (aid, label, ", ".join(ops)))
         elif resource == "git_feature_branch":
@@ -324,7 +343,7 @@ def decide(data, project, policy, patterns, config, now):
         if GIT_SKIP_HOOKS_RE.search(operation):
             raise Decision("deny", "pular hooks ou assinatura do Git (--no-verify, --no-gpg-sign) esconde problemas: "
                                    "corrija o que o hook acusa")
-        gctx = git_context(operation, cwd, config)
+        gctx = git_context(operation, cwd, config, project)
         items = classify_bash(operation, patterns, env, "ps" if tool == "PowerShell" else "sh", gctx)
         if inp.get("dangerouslyDisableSandbox") is True:  # F-08: sair do sandbox e decisao do usuario
             items.append(("unclassified", "execute", env, False, "comando pedindo para rodar fora do sandbox"))

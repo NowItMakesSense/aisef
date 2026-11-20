@@ -207,6 +207,26 @@ class Lock:
         os.remove(self.path)
 
 
+PARALLEL_MODES = ("paths", "worktree")  # L-02
+
+
+def parallel_mode(cfg):
+    """paths (padrao): fatias com arquivos em comum vao para ondas diferentes. worktree: cada fatia num worktree
+    proprio (.aisef/worktrees/<T>), entao arquivo em comum nao separa a onda; o conflito aparece no merge."""
+    m = ((cfg or {}).get("parallel") or {}).get("mode")
+    return m if m in PARALLEL_MODES else "paths"
+
+
+def slice_worktree(task_id):
+    return ".aisef/worktrees/%s" % task_id
+
+
+def slice_branch(feature_id, task_id):
+    fid = (feature_id or "").lower()
+    fid = fid[5:] if fid.startswith("feat-") else fid
+    return "slice/%s/%s" % (fid or "x", task_id)
+
+
 def _plugin_version():
     try:
         with open(os.path.join(os.path.dirname(HERE), ".claude-plugin", "plugin.json"), encoding="utf-8") as fh:

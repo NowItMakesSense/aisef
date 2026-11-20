@@ -1,6 +1,14 @@
 # Changelog
 
 ## 0.14.0 (em andamento): grafo do sistema e saúde do código ([plano](docs/plan/plano-0.13-0.15.md))
+- **Worktree por fatia (L-02).** Com `config.json` → `"parallel": {"mode": "worktree"}`, fatias com arquivos em comum entram na mesma onda, cada uma no seu worktree (`.aisef/worktrees/<T>`, branch `slice/<feature>/<T>`, fora do Git). O `next` e o `dispatch` trazem o comando de criar o worktree, e o prompt manda o agente trabalhar e commitar lá. O `complete` traz os comandos de integrar. No gateway:
+  - são livres (`worktree_local`): `git worktree`, `git branch -d` de `slice/*` já integrada, `git merge --abort` e trazer a branch da feature para a fatia;
+  - o merge da fatia na branch da feature é `git_feature_branch`/`merge`, coberto pelo mesmo escopo do push;
+  - commit na branch da fatia é livre;
+  - um único `cd` ou `git -C` para dentro do projeto passa a revelar a branch, em vez de deixá-la desconhecida;
+  - `-D` continua reforçado, e push da fatia continua pedindo.
+
+  Conflito no merge vira `task_rejected` com `merge_conflict`, e a nova tentativa reaproveita o worktree. O padrão continua `paths`. Regra nova `CONFIG-PARALLEL` e migração `0.14-worktrees-ignore`. Teste de ponta a ponta com git de verdade em `core/test_slices.py` (24): duas fatias no mesmo arquivo, a primeira integra e a segunda conflita.
 - **Worktree grava no `.aisef` principal (L-02a).** `aisef_git.aisef_root` lê o `.git` do worktree (`gitdir:` e `commondir`), sem subprocesso, e todos os hooks (gateway, auditoria, subagentes, doctor, nudge do grafo, modo Ask) e a CLI do `aisef_project` passam a usar o `.aisef` do repositório principal. Assim, um agente num worktree não divide o log assinado, as aprovações nem o runtime. Testado com `git worktree add` de verdade (`core/test_worktree.py`, 10).
 - **Custo de atenção como métrica (F-09, parte de cálculo).** O `metrics` ganha `interruptions`: quantas vezes o usuário precisou parar (pedidos ao Approval Center mais prompts do gateway), no total e por tarefa concluída. O card na tela Agora do painel fica para uma prévia do desenho, como manda a regra de interface.
 - **Log em camadas (F-05).** Novo `core/aisef_telemetry.py`. Com `config.json` → `audit.telemetry = "split"` (padrão dos projetos novos), as edições de arquivo e as chamadas MCP liberadas vão para `.aisef/telemetry/telemetry.jsonl`: cadeia de hash própria (alteração e remoção são detectadas), sem assinatura, fora do Git, com rotação e a mesma trava do log. O log assinado fica com o ciclo de vida, as decisões, os comandos de shell (de onde sai o consumo da aprovação reforçada) e tudo o que o gateway negou ou perguntou. Numa feature típica, `tool_used` passa a ser menos da metade do log assinado. Projetos antigos continuam em `signed` até o `migrate` (nova migração `0.14-telemetry`). O `metrics` conta a telemetria à parte, e o check ganha o aviso `TELEMETRY-CHAIN`. Testes em `core/test_telemetry.py` (16).

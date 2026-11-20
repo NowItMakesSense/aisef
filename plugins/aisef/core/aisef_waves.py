@@ -128,7 +128,7 @@ def _find_cycle(deps, start_ids):
     return None
 
 
-def compute_waves(tasks, feature=None):
+def compute_waves(tasks, feature=None, ignore_paths=False):
     """Planeja ondas de execucao em paralelo a partir de Task Contracts (dicts).
 
     Retorna {"waves": [{"wave": n, "tasks": [...]}], "deferred": [{"task", "reason", "wave"}],
@@ -203,7 +203,7 @@ def compute_waves(tasks, feature=None):
                 out["deferred"].append({"task": tid, "reason": "parallelizable=false: precisa de onda propria", "wave": n})
                 continue
             why = None
-            for o in picked:
+            for o in ([] if ignore_paths else picked):  # L-02: no modo worktree cada fatia tem a propria copia
                 why = tasks_conflict(by_id[o], t)
                 if why:
                     why = "conflito com %s: %s" % (o, why)

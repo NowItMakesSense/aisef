@@ -400,5 +400,8 @@ def rules_config(_cx):
         prof = (cfg if isinstance(cfg, dict) else {}).get("profile")
         if prof is not None and prof not in aisef_project.PROFILES:
             rep.err("CONFIG-PROFILE", "config.json", "profile %r invalido (use %s)" % (prof, ", ".join(aisef_project.PROFILES)))
+        par = ((cfg if isinstance(cfg, dict) else {}).get("parallel") or {}).get("mode")
+        if par is not None and par not in aisef_project.PARALLEL_MODES:  # L-02
+            rep.err("CONFIG-PARALLEL", "config.json", "parallel.mode %r invalido (use %s)" % (par, ", ".join(aisef_project.PARALLEL_MODES)))
 
     _cx.update({k: v for k, v in locals().items() if k != "_cx"})
