@@ -271,7 +271,8 @@ def classify_bash(cmd, patterns, env):
         found.append(("unclassified", "execute", env, False, "codigo ofuscado, baixado ou passado por pipe para um interpretador"))
     if TOOLING_INSTALL_RE.search(cmd):
         found.append(("unclassified", "execute", env, False, "instalacao de skill, plugin ou servidor MCP"))
-    if AISEF_AUDIT_RE.search(norm(cmd)) and not re.search(r"audit_chain\.py\s+verify|aisef_project\.py\s+(?:verify|status)", cmd):
+    if (AISEF_AUDIT_RE.search(norm(cmd)) and not re.search(r"audit_chain\.py\s+verify|aisef_project\.py\s+(?:verify|status)", cmd)
+            and not read_only_command(cmd)):  # ler o log (grep, cat, wc, jq...) e permitido; escrever nunca
         raise Decision("deny", "o log de auditoria e as chaves do AISEF so podem ser alterados pelo hook de auditoria")
     if BYPASS_SPAWN_RE.search(cmd):
         raise Decision("deny", "abrir outra sessao do Claude Code sem permissoes (bypass) escaparia do gateway e do prompt nativo")
