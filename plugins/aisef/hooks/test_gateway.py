@@ -334,6 +334,11 @@ case("subagente aprovando licao -> deny", "Bash", "deny", _agent="aisef:implemen
 case("migrate --apply -> ask (decisao do usuario)", "Bash", "ask", command="python -I core/aisef_migrate.py --project . --apply")
 case("migrate sem --apply (plano) nao pergunta", "Bash", "allow", command="python -I core/aisef_migrate.py --project .")
 case("subagente aplicando migrate -> deny", "Bash", "deny", _agent="aisef:implementer", command="python aisef_migrate.py --apply")
+case("setup --apply -> ask (uma decisao do usuario)", "Bash", "ask", command="python -I core/aisef_setup.py --project . --apply --only agents,docs")
+case("setup sem --apply (plano) nao pergunta", "Bash", "allow", command="python -I core/aisef_setup.py --project .")
+case("practices apply -> ask (escreve .claude/rules)", "Bash", "ask", command="python -I core/aisef_practices.py apply --project .")
+case("practices list nao pergunta", "Bash", "allow", command="python -I core/aisef_practices.py list --project .")
+case("aisef_project practices --apply -> ask", "Bash", "ask", command="python -I core/aisef_project.py practices --project . --apply")
 case("propor licoes segue livre", "Bash", "allow", command="python aisef_learn.py propose --project .")
 case("impeccable detect segue livre", "Bash", "allow", command="npx impeccable detect web/")
 

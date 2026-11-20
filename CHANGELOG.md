@@ -18,6 +18,8 @@
   - perfil no `config.json`: `solo` usa a triagem; `team` (padrão sem perfil) só sugere o lean; `regulated` desliga o caminho rápido;
   - só se sobe de caminho: o `aisef_new` recusa descer, e o check ganha `TRIAGE-OVERRIDDEN-DOWN` e `TRIAGE-LEAN-SHAPE`;
   - skills `aisef` e `aisef-feature` (nova fase 0, Triagem) e eval `triage-choice`. Testes em `core/test_triage.py` (54).
+- **Setup do init numa decisão só (C-03).** Novo `core/aisef_setup.py` junta o que eram quatro pedidos: ativar os agentes, as regras nativas de segunda camada, as boas práticas e a seção AISEF no `AGENTS.md` e no `CLAUDE.md` (acrescenta, nunca sobrescreve). A skill mostra o plano, o usuário desmarca o que não quer e um único `--apply` abre um prompt nativo e registra uma `decision_recorded`. Instalações de fora (Graphify, skills, plugins) continuam com o próprio prompt.
+- **Gateway: instalar boas práticas é decisão do usuário.** `aisef_practices.py apply` e `aisef_project.py practices --apply` gravavam em `.claude/rules/` sem perguntar, embora a documentação dissesse que perguntavam. Agora o gateway pergunta.
 - **`migrate` e `plugin_version` (F-06).** O init grava `plugin_version`; o doctor avisa quando o projeto está atrás do plugin. Novo `core/aisef_migrate.py`: migrações ordenadas e idempotentes, plano por padrão e `--apply` como decisão do usuário (o gateway pergunta), com evento `decision_recorded`. A primeira migração dá `profile: team` aos projetos antigos, preservando o comportamento.
 - **Perfis de cerimônia (L-04).** `config.json` → `profile`; o init pergunta, com `solo` como padrão (`--profile`):
   - `solo`: a triagem escolhe entre rápido, enxuto e completo;
