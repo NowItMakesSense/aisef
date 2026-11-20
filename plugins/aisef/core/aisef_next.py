@@ -43,11 +43,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python -I nao 
 from aisef_guide import *  # noqa: E402,F401,F403  (H-01)
 from aisef_guide import _cmd, _parse  # noqa: E402,F401
 
-EVENT_STATE = {"delegation": "in_progress", "task_started": "in_progress", "task_resumed": "in_progress",
-               "task_paused": "blocked", "task_executed": "executed", "task_validated": "validated",
-               "task_rejected": "rejected", "task_completed": "completed"}
-RANK = {"draft": 0, "ready": 1, "rejected": 1, "in_progress": 2, "executed": 3, "validated": 4, "completed": 5}
-DONE = ("completed", "cancelled")
+import aisef_workflow  # noqa: E402  (L-03: o fluxo vem de workflow.v0.1.json)
+EVENT_STATE = aisef_workflow.event_state()
+RANK = aisef_workflow.rank()
+DONE = aisef_workflow.terminal()
 DEFAULTS_PATH = os.path.join(HERE, "orchestration-defaults.v0.1.json")
 
 
@@ -63,7 +62,7 @@ def _load_dir(project, sub):
 
 
 def effective_state(contract_status, event_status):
-    if contract_status in ("cancelled", "blocked") or event_status is None:
+    if contract_status in aisef_workflow.contract_prevails() or event_status is None:
         return contract_status
     if contract_status == "completed":
         return "completed"

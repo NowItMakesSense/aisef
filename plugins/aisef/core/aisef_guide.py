@@ -38,20 +38,8 @@ MATT_EQUIVALENTS = {"/grill-me": "fase Grill (skill grilling)", "/grill-with-doc
                     "/implement-spec": "modo continuo (next) com o agente implementer + tdd",
                     "/implement": "modo continuo (next) com o agente implementer + tdd", "/tdd": "skill tdd no implementer",
                     "/code-review": "revisao da feature antes do aceite"}
-STEPS = {
-    "discovery": ["aisef-discovery: investigar o projeto e gravar .aisef/discovery.md (investigar antes de perguntar)",
-                  "aisef-tooling: sugerir skills, plugins e MCPs a partir do discovery"],
-    "specify": ["Grill: entrevistar o usuario ate fechar cada ramo da ideia (skill grilling; vocabulario no GLOSSARY.md com domain-modeling)",
-                "Spec: aisef-feature fase Spec (solucao, historias, decisoes, seams de teste confirmados com o usuario)",
-                "Fatias: aisef-feature fase Fatias (fatias verticais com blocking edges; aisef_new.py feature)",
-                "Aprovar o plano: aisef-approve"],
-    "approve_plan": ["aisef-approve: apresentar o plano pendente (requisitos, fatias, seams, riscos) e registrar a decisao do usuario"],
-    "execute": ["modo continuo: dispatch da onda (implementer com tdd, vermelho antes do verde) -> validador independente -> complete"],
-    "review": ["code-review da feature inteira (skill code-review: padroes + aderencia a spec), correcoes como novas tentativas",
-               "relatorio final planejado x executado e pedido feature_acceptance (aisef_project.py request)"],
-    "decide": ["aisef-approve: levar ao usuario as decisoes pendentes listadas em await_decision"],
-    "done": ["Nada pendente. Nova ideia? Comece pelo Grill (skill grilling) e siga Spec -> Fatias."],
-}
+import aisef_workflow  # noqa: E402  (L-03)
+STEPS = aisef_workflow.steps()  # passos de cada fase, do workflow.v0.1.json
 
 
 def tooling_review_due(cfg, approvals, log):

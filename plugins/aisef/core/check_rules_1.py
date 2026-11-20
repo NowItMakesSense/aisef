@@ -75,8 +75,10 @@ def rules_requisitos_e_features(_cx):
             profile = (json.load(fh) or {}).get("profile") or "team"
     except (OSError, ValueError, AttributeError):
         profile = "team"
-    if profile == "regulated" and MAINT_FEATURE in feats:
-        rep.err("PROFILE-QUICK", "feature " + MAINT_FEATURE, "perfil regulated nao tem caminho rapido: mova as tarefas para uma feature")
+    import aisef_workflow  # L-03: o que cada perfil exige vem do workflow.v0.1.json
+    overlay = aisef_workflow.profile(profile)
+    if not overlay["quick"] and MAINT_FEATURE in feats:
+        rep.err("PROFILE-QUICK", "feature " + MAINT_FEATURE, "perfil %s nao tem caminho rapido: mova as tarefas para uma feature" % profile)
     for fid, f in feats.items():
         where = "feature " + fid
         reqs = {}
@@ -90,16 +92,17 @@ def rules_requisitos_e_features(_cx):
         active = {i: r for i, r in reqs.items() if r["status"] == "active"}
         rule_ids = {b["id"] for b in f.get("business_rules", [])}
 
-        if profile == "regulated" and fid != MAINT_FEATURE:  # L-04: perfil regulated
+        if (overlay["tdd_all_executors"] or overlay["blueprint_high_risk"]) and fid != MAINT_FEATURE:  # L-04
             ftasks = [tasks.get(i["task_id"]) for i in f["task_plan"]]
             ftasks = [t for t in ftasks if t is not None]
             for t in ftasks:
-                if t["assigned_agent"].get("role") in aisef_catalog.validatable_roles() and                         not (t.get("tests") or {}).get("tdd_required"):
-                    rep.err("PROFILE-TDD", where, "perfil regulated: %s sem TDD (tests.tdd_required)" % t["task_id"])
+                if overlay["tdd_all_executors"] and t["assigned_agent"].get("role") in aisef_catalog.validatable_roles() \
+                        and not (t.get("tests") or {}).get("tdd_required"):
+                    rep.err("PROFILE-TDD", where, "perfil %s: %s sem TDD (tests.tdd_required)" % (profile, t["task_id"]))
             high = [t["task_id"] for t in ftasks if (t.get("risk") or {}).get("level") in ("high", "critical")]
-            if high and not any(b[1]["feature_id"] == fid for b in by["blueprints"].values()):
-                rep.err("PROFILE-BLUEPRINT", where, "perfil regulated: risco alto em %s exige Engineering Blueprint"
-                        % ", ".join(high))
+            if overlay["blueprint_high_risk"] and high and not any(b[1]["feature_id"] == fid for b in by["blueprints"].values()):
+                rep.err("PROFILE-BLUEPRINT", where, "perfil %s: risco alto em %s exige Engineering Blueprint"
+                        % (profile, ", ".join(high)))
         try:
             import aisef_budget
             with open(os.path.join(project, "config.json"), encoding="utf-8") as fh:
