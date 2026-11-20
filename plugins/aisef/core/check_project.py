@@ -831,7 +831,7 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
     # ------------------------------------------------------------------ aprovacoes e autorizacoes
     for rid, a in approvals.items():
         where = "aprovacao " + rid
-        if a["feature_id"] not in feats:
+        if a.get("feature_id") and a["feature_id"] not in feats:
             rep.err("APPROVAL-FEATURE", where, "feature %s nao existe" % a["feature_id"])
         if a.get("task_id") and a["task_id"] not in tasks:
             rep.err("APPROVAL-TASK", where, "tarefa %s nao existe" % a["task_id"])
@@ -844,7 +844,7 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
         else:
             if req["event_type"] != "approval_requested":
                 rep.err("APPROVAL-EVENT-TYPE", where, "pedido aponta para evento '%s', esperado approval_requested" % req["event_type"])
-            if req.get("feature_id") and req["feature_id"] != a["feature_id"]:
+            if req.get("feature_id") and req["feature_id"] != a.get("feature_id"):
                 rep.err("APPROVAL-EVENT-FEATURE", where, "evento do pedido e de outra feature")
         if a["status"] != "pending" and "decided_event_ref" in a["audit"]:
             dec = event_from_ref(a["audit"]["decided_event_ref"])
@@ -867,7 +867,7 @@ def check(project, schemas_dir=HERE, policy_path=None, defaults_path=None, now=N
                 if au.get("kind") != "scope" or au["environment"] != sp["environment"] or set(au["resources"]) != set(sp["resources"]) \
                         or set(au["operations"]) != set(sp["operations"]) or au["validity"]["valid_until"] != sp["valid_until"]:
                     rep.err("APPROVAL-AUTH-MISMATCH", where, "autorizacao %s difere do escopo que o usuario aprovou" % rr["id"])
-                if au["feature_id"] != a["feature_id"]:
+                if au["feature_id"] != a.get("feature_id"):
                     rep.err("APPROVAL-AUTH-MISMATCH", where, "autorizacao gerada e de outra feature")
 
     for aid, au in auths.items():

@@ -83,13 +83,32 @@
         "additionalProperties": false,
         "required": ["rule", "file", "line", "import", "from_layer", "to_layer", "severity"],
         "properties": {
-          "rule": { "enum": ["inner-imports-outer", "domain-imports-framework"] },
+          "rule": { "enum": ["inner-imports-outer", "domain-imports-framework", "cross-module-internal"] },
           "file": { "type": "string" },
           "line": { "type": "integer", "minimum": 1 },
           "import": { "type": "string" },
           "from_layer": { "enum": ["domain", "application", "infrastructure", "presentation"] },
-          "to_layer": { "enum": ["application", "infrastructure", "presentation", "framework"] },
+          "to_layer": { "enum": ["domain", "application", "infrastructure", "presentation", "framework"] },
           "severity": { "enum": ["high", "medium"] }
+        }
+      }
+    },
+    "modules": {
+      "type": "object", "additionalProperties": false, "required": ["roots", "files_scanned", "dependencies"],
+      "description": "Monolito modular: modulos e dependencias entre eles. Aplicacao/API de outro modulo e permitido; dominio ou infraestrutura de outro modulo e violacao (cross-module-internal).",
+      "properties": {
+        "roots": { "type": "array", "items": { "type": "string" } },
+        "files_scanned": { "type": "integer", "minimum": 0 },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["from_module", "to_module", "to_layer", "allowed", "file", "line"],
+            "properties": {
+              "from_module": { "type": "string" }, "to_module": { "type": "string" }, "to_layer": { "type": "string" },
+              "allowed": { "type": "boolean" }, "file": { "type": "string" }, "line": { "type": "integer", "minimum": 1 }
+            }
+          }
         }
       }
     },

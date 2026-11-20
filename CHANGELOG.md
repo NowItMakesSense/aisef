@@ -3,6 +3,12 @@
 ## Não lançado (correções)
 - **Gateway: leitura do log de auditoria pelo shell.** Um comando só de leitura que cita `.aisef/audit/` ou `.aisef/keys/` (por exemplo `grep ... .aisef/audit/log.jsonl | sort | uniq -c`) era negado como se fosse escrita. Agora passa, com o mesmo critério de leitura do modo Ask: nenhum redirecionamento e só comandos de leitura. Escrever (`>>`, `tee`, `sed -i`, `rm`...) continua negado. Achado no teste do deckloom.
 - `aisef-init`: mostra o comando real do aisef-check (`check_project.py` com `--policy` e `--defaults`).
+- **Decisão de arquitetura de nível de projeto.** `architecture_decision` aceita pedido sem `feature_id`, como na adoção do estilo de arquitetura durante a discovery, antes de existir feature. Os outros tipos de pedido continuam exigindo feature. O check e o painel tratam a ausência; no painel, o pedido aparece como "(projeto)". As skills `aisef-approve` e `aisef-discovery` explicam `feature_id` e `presented.evidence_ids` (pode ser `[]`; use o id do evento do `detect`). Bloqueava o T2 no deckloom.
+- **Detecção:**
+  - serviço com menos de 5 arquivos de código (por exemplo, só um `Program.cs` de health check) não sustenta "microsserviços" com confiança alta;
+  - nova seção `modules`: dependências entre módulos do monólito modular. Importar a aplicação de outro módulo é permitido; importar o domínio ou a infraestrutura de outro módulo é a violação `cross-module-internal`.
+  
+  Achados no deckloom.
 
 ## 0.12.0: equipe, boas práticas e arquitetura (trilha E, port do ECC; não lançado)
 - **Catálogo de agentes (E0, ADR 0020).** `core/agents/catalog.v0.1.json` é a fonte única dos papéis: tipo (`executor`, `fixer`, `evaluator`, `validator`, `advisor`, `orchestrator`), ativação (`always`, `manual`, `stack:`, `arch:`, `domain:`), nível padrão na Model Policy, ferramentas e teto do Agent Contract, e prompt em `core/agents/prompts/<id>.md`.

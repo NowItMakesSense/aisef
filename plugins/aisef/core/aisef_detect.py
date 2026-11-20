@@ -260,6 +260,42 @@ def children(dirs, parent):
     return sorted(d for d in dirs if d.startswith(parent + "/") and d.count("/") == parent.count("/") + 1)
 
 
+def module_roots(dirs):
+    """Pastas de modulo do monolito modular (filhas de modules/, contexts/...), ou [] se nao houver."""
+    parents = sorted((d for d in dirs if d.rsplit("/", 1)[-1].lower() in
+                      ("modules", "contexts", "boundedcontexts", "bounded_contexts", "bounded-contexts")), key=len)
+    for parent in parents:
+        kids = children(dirs, parent)
+        if len(kids) >= 2:
+            return kids
+    return []
+
+
+def module_dependencies(project, files, modules):
+    """Imports de um modulo para outro. Camada de aplicacao/API do outro modulo e a API publica dele (permitido);
+    dominio ou infraestrutura do outro modulo e violacao da fronteira. So nomes que aparecem como segmento do import."""
+    names = {m: m.rsplit("/", 1)[-1].lower() for m in modules}
+    out, scanned = [], 0
+    for m in modules:
+        own = [f for f in files if f.startswith(m + "/") and os.path.splitext(f)[1] in IMPORT_RES and not TEST_RE.search(f)]
+        for rel in own[:MAX_IMPORT_FILES]:
+            text = read_text(project, rel)
+            scanned += 1
+            for rx in IMPORT_RES[os.path.splitext(rel)[1]]:
+                for mt in rx.finditer(text):
+                    imp = mt.group(1)
+                    segs = set(segments(import_target(rel, imp)))
+                    for other, name in names.items():
+                        if other == m or name not in segs:
+                            continue
+                        to_layer = layer_of(import_target(rel, imp))
+                        out.append({"from_module": names[m], "to_module": name, "file": rel,
+                                    "line": text.count("\n", 0, mt.start()) + 1, "import": imp,
+                                    "to_layer": to_layer or "unknown",
+                                    "allowed": to_layer not in ("domain", "infrastructure")})
+    return out, scanned
+
+
 def modular_monolith(dirs):
     parents = sorted((d for d in dirs if d.rsplit("/", 1)[-1].lower() in
                       ("modules", "contexts", "boundedcontexts", "bounded_contexts", "bounded-contexts")), key=len)
@@ -272,6 +308,9 @@ def modular_monolith(dirs):
             return {"id": "modular-monolith", "name": "Monolito modular", "confidence": round(min(conf, 1.0), 2),
                     "evidence": ["%d modulos em %s/" % (len(kids), parent)] + ["modulo com camadas: " + k for k in layered[:3]]}
     return None
+
+
+MIN_SERVICE_FILES = 5
 
 
 def microservices(files, dirs):
@@ -294,7 +333,16 @@ def microservices(files, dirs):
             compose = [f for f in files if fnmatch.fnmatch(f.rsplit("/", 1)[-1], "docker-compose*.y*ml") or f.rsplit("/", 1)[-1] in ("compose.yaml", "compose.yml")]
             if compose:
                 ev.append("arquivo " + compose[0])
-            return {"id": "microservices", "name": "Microsservicos", "confidence": round(min(1.0, 0.5 + 0.1 * len(own)), 2), "evidence": ev}
+            # servico com pouco codigo (so um Program.cs ou health check) e esqueleto, nao microsservico de fato
+            size = {k: sum(1 for f in files if f.startswith(k + "/") and os.path.splitext(f)[1] in SOURCE_EXT and not TEST_RE.search(f))
+                    for k in own}
+            real = [k for k in own if size[k] >= MIN_SERVICE_FILES]
+            thin = [k for k in own if size[k] < MIN_SERVICE_FILES]
+            if thin:
+                ev.append("%d servico(s) com menos de %d arquivos de codigo (esqueleto?): %s"
+                          % (len(thin), MIN_SERVICE_FILES, ", ".join(k.rsplit("/", 1)[-1] for k in thin[:4])))
+            conf = 0.5 + 0.1 * len(real) if len(real) >= 2 else 0.35 + 0.05 * len(real)
+            return {"id": "microservices", "name": "Microsservicos", "confidence": round(min(1.0, conf), 2), "evidence": ev}
     return None
 
 
@@ -430,6 +478,13 @@ def detect(project):
     stacks, ext_count = detect_stacks(project, files, deps)
     styles = detect_styles(project, files, dirs, deps)
     violations, scanned = dependency_violations(project, files, styles)
+    modules = module_roots(dirs)
+    mod_deps, mod_scanned = module_dependencies(project, files, modules) if modules else ([], 0)
+    for d in mod_deps:
+        if not d["allowed"]:
+            violations.append({"rule": "cross-module-internal", "file": d["file"], "line": d["line"], "import": d["import"],
+                               "from_layer": layer_of(os.path.dirname(d["file"])) or "application",
+                               "to_layer": d["to_layer"], "severity": "high"})
     stack_ids = [s["id"] for s in stacks]
     layers = {}
     for d in sorted(dirs):
@@ -461,6 +516,9 @@ def detect(project):
         "styles": styles,
         "layers": layers,
         "violations": violations[:200],
+        "modules": {"roots": modules, "files_scanned": mod_scanned,
+                    "dependencies": [{k: d[k] for k in ("from_module", "to_module", "to_layer", "allowed", "file", "line")}
+                                     for d in mod_deps][:200]},
         "domains": domains,
         "practices": practices,
         "recommendations": recommend(stacks, styles, violations, files, ext_count),
@@ -493,6 +551,13 @@ def summary(doc):
     if doc["violations"]:
         out.append("Violacoes da regra de dependencia: %d" % len(doc["violations"]))
         out += ["  - %s:%d %s -> %s (%s)" % (v["file"], v["line"], v["from_layer"], v["to_layer"], v["import"]) for v in doc["violations"][:5]]
+    mods = doc.get("modules") or {}
+    if mods.get("roots"):
+        deps_ = mods["dependencies"]
+        pairs = sorted({"%s -> %s (%s%s)" % (d["from_module"], d["to_module"], d["to_layer"], "" if d["allowed"] else ", VIOLACAO")
+                        for d in deps_})
+        out.append("Fronteiras entre modulos: %d modulo(s), %d arquivo(s) analisados, %d dependencia(s) entre modulos%s"
+                   % (len(mods["roots"]), mods["files_scanned"], len(deps_), (": " + "; ".join(pairs[:6])) if pairs else ""))
     if doc["recommendations"]:
         out.append("Recomendacoes (decisao do usuario):")
         out += ["  - %s: %s. %s" % (r["id"], r["title"], r["why"]) for r in doc["recommendations"]]

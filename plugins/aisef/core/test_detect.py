@@ -149,7 +149,8 @@ check("modular: using de infraestrutura no dominio e violacao",
       any(v["file"].endswith("Pedido.cs") and v["to_layer"] == "infrastructure" for v in d["violations"]), d["violations"])
 
 # ---------------------------------------------------------------- microsservicos
-ms = repo("micro", {
+ms = repo("micro", dict({"services/orders/h%d.go" % i: "package main\n" for i in range(5)},
+                       **{"services/billing/m%d.py" % i: "" for i in range(5)}, **{
     "docker-compose.yml": "services: {}\n",
     "services/orders/go.mod": "module orders\n",
     "services/orders/main.go": "package main\n",
@@ -157,7 +158,7 @@ ms = repo("micro", {
     "services/billing/app.py": "",
     "services/billing/consumers/invoice.py": "",
     "services/billing/producers/paid.py": "",
-})
+}))
 d = det.detect(ms)
 s = styles(d)
 check("micro: microsservicos", s.get("microservices", 0) >= 0.5, s)
@@ -183,7 +184,7 @@ check("pastas de dependencia ignoradas", not any("node_modules" in v["file"] for
       d["scan"])
 
 # ---------------------------------------------------------------- regressao da avaliacao A-03 (repositorios reais)
-real = repo("a03", {
+real = repo("a03", dict({"src/%s.API/F%d.cs" % (n, i): "namespace X;\n" for n in ("Basket", "Catalog") for i in range(5)}, **{
     "Loja.sln": "",
     "src/Ordering.API/Ordering.API.csproj": "<Project/>",
     "src/Ordering.API/Application/Commands/Criar.cs": "using Loja.Ordering.API.Extensions;\n",
@@ -196,7 +197,7 @@ real = repo("a03", {
     "web/src/user/user.repository.port.ts": "export interface P {}\n",
     "web/src/user/user.http.adapter.ts": "export class A {}\n",
     "web/src/user/domain/user.entity.ts": "export class U {}\n",
-})
+}))
 d = det.detect(real)
 s = styles(d)
 check("A-03: pastas irmas *.API com manifest proprio sao microsservicos", s.get("microservices", 0) >= 0.5, s)
@@ -262,6 +263,68 @@ got = ap.adopt_styles(clean, ["clean", "ddd-tactical"], "REQ-777")
 with open(path, encoding="utf-8") as fh:
     check("adocao grava o estilo aprovado", json.load(fh)["approved"]["styles"] == ["clean", "ddd-tactical"])
 check("estilo adotado ativa papeis por arquitetura", ap.project_traits(clean)[1] == ("clean", "ddd-tactical"))
+
+# ---------------------------------------------------------------- achados do deckloom: servicos magros e fronteira entre modulos
+dk = repo("dk", dict({
+    "Loja.sln": "", "docker-compose.yml": "services: {}\n",
+    "src/Services/A.Service/A.Service.csproj": "<Project/>", "src/Services/A.Service/Program.cs": "x",
+    "src/Services/B.Service/B.Service.csproj": "<Project/>", "src/Services/B.Service/Program.cs": "x",
+    "src/Modules/Contas/Loja.Contas.Application/IPorta.cs": "namespace X;\n",
+    "src/Modules/Contas/Loja.Contas.Domain/Item.cs": "namespace X;\n",
+    "src/Modules/Sugestao/Loja.Sugestao.Infrastructure/Adapter.cs":
+        "using Loja.Contas.Application;\nusing Loja.Contas.Domain;\nnamespace X;\n",
+}))
+d = det.detect(dk)
+s_ = styles(d)
+check("deckloom: servicos so com Program.cs nao sao microsservicos (< 0.5)", s_.get("microservices", 0) < 0.5, s_)
+mods = d["modules"]
+check("deckloom: modulos analisados e listados", len(mods["roots"]) == 2 and mods["files_scanned"] >= 1, mods)
+dep = {(x["to_layer"], x["allowed"]) for x in mods["dependencies"]}
+check("deckloom: aplicacao de outro modulo e permitida", ("application", True) in dep, dep)
+check("deckloom: dominio de outro modulo e violacao cross-module-internal",
+      ("domain", False) in dep and any(v["rule"] == "cross-module-internal" for v in d["violations"]), d["violations"])
+check("deckloom: schema valido com modules", valid(d) == [], valid(d))
+
+# ---------------------------------------------------------------- T2 real: decisao de PROJETO (sem feature) -> adopt -> check
+import datetime  # noqa: E402
+proj2 = repo("t2", {"pyproject.toml": "[project]\nname='x'\n", "src/x/domain/a.py": "", "src/x/application/b.py": "",
+                    "src/x/infrastructure/c.py": "", "src/x/presentation/d.py": ""})
+ap.init(proj2, "PRJ-T2")
+ap.main(["detect", "--project", proj2])
+cfg = json.load(open(os.path.join(proj2, ".aisef", "config.json"), encoding="utf-8"))
+now = datetime.datetime.now(datetime.timezone.utc).astimezone()
+ev_id = next(json.loads(l)["event_id"] for l in open(os.path.join(proj2, ".aisef", "audit", "log.jsonl"), encoding="utf-8")
+             if json.loads(l)["event_type"] == "evidence_recorded")
+draft = {"schema_version": "0.1.0", "request_id": "APR-001", "request_type": "architecture_decision", "status": "pending",
+         "title": "Adotar o estilo de arquitetura do projeto", "summary": "Adotar Clean Architecture como estilo do projeto inteiro.",
+         "requested_by": {"type": "orchestrator", "id": "orchestrator"}, "project_id": cfg["project_id"],
+         "created_at": now.isoformat(timespec="seconds"),
+         "expires_at": (now + datetime.timedelta(days=7)).isoformat(timespec="seconds"),
+         "presented": {"impact": "O architecture-reviewer passa a cobrar a regra de dependencia", "evidence_ids": [ev_id]},
+         "risk": {"level": "low", "items": []}, "blocks": {"blocked_task_ids": [], "independent_work_continues": True},
+         "policy_version": "0.1.0", "audit": {},
+         "options": [{"option_id": "OPT-A", "label": "Clean", "description": "Adotar Clean Architecture",
+                      "impacts": ["revisao de arquitetura"], "risks": ["cerimonia em CRUD"]},
+                     {"option_id": "OPT-B", "label": "Nao adotar", "description": "Seguir sem estilo declarado",
+                      "impacts": ["nenhum"], "risks": ["erosao das camadas"]}],
+         "recommendation": {"option_id": "OPT-A", "rationale": "As camadas ja existem no codigo; formalizar evita erosao."}}
+dpath = os.path.join(WORK, "draft-apr.json")
+json.dump(draft, open(dpath, "w", encoding="utf-8"))
+ap.request(proj2, dpath)
+check("T2: architecture_decision de projeto sem feature_id e aceito pelo request",
+      os.path.exists(os.path.join(proj2, ".aisef", "approvals", "APR-001.json")))
+bad = dict(draft, request_id="APR-002", request_type="scope_change_decision")
+json.dump(bad, open(dpath, "w", encoding="utf-8"))
+try:
+    ap.request(proj2, dpath)
+    check("T2: outro tipo sem feature_id continua recusado", False)
+except SystemExit:
+    check("T2: outro tipo sem feature_id continua recusado", True)
+ap.decide(proj2, "APR-001", "select_option", option="OPT-A")
+ap.adopt_styles(proj2, ["clean"], "APR-001")
+codes = cp.check(proj2).codes()
+check("T2: estilo adotado sem feature, check sem APPROVAL-FEATURE nem ARCH-UNAPPROVED",
+      not ({"APPROVAL-FEATURE", "ARCH-UNAPPROVED", "SCHEMA", "ARCH-PENDING"} & set(codes)), sorted(codes))
 
 shutil.rmtree(WORK, ignore_errors=True)
 print("%d testes, %d falhas" % (total, fails))
