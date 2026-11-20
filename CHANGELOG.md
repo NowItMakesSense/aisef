@@ -1,5 +1,9 @@
 # Changelog
 
+## Não lançado (correções)
+- **Gateway: leitura do log de auditoria pelo shell.** Um comando só de leitura que cita `.aisef/audit/` ou `.aisef/keys/` (por exemplo `grep ... .aisef/audit/log.jsonl | sort | uniq -c`) era negado como se fosse escrita. Agora passa, com o mesmo critério de leitura do modo Ask: nenhum redirecionamento e só comandos de leitura. Escrever (`>>`, `tee`, `sed -i`, `rm`...) continua negado. Achado no teste do deckloom.
+- `aisef-init`: mostra o comando real do aisef-check (`check_project.py` com `--policy` e `--defaults`).
+
 ## 0.12.0: equipe, boas práticas e arquitetura (trilha E, port do ECC; não lançado)
 - **Catálogo de agentes (E0, ADR 0020).** `core/agents/catalog.v0.1.json` é a fonte única dos papéis: tipo (`executor`, `fixer`, `evaluator`, `validator`, `advisor`, `orchestrator`), ativação (`always`, `manual`, `stack:`, `arch:`, `domain:`), nível padrão na Model Policy, ferramentas e teto do Agent Contract, e prompt em `core/agents/prompts/<id>.md`.
   - `aisef_project`, `aisef_new`, `aisef_route`, `check_project` e `tools/gen_agents.py` leem do catálogo; `role_defaults` saiu da `model-policy.v0.1.json`.

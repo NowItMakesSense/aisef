@@ -8,7 +8,7 @@ description: 'Inicia o AISEF num projeto, novo ou ja existente. Cria .aisef/ (co
 CORE = `<skill-dir>/../../core`. Python = `$AISEF_PYTHON`, senao `python3`/`python` (precisa da biblioteca `cryptography` para assinar o log; sem ela o log fica so com cadeia de hash e o init avisa).
 
 ## 1. Detecte o caso
-- Ja existe `.aisef/config.json`: nao reinicie. Rode **aisef-check** e siga com a skill **aisef**.
+- Ja existe `.aisef/config.json`: nao reinicie. Rode a skill **aisef-check** (o script e `CORE/check_project.py --project .aisef --policy CORE/permission-policy.v0.1.json --defaults CORE/orchestration-defaults.v0.1.json`; sem `--policy` aparece o aviso POLICY-SKIPPED) e siga com a skill **aisef**.
 - O repositorio tem codigo (arquivos-fonte, manifests como `package.json`, `pyproject.toml`, `pom.xml`, migrations, docs): **projeto existente**.
 - Pasta vazia ou so com README: **projeto novo**.
 - Diga ao usuario qual caso detectou e por que.
