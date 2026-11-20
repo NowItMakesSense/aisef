@@ -51,8 +51,17 @@ def _plugin_version(cfg, project):
     return "plugin_version: %s -> %s" % (before, current)
 
 
+def _telemetry(cfg, project):
+    a = cfg.setdefault("audit", {})
+    if a.get("telemetry") in ("split", "signed"):
+        return None
+    a["telemetry"] = "split"
+    return ("audit.telemetry: split (0.14: edicoes de arquivo e MCP liberados vao para a telemetria; o log assinado "
+            "fica com ciclo de vida, decisoes, shell e o que o gateway negou ou perguntou)")
+
+
 # (id, funcao). Ordem importa; plugin_version sempre por ultimo.
-MIGRATIONS = [("0.13-profile", _profile), ("plugin-version", _plugin_version)]
+MIGRATIONS = [("0.13-profile", _profile), ("0.14-telemetry", _telemetry), ("plugin-version", _plugin_version)]
 
 
 def plan(project):

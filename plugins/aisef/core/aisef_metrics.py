@@ -184,6 +184,7 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
             "events": len(events),
             "tool_used": count.get("tool_used", 0),
             "tool_used_share": _ratio(count.get("tool_used", 0), len(events)),
+            "telemetry_events": _telemetry_count(project, in_window) if feature is None else None,
             "gateway_denied": gw["deny"],
             "gateway_asked": gw["ask"],
         },
@@ -208,6 +209,12 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
         out["consistency"] = {"errors": rep.count("error"), "warnings": rep.count("warning"),
                               "errors_by_rule": dict(sorted(rules.items(), key=lambda x: -x[1]))}
     return out
+
+
+def _telemetry_count(project, in_window):
+    """F-05: chamadas que foram para a telemetria (fora do log assinado)."""
+    import aisef_telemetry
+    return sum(1 for r in aisef_telemetry.read(project) if in_window(r.get("at")))
 
 
 def _cost(project, per, completed, in_window, in_feature, tasks):
@@ -346,7 +353,8 @@ def format_metrics(m):
             _fmt(t["validation_wait"]["median"]), _fmt(t["validation_wait"]["p90"]), t["validation_wait"]["n"]),
         "",
         "Ruido do log",
-        "  eventos                  %d, tool_used %d (%s)" % (n["events"], n["tool_used"], _pct(n["tool_used_share"])),
+        "  eventos                  %d, tool_used %d (%s)%s" % (n["events"], n["tool_used"], _pct(n["tool_used_share"]),
+                                                               "; telemetria %d" % n["telemetry_events"] if n.get("telemetry_events") else ""),
         "  gateway                  negou %d, perguntou %d" % (n["gateway_denied"], n["gateway_asked"]),
     ]
     k = m.get("cost") or {}

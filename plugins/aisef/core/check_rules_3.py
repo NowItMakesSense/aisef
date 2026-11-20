@@ -10,6 +10,14 @@ from check_project import *  # noqa: F401,F403
 
 
 
+def rules_telemetria(_cx):
+    """Regras: telemetria (F-05): cadeia de hash integra."""
+    project, rep = _cx.get("project"), _cx.get("rep")
+    import aisef_telemetry
+    for problem in aisef_telemetry.verify(os.path.dirname(project))[:5]:
+        rep.warn("TELEMETRY-CHAIN", "telemetry/telemetry.jsonl", problem)
+
+
 def rules_log(_cx):
     """Regras: log."""
     a, agents, approvals, e, feats, log, rep, t, tasks, where = _cx.get("a"), _cx.get("agents"), _cx.get("approvals"), _cx.get("e"), _cx.get("feats"), _cx.get("log"), _cx.get("rep"), _cx.get("t"), _cx.get("tasks"), _cx.get("where")

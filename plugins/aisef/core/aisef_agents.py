@@ -44,7 +44,7 @@ def init(project, project_id, name=None, environment="dev", profile="solo"):
         "name": name or project_id, "environment": environment, "created_at": now_iso(),
         "policy": "permission-policy.v0.1.json", "defaults": "orchestration-defaults.v0.1.json",
         "graphify": {"enabled": True, "backend": "none", "paths": ["docs", ".aisef"]},
-        "profile": profile, "plugin_version": _plugin_version()})
+        "profile": profile, "plugin_version": _plugin_version(), "audit": {"telemetry": "split"}})
     with open(os.path.join(root, ".gitignore"), "w", encoding="utf-8") as fh:
         fh.write("# gerado pelo AISEF\n*.lock\n*.tmp\npanel/\nruntime/\n")
     signed = False

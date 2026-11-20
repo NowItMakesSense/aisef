@@ -34,6 +34,7 @@ Regras (codigo -> o que verifica):
     CONFIG-GIT      opcoes git do config.json (branch_per_feature, delete_branch_after_merge, branch_prefix...)
     CONFIG-GRAPHIFY opcoes do Graphify no config.json (enabled, backend none|ollama|auto, paths e graph relativos)
     CONFIG-PROFILE  perfil de cerimonia no config.json (solo, team, regulated)
+    TELEMETRY-CHAIN telemetria (.aisef/telemetry, F-05) com a cadeia de hash quebrada (aviso: nao e o log assinado)
     BUDGET-RAISED   Feature Contract com budget acima do limite do projeto (L-01: o contrato so baixa)
     PROFILE-*       perfil regulated: PROFILE-QUICK (sem caminho rapido), PROFILE-TDD (toda tarefa executora com TDD),
                     PROFILE-BLUEPRINT (feature com tarefa de risco alto tem blueprint)
@@ -253,6 +254,7 @@ RULE_GROUPS = [
     ("check_rules_2", "rules_autoridade_de_design_arquitetura_detecta"),  # autoridade de design (0.6.1) / arquitetura detectada (aisef_detect)
     ("check_rules_2", "rules_roteamento_de_modelo"),  # roteamento de modelo (execution_profile)
     ("check_rules_2", "rules_aprovacoes_e_autorizacoes"),  # aprovacoes e autorizacoes
+    ("check_rules_3", "rules_telemetria"),  # telemetria (F-05)
     ("check_rules_3", "rules_log"),  # log
     ("check_rules_3", "rules_politica_x_schemas"),  # politica x schemas
     ("check_rules_3", "rules_memoria_de_projeto"),  # memoria de projeto (0.4.0)
