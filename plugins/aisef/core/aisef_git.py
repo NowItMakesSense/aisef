@@ -85,3 +85,43 @@ def push_targets(args, current):
             return None
         out.append((src, dst))
     return out
+
+
+def main_worktree_root(path):
+    """Raiz do repositorio principal quando `path` esta num worktree (L-02a). Le `.git` (arquivo `gitdir:`) e o
+    `commondir` do worktree, sem subprocesso. Fora de worktree, ou em erro, devolve None."""
+    d = os.path.abspath(path)
+    while True:
+        g = os.path.join(d, ".git")
+        if os.path.isdir(g):
+            return None  # repositorio principal (ou sem worktree): nada a redirecionar
+        if os.path.isfile(g):
+            try:
+                with open(g, encoding="utf-8") as fh:
+                    line = fh.read().strip()
+                if not line.startswith("gitdir:"):
+                    return None
+                gitdir = line.split(":", 1)[1].strip()
+                gitdir = gitdir if os.path.isabs(gitdir) else os.path.normpath(os.path.join(d, gitdir))
+                with open(os.path.join(gitdir, "commondir"), encoding="utf-8") as fh:
+                    common = fh.read().strip()
+            except OSError:
+                return None
+            common = common if os.path.isabs(common) else os.path.normpath(os.path.join(gitdir, common))
+            return os.path.dirname(os.path.normpath(common))
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def aisef_root(path):
+    """Projeto AISEF efetivo: num worktree, o repositorio principal (se ele tem .aisef/config.json), para o log, as
+    aprovacoes e o runtime nunca se dividirem entre copias. Senao, o proprio caminho."""
+    try:
+        main = main_worktree_root(path)
+    except Exception:
+        main = None
+    if main and os.path.isfile(os.path.join(main, ".aisef", "config.json")):
+        return main
+    return path

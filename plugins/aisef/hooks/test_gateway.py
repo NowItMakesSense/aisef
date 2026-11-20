@@ -557,11 +557,16 @@ check("eventos do Approval Center registrados pelo usuario",
 check("tentativas negadas e levadas a aprovacao ficam no log, sem segredo",
       any(e["data"]["gateway"] == "deny" and "psql" in e["data"]["target"] for e in gate)
       and any(e["data"]["gateway"] == "ask" for e in gate) and "abcdefghijklmnop" not in json.dumps(gate))
-check("4 eventos tool_used anexados", len(tools) == 4 and log[0]["event_type"] == "genesis")
-check("PowerShell auditado como comando", tools[3]["data"].get("command") == "npm run build"
-      and tools[3]["summary"].startswith("PowerShell: "))
-check("caminho gravado relativo ao projeto", tools[1]["data"]["file"] == "src/app.py")
-check("comando com token nao vai para o log", "abcdefghijklmnop" not in json.dumps(log) and tools[2]["data"]["command"].startswith("[omitido"))
+import aisef_telemetry  # noqa: E402
+tele = [r for r in aisef_telemetry.read(proj) if r.get("event_type") == "tool_used"]
+check("projeto novo (audit.telemetry split): 3 comandos de shell no log assinado, a edicao na telemetria (F-05)",
+      len(tools) == 3 and log[0]["event_type"] == "genesis" and all(t["data"]["tool"] in ("Bash", "PowerShell") for t in tools)
+      and len(tele) == 1 and tele[0]["data"]["tool"] == "Edit")
+check("PowerShell auditado como comando", tools[2]["data"].get("command") == "npm run build"
+      and tools[2]["summary"].startswith("PowerShell: "))
+check("caminho gravado relativo ao projeto (na telemetria)", tele[0]["data"]["file"] == "src/app.py")
+check("telemetria com cadeia de hash integra", aisef_telemetry.verify(proj) == [])
+check("comando com token nao vai para o log", "abcdefghijklmnop" not in json.dumps(log) and tools[1]["data"]["command"].startswith("[omitido"))
 check("nenhum evento registra raciocinio do modelo", all(e["contains_model_reasoning"] is False for e in log))
 check("cadeia e assinaturas integras (head externo)", not errors)
 check("head externo fica fora do projeto", os.path.exists(aisef_project.external_head_path("PRJ-T"))

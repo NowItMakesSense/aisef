@@ -54,7 +54,7 @@ def _reports(project, task_id):
     return out
 
 
-def executor_prompt(project, task, route, attempt, pack_text):
+def executor_prompt(project, task, route, attempt, pack_text, worktree=None):
     tid, fid, role = task["task_id"], task["feature_id"], task["assigned_agent"]["agent_id"]
     tdd = (task.get("tests") or {}).get("tdd_required")
     lines = [
@@ -62,6 +62,12 @@ def executor_prompt(project, task, route, attempt, pack_text):
         "Contrato: .aisef/contracts/tasks/%s.json. Trabalhe so dentro de scope.paths_allowed." % tid,
         "",
         "O inicio e o fim da tarefa (task_started, task_executed) sao registrados pelo hook do AISEF: nao rode append.",
+    ] + ([
+        "Worktree da fatia (L-02): trabalhe SO em %s (branch %s). Os caminhos de scope.paths_allowed sao relativos a "
+        "essa pasta: edite %s/<caminho>. Commite la: git -C %s add -A && git -C %s commit -m \"...\". Se a branch "
+        "da feature andou, traga antes: %s. O relatorio e o Execution Report continuam em .aisef/ da raiz."
+        % (worktree["path"], worktree["branch"], worktree["path"], worktree["path"], worktree["path"], worktree["sync_cmd"]),
+    ] if worktree else []) + [
         "1. Faca a tarefa%s." % (" com TDD: um comportamento por vez, teste vermelho antes do verde, nos seams de "
                                  "tests.seams; registre cada ciclo em tdd_evidence.cycles" if tdd else ""),
         "2. Antes de entregar, rode a verificacao: %s --project . --task %s (build, tipos, lint, testes, segredos no diff). "
@@ -90,7 +96,7 @@ def dispatch_wave(project, feature=None, dry_run=False, now=None):
         task = rt.load_task(project, item["task_id"])
         route = rt.route(task, policy, attempt=item["attempt"])
         pack = ctx.build_pack(project, item["task_id"])
-        prompt = executor_prompt(project, task, route, item["attempt"], ctx.render_pack(pack))
+        prompt = executor_prompt(project, task, route, item["attempt"], ctx.render_pack(pack), item.get("worktree"))
         if not dry_run:
             ap.append(project, {"event_type": "delegation", "actor": {"type": "orchestrator", "id": "orchestrator"},
                                 "feature_id": task["feature_id"], "task_id": task["task_id"],
@@ -100,7 +106,8 @@ def dispatch_wave(project, feature=None, dry_run=False, now=None):
                                 "data": {"model": route["model"], "effort": route["effort"], "level": route["level"],
                                          "attempt": item["attempt"], "context_mode": pack.get("context_mode"),
                                          "lessons": [k["id"] for k in pack["on_demand"]["knowledge"] if k.get("lesson")]}})
-        out["agents"].append({"task_id": task["task_id"], "subagent_type": "aisef:" + task["assigned_agent"]["agent_id"],
+        out["agents"].append({**({"worktree": item["worktree"]} if item.get("worktree") else {}),
+                              "task_id": task["task_id"], "subagent_type": "aisef:" + task["assigned_agent"]["agent_id"],
                               "model": route["model"], "effort": route["effort"], "level": route["level"],
                               "attempt": item["attempt"], "warnings": route.get("warnings", []) + pack["warnings"],
                               "description": "%s: %s" % (task["task_id"], (task.get("title") or "")[:40]),

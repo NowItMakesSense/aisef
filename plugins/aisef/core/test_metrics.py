@@ -105,6 +105,9 @@ check("ruido: tool_used e decisoes do gateway", n["tool_used"] == 3 and n["gatew
 check("lead time e espera pela validacao medidos",
       m["time_minutes"]["lead_time"]["n"] == 2 and m["time_minutes"]["validation_wait"]["n"] == 2, m["time_minutes"])
 check("sem --check nao ha bloco de consistencia", "consistency" not in m)
+check("custo de atencao (F-09): pedidos + prompts do gateway, por tarefa concluida",
+      a["interruptions"] == 5 and a["gateway_asks"] == 1 and a["interruptions_per_completed_task"] == 2.5, a)
+check("custo de atencao aparece no texto", "interrupcoes             5 (2.5 por tarefa concluida)" in mt.format_metrics(m))
 
 check("sem usage.jsonl: custo marcado como nao disponivel", m["cost"]["available"] is False
       and "nao disponivel" in mt.format_metrics(m), m["cost"])

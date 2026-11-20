@@ -1,0 +1,61 @@
+{
+  "$comment": "AISEF Workflow (0.14, L-03): o fluxo do AISEF como dado, numa fonte so. aisef_next (estados efetivos e ordem), aisef_guide (passos de cada fase), aisef_triage, aisef_new e o check (perfis) leem daqui. aisef_workflow.py valida contra workflow.schema.v0.1.json e confere a coerencia com os schemas do Approval Center e com os perfis aceitos.",
+  "version": "0.1.0",
+  "task_states": {
+    "$note": "Ordem dos estados da tarefa: o estado efetivo e o do log quando ele esta a frente do contrato. rejected volta ao nivel de ready.",
+    "rank": { "draft": 0, "ready": 1, "rejected": 1, "in_progress": 2, "executed": 3, "validated": 4, "completed": 5 },
+    "terminal": ["completed", "cancelled"],
+    "contract_prevails": ["cancelled", "blocked"]
+  },
+  "events": {
+    "delegation":     { "state": "in_progress", "recorded_by": ["orchestrator"] },
+    "task_started":   { "state": "in_progress", "recorded_by": ["agent"] },
+    "task_resumed":   { "state": "in_progress", "recorded_by": ["orchestrator", "agent"] },
+    "task_paused":    { "state": "blocked",     "recorded_by": ["orchestrator", "agent"] },
+    "task_executed":  { "state": "executed",    "recorded_by": ["agent"] },
+    "task_validated": { "state": "validated",   "recorded_by": ["validator"] },
+    "task_rejected":  { "state": "rejected",    "recorded_by": ["validator", "orchestrator"] },
+    "task_completed": { "state": "completed",   "recorded_by": ["orchestrator"] }
+  },
+  "phases": [
+    { "id": "discovery", "steps": [
+      "aisef-discovery: investigar o projeto e gravar .aisef/discovery.md (investigar antes de perguntar)",
+      "aisef-tooling: sugerir skills, plugins e MCPs a partir do discovery"] },
+    { "id": "specify", "steps": [
+      "Grill: entrevistar o usuario ate fechar cada ramo da ideia (skill grilling; vocabulario no GLOSSARY.md com domain-modeling)",
+      "Spec: aisef-feature fase Spec (solucao, historias, decisoes, seams de teste confirmados com o usuario)",
+      "Fatias: aisef-feature fase Fatias (fatias verticais com blocking edges; aisef_new.py feature)",
+      "Aprovar o plano: aisef-approve"] },
+    { "id": "approve_plan", "gate": "plan_approval", "steps": [
+      "aisef-approve: apresentar o plano pendente (requisitos, fatias, seams, riscos) e registrar a decisao do usuario"] },
+    { "id": "execute", "steps": [
+      "modo continuo: dispatch da onda (implementer com tdd, vermelho antes do verde) -> validador independente -> complete"] },
+    { "id": "review", "steps": [
+      "code-review da feature inteira (skill code-review: padroes + aderencia a spec), correcoes como novas tentativas",
+      "relatorio final planejado x executado e pedido feature_acceptance (aisef_project.py request)"] },
+    { "id": "decide", "gate": "feature_acceptance", "steps": [
+      "aisef-approve: levar ao usuario as decisoes pendentes listadas em await_decision"] },
+    { "id": "done", "steps": [
+      "Nada pendente. Nova ideia? Comece pelo Grill (skill grilling) e siga Spec -> Fatias."] }
+  ],
+  "gates": {
+    "$note": "Cada tipo de pedido do Approval Center e um portao decidido pelo usuario, pelo prompt nativo.",
+    "plan_approval":         { "decided_by": "user", "what": "plano da feature (requisitos, fatias, seams)" },
+    "scope_authorization":   { "decided_by": "user", "what": "escopo de trabalho em dev ou staging, ate 7 dias" },
+    "operation_approval":    { "decided_by": "user", "what": "uma operacao pontual" },
+    "reinforced_approval":   { "decided_by": "user", "what": "operacao de producao ou destrutiva, uso unico" },
+    "git_operation":         { "decided_by": "user", "what": "operacao Git fora do que e livre" },
+    "architecture_decision": { "decided_by": "user", "what": "decisao arquitetural ou ADR" },
+    "scope_change_decision": { "decided_by": "user", "what": "mudanca de escopo descoberta na execucao" },
+    "feature_acceptance":    { "decided_by": "user", "what": "aceite da feature entregue" }
+  },
+  "profiles": {
+    "$note": "L-04: sobreposicoes do fluxo. quick: caminho rapido existe; lean: 'use' (triagem decide), 'suggest' (o calculado lean vira full com nota); tdd_all_executors e blueprint_high_risk viram erros do check (PROFILE-TDD, PROFILE-BLUEPRINT).",
+    "solo":      { "quick": true,  "lean": "use",     "tdd_all_executors": false, "blueprint_high_risk": false,
+                   "note": null },
+    "team":      { "quick": true,  "lean": "suggest", "tdd_all_executors": false, "blueprint_high_risk": false,
+                   "note": "perfil team: o ciclo completo continua o padrao; lean so como sugestao (mude para solo para usar)" },
+    "regulated": { "quick": false, "lean": "use",     "tdd_all_executors": true,  "blueprint_high_risk": true,
+                   "note": "perfil regulated: sem caminho rapido" }
+  }
+}

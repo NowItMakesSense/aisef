@@ -2,7 +2,9 @@
 """AISEF Audit & Evidence: hook PostToolUse do Claude Code (v0.1).
 
 Anexa um evento 'tool_used' a .aisef/audit/log.jsonl para cada operacao que altera algo (Bash, PowerShell, Edit,
-Write, MultiEdit, NotebookEdit). Registra o que foi feito, nunca o raciocinio do modelo (sempre
+Write, MultiEdit, NotebookEdit). Com config.json -> audit.telemetry = "split" (F-05, padrao dos projetos novos),
+Edit/Write/MCP vao para a telemetria (.aisef/telemetry/, cadeia de hash sem assinatura); Bash e PowerShell continuam
+no log assinado. Registra o que foi feito, nunca o raciocinio do modelo (sempre
 contains_model_reasoning=false). Se o comando parecer conter segredo, ele e substituido por um aviso
 antes de gravar (regra T3). So atua em projetos com .aisef/config.json e nunca bloqueia a sessao:
 uma falha vira aviso em stderr.
@@ -17,12 +19,22 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "core"))
 MAX_COMMAND = 400
 
 
+
+def _aisef_root(project):
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+        import aisef_git
+        return aisef_git.aisef_root(project)
+    except Exception:
+        return project
+
 def main():
     try:
         data = json.load(sys.stdin)
     except Exception:
         return
     project = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
+    project = _aisef_root(project)  # L-02a: worktree grava no .aisef do repositorio principal
     if not os.path.exists(os.path.join(project, ".aisef", "config.json")):
         return
     import aisef_project
@@ -56,6 +68,22 @@ def main():
         detail["subagent"] = data.get("agent_type") or data.get("agent_id")
     if len(summary) < 3:
         summary = "tool_used"
+    import aisef_telemetry
+    if aisef_telemetry.routes_to_telemetry(aisef_project.load_config(project), tool):
+        # F-05: edicao de arquivo e MCP liberados vao para a telemetria (cadeia de hash, sem assinatura)
+        try:
+            aisef_telemetry.append(project, {"event_type": "tool_used", "summary": summary[:500], "data": detail})
+        except Exception as exc:
+            sys.stderr.write("AISEF: telemetria NAO registrada (%s)\n" % exc)
+        if data.get("agent_id") or data.get("agent_type"):
+            try:
+                sys.path.insert(1, HERE)
+                import agent_events
+                agent_events.runtime_append(project, {"event": "tool", "agent_id": data.get("agent_id"),
+                                                      "agent_type": data.get("agent_type"), "summary": summary[:160]})
+            except Exception:
+                pass
+        return
     try:
         event = aisef_project.append(project, {"event_type": "tool_used", "actor": {"type": "orchestrator", "id": "claude-code"},
                                                "summary": summary[:500], "data": detail, "panel_visible": False})

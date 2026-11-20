@@ -9,7 +9,7 @@ O detalhe de cada versão entregue está no [CHANGELOG](../CHANGELOG.md); as dec
 | ~~0.6.0~~ | Entregue: SDD + TDD com fatias verticais, `implementer`, evidência de TDD checada e guia de fases |
 | ~~0.6.1~~ | Entregue: autoridade de design por projeto, `design_check` e frontend dentro dos tokens |
 | ~~0.7.0~~ | Entregue: `dispatch` da onda numa chamada, validação por onda, `precheck` determinístico, auditoria assíncrona das edições |
-| depois | **Worktrees por fatia** (fatias com arquivos em comum em paralelo). Adiado: pela política atual, cada merge local pede aprovação; antes é preciso uma autorização de escopo para merges em branches de integração (mudança de política, decisão sua) |
+| ~~depois~~ | Entregue na 0.14.0 (L-02): worktrees por fatia, com o merge da fatia coberto pelo escopo da feature (ADR 0025) |
 | ~~0.8.0~~ | Entregue: painel ao vivo (servidor local), aba Agora, fluxo da feature, ondas em Gantt, estado efetivo |
 | ~~0.8.1~~ | Entregue: aprendizado contínuo revisado e estado que sobrevive ao compact. Perfis de hook descartados (o gateway precisa rodar sempre) |
 | ~~0.8.2~~ | Entregue: busca de ferramentas por gatilho, revisão periódica (`/skill-doctor`, `claude plugin eval`), desinstalação com aprovação |

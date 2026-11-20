@@ -91,13 +91,14 @@ check("sandbox: sandbox_reminder false silencia o doctor", env.sandbox_advice(sb
 # init sem cryptography: recusa antes de criar qualquer coisa (D5)
 proj = os.path.join(work, "proj")
 os.makedirs(proj)
-ap.HAS_CRYPTO = False
+import aisef_base  # noqa: E402
+aisef_base.HAS_CRYPTO = False
 try:
     ap.init(proj, "PRJ-ENV")
     refused, text = False, ""
 except SystemExit as e:
     refused, text = True, str(e)
-ap.HAS_CRYPTO = True
+aisef_base.HAS_CRYPTO = True
 check("init sem cryptography recusa e diz como instalar", refused and "nada foi criado" in text and "cryptography" in text, text)
 check("init recusado nao cria .aisef/", not os.path.exists(os.path.join(proj, ".aisef")))
 check("init com cryptography segue assinado", ap.init(proj, "PRJ-ENV") is True)

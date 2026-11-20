@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**164 regras** em 30 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**166 regras** em 31 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -45,6 +45,12 @@ Requisitos, critérios e arquitetura da feature.
 Caminho quick, lean ou full escolhido em código, sem rebaixar.
 
 `TRIAGE-LEAN-SHAPE`, `TRIAGE-OVERRIDDEN-DOWN`
+
+## Telemetria (`TELEMETRY-*`)
+
+A cadeia de hash da telemetria (fora do log assinado) está íntegra.
+
+`TELEMETRY-CHAIN`
 
 ## Orçamento (`BUDGET-*`)
 
@@ -176,7 +182,7 @@ Atores, ordem e referências dos eventos.
 
 Opções do config.json.
 
-`CONFIG-GIT`, `CONFIG-GRAPHIFY`, `CONFIG-PROFILE`
+`CONFIG-GIT`, `CONFIG-GRAPHIFY`, `CONFIG-PARALLEL`, `CONFIG-PROFILE`
 
 ## Memória de projeto (`KNW-*`)
 

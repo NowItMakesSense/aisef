@@ -184,6 +184,7 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
             "events": len(events),
             "tool_used": count.get("tool_used", 0),
             "tool_used_share": _ratio(count.get("tool_used", 0), len(events)),
+            "telemetry_events": _telemetry_count(project, in_window) if feature is None else None,
             "gateway_denied": gw["deny"],
             "gateway_asked": gw["ask"],
         },
@@ -192,6 +193,10 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
                         "lead_time_minutes": _minutes(s["first_delegation"], s["completed_at"])}
                   for tid, s in sorted(per.items())},
     }
+    # F-09: custo de atencao = toda vez que o usuario precisou parar (pedido ao Approval Center ou prompt do gateway)
+    interruptions = len(appr) + gw["ask"]
+    out["attention"].update({"gateway_asks": gw["ask"], "interruptions": interruptions,
+                             "interruptions_per_completed_task": _ratio(interruptions, len(completed))})
     out["cost"] = _cost(project, per, completed, in_window, in_feature, tasks)
     for tid, row in out["tasks"].items():
         row["tokens"] = out["cost"].get("_per_task", {}).get(tid)
@@ -208,6 +213,12 @@ def compute_metrics(project, feature=None, since=None, run_check=True, now=None)
         out["consistency"] = {"errors": rep.count("error"), "warnings": rep.count("warning"),
                               "errors_by_rule": dict(sorted(rules.items(), key=lambda x: -x[1]))}
     return out
+
+
+def _telemetry_count(project, in_window):
+    """F-05: chamadas que foram para a telemetria (fora do log assinado)."""
+    import aisef_telemetry
+    return sum(1 for r in aisef_telemetry.read(project) if in_window(r.get("at")))
 
 
 def _cost(project, per, completed, in_window, in_feature, tasks):
@@ -324,6 +335,8 @@ def format_metrics(m):
     lines += [
         "",
         "Atencao humana",
+        "  interrupcoes             %d (%s por tarefa concluida): pedidos + prompts do gateway" % (
+            a["interruptions"], _fmt(a["interruptions_per_completed_task"])),
         "  pedidos de aprovacao     %d (%s por tarefa concluida, %s por tarefa)" % (
             a["approval_requests"], _fmt(a["per_completed_task"]), _fmt(a["per_task"])),
         "  fatia Git                %s" % _pct(a["git_share"]),
@@ -346,7 +359,8 @@ def format_metrics(m):
             _fmt(t["validation_wait"]["median"]), _fmt(t["validation_wait"]["p90"]), t["validation_wait"]["n"]),
         "",
         "Ruido do log",
-        "  eventos                  %d, tool_used %d (%s)" % (n["events"], n["tool_used"], _pct(n["tool_used_share"])),
+        "  eventos                  %d, tool_used %d (%s)%s" % (n["events"], n["tool_used"], _pct(n["tool_used_share"]),
+                                                               "; telemetria %d" % n["telemetry_events"] if n.get("telemetry_events") else ""),
         "  gateway                  negou %d, perguntou %d" % (n["gateway_denied"], n["gateway_asked"]),
     ]
     k = m.get("cost") or {}

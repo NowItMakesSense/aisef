@@ -213,7 +213,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
 ### 0.14: Grafo do sistema e saúde do código
 
 ```
-[ ] H-01: Quebrar o aisef_project.py e o check_project.py
+[x] H-01: Quebrar o aisef_project.py e o check_project.py
+    Status: feito: nenhum modulo acima de 500 linhas; check() virou registro de grupos (check_rules_1..3)
     Descrição:
       - aisef_project.py vira um pacote de módulos: audit_log (append, verify, anchor,
         rotate-key), requests (request, decide, reinforced), waves (paths, conflitos,
@@ -227,7 +228,8 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
       sem mudança; gen_docs continua em sincronia.
     Estimativa: 3–4 dias
 
-[ ] G-07: Grafo do sistema consultável
+[x] G-07: Grafo do sistema consultável
+    Status: feito (aisef_sysgraph.py); o filtro 'impacto de' no painel espera o desenho aprovado
     Descrição: aisef_project.py graph query sobre os contratos, sem modelo:
       impact --req REQ-x         tarefas, critérios, testes, arquivos e evidências ligados
       impact --file <caminho>    requisitos e tarefas que tocam o arquivo
@@ -238,11 +240,13 @@ Estimativas em dias de trabalho seu com o Claude, como faixa. **Fechamento de to
       filtro "impacto de".
     Estimativa: 2–3 dias
 
-[ ] L-03: Workflow declarativo (do plano anterior)
+[x] L-03: Workflow declarativo (do plano anterior)
+    Status: feito (workflow.v0.1.json), sem mudanca de comportamento
     Observação: os perfis da L-04 passam a ser sobreposições do workflow.
     Estimativa: 3–5 dias
 
-[ ] F-05, F-09, L-02a, L-02 (do plano anterior, sem mudança de escopo)
+[x] F-05, F-09, L-02a, L-02 (do plano anterior, sem mudança de escopo)
+    Status: feitos; o card de custo de atencao (F-09) no painel espera o desenho aprovado
     F-05 Log em camadas                       2–3 dias
     F-09 Custo de atenção no painel           1–2 dias
     L-02a Raiz do projeto via git-common-dir  1–2 dias

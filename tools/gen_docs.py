@@ -8,7 +8,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CORE = os.path.join(ROOT, "plugins", "aisef", "core")
-SOURCES = ["check_project.py", "check_knowledge.py"]
+SOURCES = ["check_project.py", "check_rules_1.py", "check_rules_2.py", "check_rules_3.py", "check_knowledge.py"]
 NOT_RULES = {"FEAT-MAINT"}  # id da feature de manutencao, nao uma regra
 OUT = os.path.join(ROOT, "docs", "reference", "check-rules.md")
 
@@ -20,6 +20,7 @@ GROUPS = [
     ("AGENT", "Agentes", "Agent Contracts ativos, papel, teto de recursos e de ambiente"),
     ("FEAT", "Feature Contract", "requisitos, critérios e arquitetura da feature"),
     ("TRIAGE", "Triagem", "caminho quick, lean ou full escolhido em código, sem rebaixar"),
+    ("TELEMETRY", "Telemetria", "a cadeia de hash da telemetria (fora do log assinado) está íntegra"),
     ("BUDGET", "Orçamento", "limites da feature no modo contínuo só podem baixar os do projeto"),
     ("PROFILE", "Perfil", "perfil regulated: sem caminho rápido, TDD e blueprint em risco alto"),
     ("PLAN", "Plano de tarefas", "plano coerente com a feature e os papéis"),

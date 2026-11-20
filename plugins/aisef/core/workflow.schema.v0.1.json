@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisef.local/schemas/workflow/0.1.0",
+  "title": "AISEF Workflow",
+  "description": "O fluxo do AISEF como dado (0.14, L-03): estados da tarefa, eventos que os mudam e quem os registra, fases com seus passos e portoes, tipos de pedido do Approval Center e perfis de cerimonia.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "task_states", "events", "phases", "gates", "profiles"],
+  "properties": {
+    "$comment": { "type": "string" },
+    "version": { "const": "0.1.0" },
+    "task_states": {
+      "type": "object", "additionalProperties": false, "required": ["rank", "terminal", "contract_prevails"],
+      "properties": {
+        "$note": { "type": "string" },
+        "rank": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "terminal": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "contract_prevails": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "events": {
+      "type": "object", "minProperties": 1,
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false, "required": ["state", "recorded_by"],
+        "properties": {
+          "state": { "type": "string" },
+          "recorded_by": { "type": "array", "minItems": 1, "items": { "enum": ["user", "orchestrator", "agent", "validator", "system"] } }
+        }
+      }
+    },
+    "phases": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "steps"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z_]+$" },
+          "gate": { "type": "string" },
+          "steps": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 5 } }
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "properties": { "$note": { "type": "string" } },
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false, "required": ["decided_by", "what"],
+        "properties": { "decided_by": { "const": "user" }, "what": { "type": "string" } }
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "properties": { "$note": { "type": "string" } },
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "required": ["quick", "lean", "tdd_all_executors", "blueprint_high_risk", "note"],
+        "properties": {
+          "quick": { "type": "boolean" },
+          "lean": { "enum": ["use", "suggest"] },
+          "tdd_all_executors": { "type": "boolean" },
+          "blueprint_high_risk": { "type": "boolean" },
+          "note": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

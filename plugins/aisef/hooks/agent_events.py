@@ -25,6 +25,15 @@ import aisef_runtime  # noqa: E402
 MAX_BYTES = 2 * 1024 * 1024  # o arquivo e uma visao ao vivo, nao historico: passou disso, recomeca
 
 
+
+def _aisef_root(project):
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+        import aisef_git
+        return aisef_git.aisef_root(project)
+    except Exception:
+        return project
+
 def _now():
     return datetime.datetime.now(datetime.timezone.utc)
 
@@ -205,6 +214,7 @@ def on_stop(project, data):
 def main():
     data = json.load(sys.stdin)
     project = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
+    project = _aisef_root(project)  # L-02a: worktree grava no .aisef do repositorio principal
     if not os.path.exists(os.path.join(project, ".aisef", "config.json")):
         return
     event = data.get("hook_event_name")

@@ -107,10 +107,12 @@ def compute(paths=(), changes=(), files=None, lines=None, slices=1, risk="low"):
 
 def apply_profile(computed, profile):
     """Caminho efetivo pelo perfil. Devolve (caminho, nota)."""
-    if profile == "team" and computed == "lean":
-        return "full", "perfil team: o ciclo completo continua o padrao; lean so como sugestao (mude para solo para usar)"
-    if profile == "regulated" and computed == "quick":
-        return "lean", "perfil regulated: sem caminho rapido"
+    import aisef_workflow  # L-03: a sobreposicao do perfil vem do workflow.v0.1.json
+    ov = aisef_workflow.profile(profile)
+    if computed == "lean" and ov["lean"] == "suggest":
+        return "full", ov["note"]
+    if computed == "quick" and not ov["quick"]:
+        return "lean", ov["note"]
     return computed, None
 
 
