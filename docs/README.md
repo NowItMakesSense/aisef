@@ -10,6 +10,7 @@
 | Consultar os comandos `aisef_*.py` | [reference/commands.md](reference/commands.md) |
 | Saber o que cada hook faz | [reference/hooks.md](reference/hooks.md) |
 | Ver as regras do `aisef-check` | [reference/check-rules.md](reference/check-rules.md) (gerado) |
+| Saber o que já rodou em uso real e como desligar cada recurso | [reference/maturity.md](reference/maturity.md) |
 | Entender por que algo é como é | [adr/](adr/README.md) |
 | Ver o que vem a seguir | [roadmap.md](roadmap.md) |
 | Ver o plano de melhorias 0.11–0.15 (tarefas, metas, riscos) | [plan/melhorias-0.11-0.14.md](plan/melhorias-0.11-0.14.md) |

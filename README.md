@@ -6,7 +6,7 @@
 
 AISEF is a Claude Code plugin for teams that must show what the AI did, not just ship faster. A plain-language request becomes a specified feature: triaged in code, split into vertical slices, built test-first by agents in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log that CI can verify on each pull request.
 
-| **166** | **1,818** | **138** | **66** | **~0.2 s** |
+| **166** | **2,500+** | **138** | **66** | **~0.2 s** |
 |---|---|---|---|---|
 | consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 48 of them bypass attempts, none get through | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
@@ -106,8 +106,11 @@ It never changes anything on its own. You adopt a style through the Approval Cen
 
 The review gate adds about 13% per slice, which is within run-to-run noise. On a task this small, the full process costs about 11× more than plain Claude Code. What you pay for is the spec, the TDD evidence, independent validation, review and the signed record. Quality gains on larger, real features are being measured next.
 
+Features from 0.13 on are covered by CI, including a test that runs a whole feature cycle through all 48 combinations of profile, path, parallelism, telemetry and per-person log. They have not run in a real project yet. The [maturity table](docs/reference/maturity.md) shows the level of each one, whether it is on by default, and how to turn it back.
+
 ## What's new
 
+- **0.15.2, what is proven and what is not.** A maturity table tells real-use features from CI-only ones, with the default and the way back for each. A new test runs a whole feature cycle through all 48 mode combinations. The README numbers are now checked against the code.
 - **0.15.1, attention cost and impact in the panel.** The Now screen shows how often you had to stop (approvals and gateway prompts per completed task, first-pass validation, tokens per task), and Traceability gains an "Impact of" filter: type a requirement, task or file and see only the requirements it touches.
 - **0.15.0, for teams and auditors.** The `aisef-verify` GitHub Action on every pull request, a self-verifying evidence package per feature with SOC 2 and ISO 27001 controls, OpenTelemetry export with the GenAI conventions, one audit log per person (merges never conflict, approvals signed by whoever gave them), and a roadmap checked against the changelog.
 - **0.14.0, the system as a graph, the flow as data, slices in their own worktrees.**

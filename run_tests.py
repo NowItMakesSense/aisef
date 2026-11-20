@@ -5,6 +5,7 @@ As suites sao scripts autonomos (sem pytest), cada uma com sua propria contagem 
 A do painel renderiza em Chrome headless quando o Chrome existe; sem ele, essa parte e pulada.
 """
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -42,6 +43,7 @@ SUITES = [
     ("Approval Center: request e decide reforcado", [os.path.join(CORE, "test_request_decide.py")]),
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),
+    ("combinacoes de modos, ciclo inteiro (48)", [os.path.join(CORE, "test_modes.py")]),
     ("log por pessoa, com merge de verdade (T-04, T-05)", [os.path.join(CORE, "test_streams.py")]),
     ("exportacao OpenTelemetry (T-03)", [os.path.join(CORE, "test_otel.py")]),
     ("pacote de evidencia por feature (T-02)", [os.path.join(CORE, "test_evidence.py")]),
@@ -69,9 +71,12 @@ SUITES = [
 ]
 
 failed = []
+checks_total = 0
 for name, args in SUITES:
     r = subprocess.run([sys.executable, "-I"] + args, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     last = (r.stdout.strip().splitlines() or ["(sem saida)"])[-1]
+    m = re.match(r"(\d+) (?:testes|verificacoes)", last.strip())
+    checks_total += int(m.group(1)) if m else 0
     print("%-40s %s  %s" % (name, "OK   " if r.returncode == 0 else "FALHA", last))
     if r.returncode != 0:
         failed.append(name)
@@ -87,6 +92,16 @@ r = subprocess.run([sys.executable, "-I", os.path.join(CORE, "check_project.py")
 print("%-40s %s  %s" % ("demo: check_project --strict", "OK   " if r.returncode == 0 else "FALHA", r.stdout.strip().splitlines()[-1]))
 if r.returncode != 0:
     failed.append("demo")
+
+# os numeros do README: o piso de verificacoes ("2,500+") contra o total medido agora
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import gen_docs  # noqa: E402
+
+wrong = gen_docs.readme_problems(checks_total=checks_total)
+print("%-40s %s  %s" % ("README: piso de verificacoes", "FALHA" if wrong else "OK   ",
+                        "; ".join(wrong) if wrong else "%d verificacoes medidas" % checks_total))
+if wrong:
+    failed.append("readme")
 
 print("\n%d suite(s) com falha" % len(failed) if failed else "\ntudo verde")
 sys.exit(1 if failed else 0)
