@@ -66,6 +66,11 @@ case("cat .gitignore e git check-ignore em .aisef/keys -> allow", "Bash", "allow
      command="cat .aisef/.gitignore && git check-ignore .aisef/keys/x")
 case("git status com grep de .aisef/keys -> allow", "Bash", "allow", command="git status --porcelain -uall | grep .aisef/keys")
 case("git rm em .aisef/keys -> deny", "Bash", "deny", command="git rm .aisef/keys/x")
+case("git add --dry-run com grep de .aisef/audit -> allow", "Bash", "allow",
+     command='cat .aisef/.gitignore; git add -A --dry-run | grep -v ".aisef/audit/archive"')
+case("git add -n -> allow", "Bash", "allow", command="git add -A -n")
+case("git clean --dry-run -> allow", "Bash", "allow", command="git clean -fd --dry-run")
+case("git add de verdade continua pedindo -> ask", "Bash", "ask", command="git add -A")
 case("git commit --no-verify -> deny", "Bash", "deny", command='git commit --no-verify -m "x"')
 case("git push --no-verify -> deny", "Bash", "deny", command="git push --no-verify origin main")
 case("git -c commit.gpgsign=false -> deny", "Bash", "deny", command='git -c commit.gpgsign=false commit -m "x"')

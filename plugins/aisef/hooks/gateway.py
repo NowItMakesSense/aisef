@@ -229,7 +229,7 @@ def classify_bash(cmd, patterns, env):
         sub, rest = m.group(1).lower(), m.group(2)
         if sub in ("status", "log", "diff", "show", "blame", "fetch", "remote", "rev-parse", "ls-files", "describe",
                    "shortlog", "grep", "check-ignore", "check-attr", "ls-tree", "rev-list", "for-each-ref", "cat-file",
-                   "merge-base", "name-rev") or (sub == "branch" and not re.search(r"\s-(?:d|D|-delete)\b", rest)):
+                   "merge-base", "name-rev") or (sub in GIT_DRY_RUN_OK and GIT_DRY_RUN_RE.search(rest)) or (sub == "branch" and not re.search(r"\s-(?:d|D|-delete)\b", rest)):
             op = "status_log_diff"
         elif sub == "commit":
             op = "history_rewrite" if "--amend" in rest else "commit"
@@ -253,7 +253,7 @@ def classify_bash(cmd, patterns, env):
         else:
             op = None  # subcomando nao classificado
         # T1: descartar trabalho local tambem e destrutivo (git clean, checkout/restore de arquivos, stash drop)
-        discards = ((sub == "clean" and re.search(r"\s-[a-z]*f", rest)) or
+        discards = ((sub == "clean" and re.search(r"\s-[a-z]*f", rest) and not GIT_DRY_RUN_RE.search(rest)) or
                     (sub == "checkout" and re.search(r"\s(?:--\s|\.(?:\s|$))", rest + " ")) or
                     (sub == "restore" and "--staged" not in rest) or
                     (sub == "stash" and re.search(r"\s(?:drop|clear)\b", rest)))
@@ -427,6 +427,8 @@ READONLY_CMDS = {"ls", "dir", "cat", "type", "head", "tail", "wc", "grep", "rg",
                  "more", "stat", "file", "which", "where", "get-content", "gc", "get-childitem", "gci", "select-string", "sls",
                  "get-location", "gl", "measure-object", "where-object", "select-object", "sort-object", "format-table",
                  "format-list", "get-item", "gi", "test-path", "sort", "uniq", "cut", "jq"}
+GIT_DRY_RUN_OK = {"add", "rm", "clean", "mv"}  # com -n/--dry-run so mostram o que fariam
+GIT_DRY_RUN_RE = re.compile(r"\s(?:-n|--dry-run)\b")
 READONLY_GIT = {"status", "log", "diff", "show", "blame", "ls-files", "rev-parse", "describe", "shortlog", "grep", "remote",
                 "check-ignore", "check-attr", "ls-tree", "rev-list", "for-each-ref", "cat-file", "merge-base", "name-rev"}
 READONLY_AISEF_RE = re.compile(r"(?:aisef_project\.py\s+(?:next|status|verify|waves|precheck|mode)\b(?![^;&|]*--set)|"
@@ -455,7 +457,8 @@ def read_only_command(cmd):
             head = head[:-4]
         if head == "git":
             sub = next((t for i, t in enumerate(toks[1:], 1) if not t.startswith("-") and toks[i - 1] != "-C"), "")
-            if sub not in READONLY_GIT and not (sub == "branch" and not re.search(r"\s-(?:d|D|m|M|-delete|-move)\b", seg)):
+            if sub not in READONLY_GIT and not (sub == "branch" and not re.search(r"\s-(?:d|D|m|M|-delete|-move)\b", seg)) \
+                    and not (sub in GIT_DRY_RUN_OK and GIT_DRY_RUN_RE.search(seg)):
                 return False
         elif head in ("python", "python3", "py"):
             if not READONLY_AISEF_RE.search(seg):
