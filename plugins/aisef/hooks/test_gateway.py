@@ -337,6 +337,8 @@ case("subagente aplicando migrate -> deny", "Bash", "deny", _agent="aisef:implem
 case("setup --apply -> ask (uma decisao do usuario)", "Bash", "ask", command="python -I core/aisef_setup.py --project . --apply --only agents,docs")
 case("setup sem --apply (plano) nao pergunta", "Bash", "allow", command="python -I core/aisef_setup.py --project .")
 case("practices apply -> ask (escreve .claude/rules)", "Bash", "ask", command="python -I core/aisef_practices.py apply --project .")
+case("comando fora do sandbox -> ask (F-08)", "Bash", "ask", command="npm test", dangerouslyDisableSandbox=True)
+case("comando dentro do sandbox segue livre", "Bash", "allow", command="npm test", dangerouslyDisableSandbox=False)
 case("practices list nao pergunta", "Bash", "allow", command="python -I core/aisef_practices.py list --project .")
 case("aisef_project practices --apply -> ask", "Bash", "ask", command="python -I core/aisef_project.py practices --project . --apply")
 case("propor licoes segue livre", "Bash", "allow", command="python aisef_learn.py propose --project .")
@@ -433,6 +435,9 @@ if not ok:
 fails += not ok
 
 print("--- doctor (SessionStart)")
+os.makedirs(os.path.join(proj, ".claude"), exist_ok=True)  # sandbox ligado: no Linux, desligado gera aviso (F-08)
+with open(os.path.join(proj, ".claude", "settings.local.json"), "w", encoding="utf-8") as fh:
+    json.dump({"sandbox": {"enabled": True}}, fh)
 r = run("doctor.py", {})
 total += 1
 ok = "Graphify esta ligado" in r.stdout and "graphify-out/graph.json" in r.stdout and r.returncode == 0

@@ -20,6 +20,14 @@ def problems(project):
         found.append(libs)
     root = os.path.join(project, ".aisef")
     try:
+        import aisef_env as _env
+        import aisef_project as _ap
+        sb = _env.sandbox_advice(project, _ap.load_config(project))  # F-08
+        if sb:
+            found.append(sb)
+    except Exception:
+        pass
+    try:
         import aisef_migrate
         mig = aisef_migrate.status(project)  # F-06: projeto atras do plugin
         if mig:

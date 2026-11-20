@@ -34,7 +34,10 @@ with open(os.path.join(proj, "AGENTS.md"), "w", encoding="utf-8") as fh:
     fh.write("# Regras do time\n\nUse tabs.\n")
 ap.init(proj, "PRJ-SETUP")
 pl = su.plan(proj)
-check("plano traz os quatro itens num projeto novo", set(pl) == set(su.ITEMS), pl)
+import aisef_env  # noqa: E402
+SANDBOX = aisef_env.sandbox_status(proj)["supported"] and not aisef_env.sandbox_status(proj)["enabled"]
+check("plano traz os itens num projeto novo (sandbox so onde ele existe)",
+      set(pl) == set(su.ITEMS) - (set() if SANDBOX else {"sandbox"}), pl)
 check("plano de agentes = os drafts do nucleo", "implementer" in pl["agents"] and "qa" not in pl["agents"], pl["agents"])
 check("plano nao grava nada", not os.path.exists(os.path.join(proj, ".claude", "settings.json"))
       and "AISEF" not in open(os.path.join(proj, "AGENTS.md"), encoding="utf-8").read())
@@ -52,9 +55,10 @@ check("CLAUDE.md criado com a linha", su.CLAUDE_LINE in open(os.path.join(proj, 
 last = log(proj)[-1]
 check("uma decisao do usuario resume o setup", last["event_type"] == "decision_recorded" and last["actor"]["type"] == "user"
       and set(last["data"]["setup"]) == {"agents", "settings", "docs"}, last)
-check("practices continua pendente no plano", set(su.plan(proj)) == {"practices"}, su.plan(proj))
+check("practices continua pendente no plano", set(su.plan(proj)) == {"practices"} | ({"sandbox"} if SANDBOX else set()),
+      su.plan(proj))
 done = su.apply(proj)
-check("depois aplica o que faltou (practices)", set(done) == {"practices"} and
+check("depois aplica o que faltou (practices)", set(done) == {"practices"} | ({"sandbox"} if SANDBOX else set()) and
       os.path.isdir(os.path.join(proj, ".claude", "rules", "aisef")), done)
 n1 = len(log(proj))
 check("segunda vez: nada a fazer, nenhum evento", su.apply(proj) == {} and len(log(proj)) == n1 and su.plan(proj) == {})

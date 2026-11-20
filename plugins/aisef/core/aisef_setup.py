@@ -11,6 +11,7 @@ Itens:
     settings   regras nativas de segunda camada em .claude/settings.json (mescla, nunca apaga)
     practices  boas praticas em .claude/rules/aisef/ (nao sobrescreve arquivo mudado no projeto)
     docs       secao AISEF no AGENTS.md e uma linha no CLAUDE.md (acrescenta, nunca sobrescreve)
+    sandbox    sandbox.enabled no .claude/settings.json (so em Linux, macOS e WSL2; F-08)
 
     python -I aisef_setup.py --project .                               (plano: o que cada item faria)
     python -I aisef_setup.py --project . --apply [--only agents,docs] [--roles backend,qa]
@@ -25,7 +26,7 @@ sys.path.insert(0, HERE)
 import aisef_practices  # noqa: E402
 import aisef_project as ap  # noqa: E402
 
-ITEMS = ("agents", "settings", "practices", "docs")
+ITEMS = ("agents", "settings", "practices", "docs", "sandbox")
 TEMPLATE = os.path.join(HERE, "templates", "AGENTS.aisef.md")
 CLAUDE_LINE = "Este projeto usa o AISEF (plugin aisef): estado em .aisef/, regras em AGENTS.md (secao AISEF)."
 
@@ -71,7 +72,10 @@ def plan(project, roles=None):
     settings = ["ask: %s" % r for r in added["ask"]] + ["deny: %s" % r for r in added["deny"]] + added["settings"]
     practices = ["%s (%s)" % (r["target"], r["state"]) for r in aisef_practices.plan(project)
                  if r["state"] not in ("igual", "modificado no projeto")]
-    out = {"agents": drafts, "settings": settings, "practices": practices, "docs": _docs_plan(project)}
+    import aisef_env
+    sb = aisef_env.sandbox_status(project)
+    sandbox = ["sandbox.enabled = true em .claude/settings.json"] if sb["supported"] and not sb["enabled"] else []
+    out = {"agents": drafts, "settings": settings, "practices": practices, "docs": _docs_plan(project), "sandbox": sandbox}
     return {k: v for k, v in out.items() if v}
 
 
@@ -110,6 +114,12 @@ def apply(project, only=ITEMS, roles=None):
         done["practices"] = aisef_practices.apply(project)[0]
     if "docs" in only and "docs" in todo:
         done["docs"] = _apply_docs(project)
+    if "sandbox" in only and "sandbox" in todo:
+        path = os.path.join(project, ".claude", "settings.json")
+        cur = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else {}
+        cur.setdefault("sandbox", {})["enabled"] = True
+        ap.write_json(path, cur)
+        done["sandbox"] = todo["sandbox"]
     done = {k: v for k, v in done.items() if v}
     if done:
         ap.append(project, {"event_type": "decision_recorded", "actor": {"type": "user", "id": "user"},

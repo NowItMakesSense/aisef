@@ -578,6 +578,8 @@ def decide(data, project, policy, patterns, config, now):
             raise Decision("deny", "pular hooks ou assinatura do Git (--no-verify, --no-gpg-sign) esconde problemas: "
                                    "corrija o que o hook acusa")
         items = classify_bash(operation, patterns, env, "ps" if tool == "PowerShell" else "sh")
+        if inp.get("dangerouslyDisableSandbox") is True:  # F-08: sair do sandbox e decisao do usuario
+            items.append(("unclassified", "execute", env, False, "comando pedindo para rodar fora do sandbox"))
     else:
         paths = [norm(inp.get(k)) for k in ("file_path", "path", "notebook_path", "pattern", "glob") if isinstance(inp.get(k), str)]
         operation = tool + " " + " ".join(paths)

@@ -55,14 +55,15 @@ python -I CORE/aisef_setup.py --project .
   Diga que existe a **equipe estendida** (qa, doc-updater, e2e-runner, code-simplifier, refactor-cleaner, performance-optimizer, spec-miner, docs-lookup, commit-reviewer e outros, `aisef_catalog.py list --tier extended`), que entra quando o usuario pede ou quando o trabalho pedir: `agents --roles doc-updater` cria o draft. Papeis `manual` (React build, saude) tambem so por pedido.
 - **settings**: regras nativas de segunda camada em `.claude/settings.json` (mescla, nunca apaga). Se o gateway falhar ou for desligado, elas continuam valendo. Incluem `env.DO_NOT_TRACK=1` (desliga a telemetria das CLIs de busca, como `npx skills`; um valor do usuario e respeitado), pedem aprovacao para instalar skill, plugin ou MCP e incluem `disableBypassPermissionsMode`; mesmo sem elas, em modo bypass o gateway nega tudo o que pediria aprovacao.
 - **practices**: boas praticas da stack e do estilo em `.claude/rules/aisef/` (nao sobrescreve arquivo mudado no projeto).
+- **sandbox** (so em Linux, macOS e WSL2; o plano nao mostra no Windows nativo): liga `sandbox.enabled` no `.claude/settings.json`. O sandbox isola os comandos; o gateway decide o que pode rodar; o log prova o que rodou. Com ele ligado, o gateway pergunta quando um comando pede para sair do sandbox (`dangerouslyDisableSandbox`). Se o usuario recusar, grave `"sandbox_reminder": false` no `.aisef/config.json` (a edicao pede aprovacao) e o doctor para de lembrar. No Windows nativo, so diga que o sandbox existe no WSL2.
 - **docs**: a secao AISEF (`CORE/templates/AGENTS.aisef.md`) no `AGENTS.md`, que Codex, Cursor e Gemini leem, e uma linha no `CLAUDE.md`. Acrescenta, nunca sobrescreve.
 
-Pergunte **uma vez** (AskUserQuestion, `multiSelect: true`, os quatro marcados como recomendados) o que aplicar. Com a escolha, **um** comando, que abre **um** prompt nativo e registra a decisao no log:
+Pergunte **uma vez** (AskUserQuestion, `multiSelect: true`, todos marcados como recomendados) o que aplicar. Com a escolha, **um** comando, que abre **um** prompt nativo e registra a decisao no log:
 ```
 python -I CORE/aisef_setup.py --project . --apply --only <itens escolhidos> [--roles <agentes, se ele limitou>]
 ```
 
-Ferramentas MCP pedem aprovacao ate o usuario libera-las em `.aisef/config.json` -> `"mcp_allow": ["mcp__servidor__ferramenta", "mcp__docs__*"]` (so leitura e o que ele confia). Recomende tambem o sandbox do Claude Code (`/sandbox`): o gateway le comandos por padroes e reduz o risco, mas nao e uma fronteira de seguranca.
+Ferramentas MCP pedem aprovacao ate o usuario libera-las em `.aisef/config.json` -> `"mcp_allow": ["mcp__servidor__ferramenta", "mcp__docs__*"]` (so leitura e o que ele confia).
 
 ## 5. Pesquisa de ferramentas (pergunte antes)
 A **aisef-tooling** sugere skills, plugins e MCPs para o projeto e pesquisa skills com a skill `find-skills`

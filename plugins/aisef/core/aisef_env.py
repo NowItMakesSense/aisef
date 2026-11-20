@@ -103,3 +103,42 @@ def diagnose(path_env=None, run=subprocess.run):
     if not missing:
         return None
     return advice(missing, found=find_python(path_env=path_env, run=run))
+
+
+# ------------------------------------------------------------------ sandbox do Claude Code (F-08)
+SANDBOX_PLATFORMS = ("linux", "darwin")  # o sandbox nativo roda em Linux, macOS e WSL2; nao no Windows nativo
+
+
+def _settings_files(project, home=None):
+    home = home or os.path.expanduser("~")
+    return [os.path.join(home, ".claude", "settings.json"), os.path.join(project, ".claude", "settings.json"),
+            os.path.join(project, ".claude", "settings.local.json")]
+
+
+def sandbox_status(project, platform=None, home=None):
+    """{'supported', 'enabled', 'source'}: o ultimo settings que define sandbox.enabled vence (usuario < projeto < local)."""
+    import json
+    platform = platform or sys.platform
+    st = {"supported": platform.startswith(SANDBOX_PLATFORMS), "enabled": False, "source": None}
+    for path in _settings_files(project, home):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                sb = (json.load(fh) or {}).get("sandbox")
+        except (OSError, ValueError, AttributeError):
+            continue
+        if isinstance(sb, dict) and isinstance(sb.get("enabled"), bool):
+            st["enabled"], st["source"] = sb["enabled"], path
+    return st
+
+
+def sandbox_advice(project, cfg=None, platform=None, home=None):
+    """Aviso do doctor, ou None. Silencioso no Windows nativo, com o sandbox ligado ou com
+    config.json -> "sandbox_reminder": false (o usuario recusou)."""
+    if (cfg or {}).get("sandbox_reminder") is False:
+        return None
+    st = sandbox_status(project, platform, home)
+    if not st["supported"] or st["enabled"]:
+        return None
+    return ("sandbox do Claude Code desligado: o gateway decide o que pode rodar, mas le comandos por padroes e nao "
+            "isola. Ligue com /sandbox ou pelo setup (`aisef_setup.py --apply --only sandbox`); para nao ver mais "
+            "este aviso, grave \"sandbox_reminder\": false no .aisef/config.json")

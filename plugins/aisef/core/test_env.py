@@ -71,6 +71,23 @@ check("conselho sem Python achado: pip install exato no Python dos hooks",
       "`/usr/bin/python3 -m pip install jsonschema cryptography`" in msg, msg)
 check("ambiente completo (este Python): diagnose devolve None", env.diagnose(path_env="", run=Run()) is None)
 
+# sandbox do Claude Code (F-08)
+import json  # noqa: E402
+sbp = os.path.join(work, "sbp")
+home = os.path.join(work, "sbhome")
+os.makedirs(os.path.join(sbp, ".claude"))
+os.makedirs(os.path.join(home, ".claude"))
+check("sandbox: Windows nativo nao suporta e o doctor fica quieto",
+      env.sandbox_status(sbp, "win32", home)["supported"] is False and env.sandbox_advice(sbp, {}, "win32", home) is None)
+check("sandbox: Linux sem settings = desligado, doctor avisa com o caminho para ligar",
+      "aisef_setup.py" in (env.sandbox_advice(sbp, {}, "linux", home) or ""))
+json.dump({"sandbox": {"enabled": True}}, open(os.path.join(home, ".claude", "settings.json"), "w"))
+check("sandbox: ligado no settings do usuario vale para o projeto", env.sandbox_status(sbp, "linux", home)["enabled"] is True
+      and env.sandbox_advice(sbp, {}, "linux", home) is None)
+json.dump({"sandbox": {"enabled": False}}, open(os.path.join(sbp, ".claude", "settings.local.json"), "w"))
+check("sandbox: settings.local do projeto vence o do usuario", env.sandbox_status(sbp, "darwin", home)["enabled"] is False)
+check("sandbox: sandbox_reminder false silencia o doctor", env.sandbox_advice(sbp, {"sandbox_reminder": False}, "linux", home) is None)
+
 # init sem cryptography: recusa antes de criar qualquer coisa (D5)
 proj = os.path.join(work, "proj")
 os.makedirs(proj)
