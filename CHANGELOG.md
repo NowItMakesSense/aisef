@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.1: painel com custo de atenção e impacto
+- **Custo de atenção na tela Agora (F-09).** Novo card na coluna da direita com interrupções (pedidos ao Approval Center mais prompts do gateway), interrupções por tarefa concluída, taxa de aprovação na 1ª validação e mediana de tokens por tarefa concluída. Os dados saem do `build_panel.py` (`attention` no `panel-data`), com a mesma conta do `metrics`.
+- **Filtro "Impacto de" na Rastreabilidade (G-07).** Digite um requisito, uma tarefa ou um arquivo (aceita `\` e `./`) e a tela mostra só os requisitos ligados a ele, pelo escopo das tarefas e pelos arquivos que os relatórios mudaram (`files` em cada linha da RTM). O filtro sobrevive a recarregar.
+- **Tela Agora mais limpa.** O bloco "Próximo passo" saiu da coluna da direita, e o mapa de execução acompanha a altura dela, com as faixas das ondas até a legenda.
+
 ## 0.15.0: times e auditores ([plano](docs/plan/plano-0.13-0.15.md))
 - **Um log por pessoa (T-04 + T-05, [ADR 0026](docs/adr/0026-log-por-pessoa.md)).** Com `aisef_streams.py enable` (decisão do usuário), o log atual vira o stream do dono, sem reescrever nada.
   - **Stream de cada pessoa:** fica em `.aisef/audit/streams/<id>/`, com cadeia, `log_id`, chave Ed25519, ids de evento e `head.json` próprios. A identidade vem do `AISEF_USER` ou do e-mail do Git.

@@ -153,6 +153,56 @@ def check_integrity(project):
 
 
 # ----------------------------------------------------------------------------- derivacao
+def rtm_files(task_ids, task_by_id, reports):
+    """G-07: arquivos de um requisito, para o filtro "impacto de" (escopo das tarefas e o que os relatorios mudaram)."""
+    out = set()
+    for tid in task_ids:
+        t = task_by_id.get(tid) or {}
+        out.update(((t.get("scope") or {}).get("paths_allowed") or []))
+        for r in reports:
+            if r.get("task_id") != tid:
+                continue
+            for kind in ("created", "modified", "deleted"):
+                for fe in ((r.get("files") or {}).get(kind) or []):
+                    p = fe.get("path") if isinstance(fe, dict) else fe
+                    if p:
+                        out.add(p.replace("\\", "/"))
+    return sorted(out)
+
+
+def attention_summary(project, loaded, log):
+    """F-09: o custo de atencao para a tela Agora (mesma conta do metrics: pedidos ao Approval Center mais prompts do
+    gateway, por tarefa concluida), mais a 1a validacao e os tokens por tarefa concluida."""
+    tasks = loaded.get("tasks", [])
+    completed = [t for t in tasks if (t.get("state") or {}).get("status") == "completed"]
+    asks = sum(1 for e in log if e.get("event_type") == "tool_used" and (e.get("data") or {}).get("gateway") == "ask")
+    requests = len(loaded.get("approvals", []))
+    first = {}
+    for e in log:
+        if e.get("task_id") and e.get("event_type") in ("task_validated", "task_rejected") and e["task_id"] not in first:
+            first[e["task_id"]] = e["event_type"] == "task_validated"
+    tokens = {}
+    try:
+        with open(os.path.join(project, "runtime", "usage.jsonl"), encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    u = json.loads(line)
+                except ValueError:
+                    continue
+                if u.get("task_id") and isinstance(u.get("usage"), dict):
+                    tokens[u["task_id"]] = tokens.get(u["task_id"], 0) + sum(
+                        int(u["usage"].get(k) or 0) for k in ("input_tokens", "output_tokens", "cache_creation_input_tokens"))
+    except OSError:
+        pass
+    done_tokens = sorted(tokens[t["task_id"]] for t in completed if t["task_id"] in tokens)
+    n = len(completed)
+    return {"interruptions": requests + asks, "approval_requests": requests, "gateway_asks": asks,
+            "tasks_completed": n,
+            "interruptions_per_completed_task": round((requests + asks) / n, 2) if n else None,
+            "first_pass_validation_rate": round(sum(first.values()) / len(first), 2) if first else None,
+            "tokens_per_completed_task_median": done_tokens[len(done_tokens) // 2] if done_tokens else None}
+
+
 def derive(loaded, log, integrity):
     features = loaded["features"]
     tasks = loaded["tasks"]
@@ -200,6 +250,7 @@ def derive(loaded, log, integrity):
                 "kind": req["kind"], "statement": req["statement"], "status": state,
                 "task_ids": list(entry["task_ids"]), "criterion_ids": list(entry["criterion_ids"]),
                 "missing_task_ids": missing,
+                "files": rtm_files(entry["task_ids"], task_by_id, loaded.get("reports", [])),
             })
 
     feature_rows = []
@@ -395,6 +446,7 @@ def build(project, out, schemas_dir, now=None):
     apply_effective_states(loaded["tasks"], log)
     views = derive(loaded, log, integrity)
     views["engineering"] = derive_engineering(loaded["blueprints"])
+    views["attention"] = attention_summary(project, loaded, log)  # F-09
     import panel_live
     views["live"] = panel_live.derive_live(project, loaded, log, now)
 
