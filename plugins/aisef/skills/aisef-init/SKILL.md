@@ -37,14 +37,16 @@ python -I CORE/aisef_project.py detect --project .
 Grava `.aisef/architecture.json` (stacks, estilos com confianca e evidencia, violacoes da regra de dependencia, praticas e recomendacoes) e cria os drafts dos agentes da stack detectada (revisor e corretor de build da linguagem). Mostre o resumo ao usuario dizendo que e **heuristica**; confirmar o estilo e adota-lo fica para a **aisef-discovery**. Em projeto novo, rode o mesmo comando depois que a stack existir.
 
 ## 4. Ative os agentes (decisao do usuario)
-O init criou os Agent Contracts dos papeis `always` do catalogo (`CORE/agents/catalog.v0.1.json`) em `.aisef/contracts/agents/*.json`, com `status: "draft"`; o `detect` acrescentou os da stack. Agente em draft e bloqueado pelo gateway, e agente sem contrato nao edita. Mostre a equipe agrupada por tipo (`python -I CORE/aisef_catalog.py list`):
-- **executores**: implementer, backend, frontend, database, devops, doc-updater, e2e-runner;
-- **avaliadores** (so relatam): qa, security, code-reviewer, architecture-reviewer, database-reviewer e os demais revisores;
-- **corretores** (diff minimo): code-simplifier, refactor-cleaner, performance-optimizer e os corretores de build da stack;
-- **consultores**: planner, architect, code-architect, code-explorer, spec-miner, domain e outros;
+O init criou os Agent Contracts do **nucleo** do catalogo (`CORE/agents/catalog.v0.1.json`: papeis `always` sem `tier: extended`) em `.aisef/contracts/agents/*.json`, com `status: "draft"`; o `detect` acrescentou os da stack e, com estilo de arquitetura detectado, o `architecture-reviewer`. Agente em draft e bloqueado pelo gateway, e agente sem contrato nao edita. Mostre a equipe agrupada por tipo (`python -I CORE/aisef_catalog.py list --tier core`):
+- **executores**: implementer, backend, frontend, database, devops;
+- **avaliadores** (so relatam; o roteamento de revisao chama em toda tarefa): code-reviewer, database-reviewer, pr-test-analyzer, security e os revisores da stack;
+- **corretores** (diff minimo): os corretores de build da stack;
+- **consultores**: planner, architect, code-explorer;
 - o `validator`, so com Git de leitura.
 
-Mostre o teto de cada grupo (recursos, Git, ambiente maximo) e pergunte se aprova (AskUserQuestion: todos, so os essenciais `implementer,validator,qa,security,code-reviewer`, escolher, nenhum agora). Papeis `manual` (React, Vue, acessibilidade, saude) so entram se o usuario pedir: `agents --roles react-reviewer`. Com o OK:
+Diga que existe a **equipe estendida** (qa, doc-updater, e2e-runner, code-simplifier, refactor-cleaner, performance-optimizer, spec-miner, docs-lookup, commit-reviewer e outros, `aisef_catalog.py list --tier extended`), que entra quando o usuario pede ou quando o trabalho pedir: `agents --roles doc-updater` cria o draft. Papeis `manual` (React build, saude) tambem so por pedido.
+
+Mostre o teto de cada grupo (recursos, Git, ambiente maximo) e pergunte se aprova (AskUserQuestion: todos do nucleo, escolher, nenhum agora). Com o OK:
 ```
 python -I CORE/aisef_project.py agents --project . --activate [--roles backend,qa]
 ```

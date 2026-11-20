@@ -30,6 +30,7 @@ def check(name, cond, detail=None):
 proj = os.path.join(work, "p")
 os.makedirs(proj)
 ap.init(proj, "PRJ-DSP", "despacho", "dev")
+ap.write_agent_drafts(proj, ["architecture-reviewer"])  # entra pelo estilo; aqui a tarefa toca domain
 ap.activate_agents(proj)
 open(os.path.join(proj, ".aisef", "discovery.md"), "w", encoding="utf-8").write("# Discovery\n")
 brief = json.loads(json.dumps(aisef_new.EXAMPLES["feature"]))

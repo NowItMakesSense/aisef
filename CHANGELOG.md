@@ -6,6 +6,12 @@
   - `aisef_graph.py build-native` grava `.aisef/runtime/graph.json` (fora do Git) no formato do Graphify, e o `pack` o reconstrói sozinho quando um arquivo de código muda, entra ou sai;
   - o `pack` usa, nesta ordem, o Graphify, o grafo nativo e nenhum. O `context_mode` ganha o valor `native`;
   - 5.000 arquivos em cerca de 1,2 s; conferir que nada mudou leva cerca de 0,2 s. Testes em `core/test_graph.py`.
+- **Catálogo em núcleo e estendido (C-04).** Um projeto Python novo começa com 15 agentes, não 33:
+  - campo `tier` no catálogo: os papéis `always` são o núcleo (13 subagentes: executores, `code-reviewer`, `database-reviewer`, `pr-test-analyzer`, `security`, `validator`, `planner`, `architect`, `code-explorer`); com `tier: extended` (qa, doc-updater, e2e-runner, code-simplifier, refactor-cleaner, performance-optimizer, spec-miner, docs-lookup, commit-reviewer e outros) só entram por pedido (`agents --roles`);
+  - o `architecture-reviewer` entra quando um estilo de arquitetura é detectado ou adotado;
+  - projetos existentes não mudam: contratos já criados continuam;
+  - `metrics` ganha a seção **Agentes**: tarefas, despachos e 1ª validação por executor, vereditos por revisor, execuções e tokens por papel, e os contratos ativos que nunca trabalharam;
+  - novo `tools/agent_usage.py`: soma vários projetos e lista os papéis nunca usados (insumo da revisão do catálogo, C-05).
 
 ## 0.12.1: correções vindas do uso real e README novo
 - **README novo** (inglês e pt-BR): a equipe de 66 agentes, as ferramentas, o radar de arquitetura e os números do benchmark na frente.

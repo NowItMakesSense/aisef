@@ -80,8 +80,12 @@ check("domain ativa pelo dominio", cat.applicable({"activation": "domain:ml"}, d
 with tempfile.TemporaryDirectory() as tmp:
     ap.init(tmp, "demo-catalogo")
     made = sorted(f[:-5] for f in os.listdir(os.path.join(tmp, ".aisef", "contracts", "agents")))
-    always = sorted(r["id"] for r in cat.roles() if r["activation"] == "always")
-    check("init cria so os papeis always", made == always, made)
+    core = sorted(r["id"] for r in cat.roles() if r["activation"] == "always" and r.get("tier", "core") == "core")
+    check("init cria so os papeis always do nucleo (C-04)", made == core, made)
+    check("nucleo: 13 subagentes mais o orquestrador", len(core) == 14 and "orchestrator" in core, core)
+    ext = [r["id"] for r in cat.roles() if r.get("tier") == "extended"]
+    check("estendidos (qa, doc-updater...) ficam fora do init", ext and not set(ext) & set(made) and "qa" in ext, ext)
+    check("estendido entra por pedido (agents --roles)", ap.write_agent_drafts(tmp, ["qa"]) == ["qa"])
     stack_roles = [r["id"] for r in cat.roles() if r["activation"].startswith("stack:")]
     if stack_roles:
         sid = cat.get(stack_roles[0])["activation"].split(":", 1)[1]
@@ -98,5 +102,16 @@ with tempfile.TemporaryDirectory() as tmp:
     except SystemExit:
         check("papel fora do catalogo e recusado", True)
 
+check("tier extended nao se aplica sozinho", not cat.applicable({"activation": "always", "tier": "extended"}, ("python",)))
+check("tier fora de always e problema do catalogo", any("tier so vale" in x for x in (
+    lambda: (cat.roles().append({"id": "x-y", "activation": "stack:python", "tier": "core"}), cat.check(),
+             cat.roles().pop())[1])()))
+with tempfile.TemporaryDirectory() as tmp:
+    ap.init(tmp, "demo-python")
+    with open(os.path.join(tmp, ".aisef", "architecture.json"), "w", encoding="utf-8") as fh:
+        json.dump({"stacks": [{"id": "python"}], "styles": []}, fh)
+    ap.write_agent_drafts(tmp)
+    made = [f[:-5] for f in os.listdir(os.path.join(tmp, ".aisef", "contracts", "agents")) if f != "orchestrator.json"]
+    check("projeto Python novo: no maximo 15 subagentes (eram 33)", len(made) <= 15 and "python-reviewer" in made, sorted(made))
 print("%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

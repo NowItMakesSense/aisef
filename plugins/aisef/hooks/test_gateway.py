@@ -286,7 +286,7 @@ case("subagente registrando decisao do usuario -> deny", "Bash", "deny", _agent=
      command="python aisef_project.py decide --request APR-1 --choice approve")
 case("subagente sem Agent Contract segue so a politica", "Bash", "ask", _agent="Explore", command="git commit -m x")
 case("ativar agentes -> ask (decisao do usuario)", "Bash", "ask", command="python aisef_project.py agents --project . --activate")
-case("editar Agent Contract -> ask", "Edit", "ask", file_path=os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"))
+case("editar Agent Contract -> ask", "Edit", "ask", file_path=os.path.join(proj, ".aisef", "contracts", "agents", "security.json"))
 
 print("--- PowerShell (ferramenta do Claude Code no Windows): mesma politica do Bash")
 case("PS: git status -> allow", "PowerShell", "allow", command="git status")
@@ -313,7 +313,7 @@ print("--- escrita por shell em arquivos de decisao do AISEF")
 case("redirecionar para config.json -> ask", "Bash", "ask", command="echo {} > .aisef/config.json")
 case("PS: Set-Content numa aprovacao -> ask", "PowerShell", "ask", command="Set-Content .aisef/approvals/APR-9.json x")
 case("cp sobre uma autorizacao -> ask", "Bash", "ask", command="cp /tmp/a.json .aisef/authorizations/AUTH-1.json")
-case("sed -i em Agent Contract -> ask", "Bash", "ask", command="sed -i s/draft/active/ .aisef/contracts/agents/qa.json")
+case("sed -i em Agent Contract -> ask", "Bash", "ask", command="sed -i s/draft/active/ .aisef/contracts/agents/security.json")
 case("subagente escrevendo aprovacao por shell -> deny", "Bash", "deny", _agent="aisef:backend",
      command="echo {} > .aisef/approvals/APR-9.json")
 case("ler uma aprovacao segue livre", "Bash", "allow", command="cat .aisef/approvals/APR-1.json 2>/dev/null")
@@ -464,16 +464,16 @@ print(("OK    " if ok else "FALHA ") + "doctor: Graphify desligado pelo usuario 
 fails += not ok
 open(cfg_path, "w", encoding="utf-8").write(cfg_txt)
 os.utime(adr, (time.time() - 7200, time.time() - 7200))
-cfg_bak = open(os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"), encoding="utf-8").read()
-qa = json.loads(cfg_bak)
-qa["status"] = "draft"
-aisef_project.write_json(os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"), qa)
+cfg_bak = open(os.path.join(proj, ".aisef", "contracts", "agents", "security.json"), encoding="utf-8").read()
+sec = json.loads(cfg_bak)
+sec["status"] = "draft"
+aisef_project.write_json(os.path.join(proj, ".aisef", "contracts", "agents", "security.json"), sec)
 r = run("doctor.py", {})
 total += 1
-ok = "draft" in r.stdout and "qa" in r.stdout and r.returncode == 0
+ok = "draft" in r.stdout and "security" in r.stdout and r.returncode == 0
 print(("OK    " if ok else "FALHA ") + "doctor: avisa agente em draft, sem bloquear")
 fails += not ok
-open(os.path.join(proj, ".aisef", "contracts", "agents", "qa.json"), "w", encoding="utf-8").write(cfg_bak)
+open(os.path.join(proj, ".aisef", "contracts", "agents", "security.json"), "w", encoding="utf-8").write(cfg_bak)
 
 print("--- hook de auditoria")
 for payload in ({"tool_name": "Bash", "tool_input": {"command": "npm test"}, "session_id": "s1"},
