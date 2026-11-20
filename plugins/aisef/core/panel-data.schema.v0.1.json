@@ -126,7 +126,8 @@
           "status": { "enum": ["not_started", "in_progress", "covered", "broken_link"], "description": "broken_link: a RTM aponta para tarefa que nao existe ou foi excluida por contrato invalido." },
           "task_ids": { "type": "array", "items": { "type": "string" } },
           "criterion_ids": { "type": "array", "items": { "type": "string" } },
-          "missing_task_ids": { "type": "array", "items": { "type": "string" } }
+          "missing_task_ids": { "type": "array", "items": { "type": "string" } },
+          "files": { "type": "array", "items": { "type": "string" }, "description": "G-07: escopo das tarefas e arquivos que os relatorios mudaram, para o filtro 'impacto de'." }
         }
       }
     },
@@ -420,6 +421,20 @@
         "timeline": { "type": "array", "description": "Opcional (0.2.0): {task_id, wave, start, end, state} para a raia de ondas.", "items": { "type": "object" } },
         "learning": { "type": "array", "items": { "type": "object" } },
         "model_runs": { "type": "object" }
+      }
+    },
+    "attention": {
+      "type": "object",
+      "description": "F-09: custo de atencao (pedidos ao Approval Center mais prompts do gateway), 1a validacao e tokens por tarefa concluida.",
+      "additionalProperties": false,
+      "properties": {
+        "interruptions": { "type": "integer", "minimum": 0 },
+        "approval_requests": { "type": "integer", "minimum": 0 },
+        "gateway_asks": { "type": "integer", "minimum": 0 },
+        "tasks_completed": { "type": "integer", "minimum": 0 },
+        "interruptions_per_completed_task": { "type": ["number", "null"] },
+        "first_pass_validation_rate": { "type": ["number", "null"] },
+        "tokens_per_completed_task_median": { "type": ["integer", "null"] }
       }
     },
     "source_errors": {

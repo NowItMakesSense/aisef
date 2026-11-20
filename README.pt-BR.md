@@ -108,6 +108,7 @@ O portão de revisão acrescenta cerca de 13% por fatia, dentro da variação en
 
 ## Novidades
 
+- **0.15.1, custo de atenção e impacto no painel.** A tela Agora mostra quantas vezes você precisou parar (aprovações e perguntas do gateway por tarefa concluída, aprovação de primeira, tokens por tarefa), e a Rastreabilidade ganha o filtro "Impacto de": digite um requisito, uma tarefa ou um arquivo e veja só os requisitos ligados a ele.
 - **0.15.0, para times e auditores.** A GitHub Action `aisef-verify` em cada pull request, um pacote de evidência por feature que se verifica sozinho, com os controles SOC 2 e ISO 27001, exportação OpenTelemetry com as convenções GenAI, um log de auditoria por pessoa (o merge nunca conflita e cada aprovação é assinada por quem a deu) e um roadmap conferido contra o CHANGELOG.
 - **0.14.0, o sistema como grafo, o fluxo como dado e as fatias em worktrees.**
   - nenhum módulo do núcleo ou dos hooks passa de 500 linhas; o `aisef_project` mantém a mesma API, e o check roda um registro de grupos de regras;

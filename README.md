@@ -108,6 +108,7 @@ The review gate adds about 13% per slice, which is within run-to-run noise. On a
 
 ## What's new
 
+- **0.15.1, attention cost and impact in the panel.** The Now screen shows how often you had to stop (approvals and gateway prompts per completed task, first-pass validation, tokens per task), and Traceability gains an "Impact of" filter: type a requirement, task or file and see only the requirements it touches.
 - **0.15.0, for teams and auditors.** The `aisef-verify` GitHub Action on every pull request, a self-verifying evidence package per feature with SOC 2 and ISO 27001 controls, OpenTelemetry export with the GenAI conventions, one audit log per person (merges never conflict, approvals signed by whoever gave them), and a roadmap checked against the changelog.
 - **0.14.0, the system as a graph, the flow as data, slices in their own worktrees.**
   - no core or hook module is over 500 lines anymore; `aisef_project` keeps the same API, and the check runs a registry of rule groups;

@@ -8,7 +8,7 @@ O detalhe de cada versão está no [CHANGELOG](../CHANGELOG.md), e as decisões 
 
 | Versão | Entrega |
 |---|---|
-| depois | Painel: card de custo de atenção na tela Agora (F-09) e filtro "impacto de" na Rastreabilidade (G-07), a partir de uma prévia aprovada |
+| 0.15.1 | Painel: custo de atenção na tela Agora (F-09), filtro "impacto de" na Rastreabilidade (G-07), tela Agora sem o bloco "Próximo passo" |
 | depois | Revisão do catálogo de agentes com dados de uso de projetos reais (C-05, `tools/agent_usage.py`) |
 | depois | Confirmar numa sessão real que o Claude Code entrega o `agent_id` de quem chama a ferramenta Agent; sem isso, a ligação pai → subagente continua marcada como inferida |
 

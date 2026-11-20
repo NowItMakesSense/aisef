@@ -1,6 +1,6 @@
 # Plano: da nota 7,5 para 8,5 (0.13 → 0.15)
 
-> **Status:** concluído em 2026-11-20 (0.13.0, 0.14.0 e 0.15.0). Pendentes: as duas telas do painel (F-09, G-07), que esperam a prévia aprovada, e o C-05, que depende de dados de uso real.
+> **Status:** concluído em 2026-11-20 (0.13.0, 0.14.0 e 0.15.0). As telas do painel (F-09, G-07) saíram na 0.15.1. Pendente: o C-05, que depende de dados de uso real.
 > **Origem:** análise de 2026-11-20 sobre a 0.12.1 (nota geral 7,5).
 > **Relação com o [plano anterior](melhorias-0.11-0.14.md):** este plano **reordena** as tarefas que ainda estão abertas (F-*, L-*, T-*, G-05) e acrescenta tarefas novas (C-*, S-*, H-*, G-06/07, L-06, D-02). Os IDs antigos continuam valendo.
 > **Testes e medições ficam fora deste plano.** Como já decidido, o teste de uso real da 0.12 (M-05, portão de revisão, verify-loop, gateway) e as medições do benchmark acontecem depois, no projeto novo que você vai criar. Nenhuma tarefa daqui depende deles.
