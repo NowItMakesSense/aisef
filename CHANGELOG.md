@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.14.0 (em andamento): grafo do sistema e saúde do código ([plano](docs/plan/plano-0.13-0.15.md))
+## 0.14.0: grafo do sistema, workflow declarativo, log em camadas e worktrees ([plano](docs/plan/plano-0.13-0.15.md))
 - **Worktree por fatia (L-02).** Com `config.json` → `"parallel": {"mode": "worktree"}`, fatias com arquivos em comum entram na mesma onda, cada uma no seu worktree (`.aisef/worktrees/<T>`, branch `slice/<feature>/<T>`, fora do Git). O `next` e o `dispatch` trazem o comando de criar o worktree, e o prompt manda o agente trabalhar e commitar lá. O `complete` traz os comandos de integrar. No gateway:
   - são livres (`worktree_local`): `git worktree`, `git branch -d` de `slice/*` já integrada, `git merge --abort` e trazer a branch da feature para a fatia;
   - o merge da fatia na branch da feature é `git_feature_branch`/`merge`, coberto pelo mesmo escopo do push;

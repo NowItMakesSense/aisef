@@ -90,6 +90,13 @@ O portão de revisão acrescenta cerca de 13% por fatia, dentro da variação en
 
 ## Novidades
 
+- **0.14.0, o sistema como grafo, o fluxo como dado e as fatias em worktrees.**
+  - nenhum módulo do núcleo ou dos hooks passa de 500 linhas; o `aisef_project` mantém a mesma API, e o check roda um registro de grupos de regras;
+  - o `aisef_sysgraph.py` responde perguntas de impacto sem modelo: que tarefas, critérios, testes, arquivos e evidências um requisito toca, e por que uma tarefa existe;
+  - o fluxo (estados, eventos, fases, portões, perfis) fica no `workflow.v0.1.json`, lido pelo loop, pelo guia, pela triagem e pelo check;
+  - edições de arquivo e chamadas MCP liberadas vão para uma telemetria com cadeia de hash, e o log assinado fica com o que prova o trabalho;
+  - com `parallel.mode = worktree`, fatias que mexem no mesmo arquivo rodam lado a lado, cada uma no seu worktree, integram pelo escopo da feature, e conflito no merge vira nova tentativa. Hooks dentro de um worktree gravam no `.aisef` principal;
+  - o `metrics` mostra o custo de atenção: quantas vezes você precisou parar, por tarefa concluída.
 - **0.13.0, menos atrito, gateway mais duro e um loop que sabe parar.**
   - a triagem em código escolhe o caminho (rápido, enxuto ou completo); o caminho enxuto é uma fatia com TDD e sem blueprint, e os perfis (solo, team, regulated) definem o padrão;
   - um projeto Python começa com 15 agentes, não 33, e o init aplica agentes, regras nativas, boas práticas e docs numa aprovação só;

@@ -90,6 +90,13 @@ The review gate adds about 13% per slice, which is within run-to-run noise. On a
 
 ## What's new
 
+- **0.14.0, the system as a graph, the flow as data, slices in their own worktrees.**
+  - no core or hook module is over 500 lines anymore; `aisef_project` keeps the same API, and the check runs a registry of rule groups;
+  - `aisef_sysgraph.py` answers impact questions without a model: which tasks, criteria, tests, files and evidence a requirement touches, and why a task exists;
+  - the flow (task states, events, phases, gates, profiles) lives in `workflow.v0.1.json`, read by the loop, the guide, the triage and the check;
+  - file edits and allowed MCP calls go to a hash-chained telemetry, so the signed log keeps what proves the work;
+  - with `parallel.mode = worktree`, slices that share a file run side by side in their own worktrees, merge through the feature scope, and a merge conflict becomes a new attempt. Hooks inside a worktree write to the main `.aisef`;
+  - `metrics` reports the attention cost: how many times you had to stop, per finished task.
 - **0.13.0, less friction, harder gateway, a loop that knows when to stop.**
   - code triage picks the path (quick, lean or full); the new lean path is one TDD slice with no blueprint, and ceremony profiles (solo, team, regulated) set the defaults;
   - a Python project starts with 15 agents instead of 33, and the init applies agents, native rules, practices and docs in one approval;
