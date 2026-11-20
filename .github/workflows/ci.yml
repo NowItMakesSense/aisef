@@ -38,6 +38,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
       - run: |
           python -I plugins/aisef/core/make_demo_project.py demo/.aisef
           printf '{"project_id": "PRJ-1", "schema_version": "0.1.0"}' > demo/.aisef/config.json
