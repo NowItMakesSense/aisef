@@ -18,6 +18,8 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import aisef_imports  # noqa: E402
 STACKS_PATH = os.path.join(HERE, "detect", "stacks.v0.1.json")
 SCHEMA = "architecture.schema.v0.1.json"
 
@@ -347,22 +349,7 @@ def microservices(files, dirs):
 
 
 # ------------------------------------------------------------------ regra de dependencia
-IMPORT_RES = {
-    ".py": [re.compile(r"^\s*from\s+([\w.]+)\s+import", re.M), re.compile(r"^\s*import\s+([\w.]+)", re.M)],
-    ".ts": [re.compile(r"""(?:import|export)\s[^'"]*?from\s+['"]([^'"]+)['"]"""), re.compile(r"""require\(\s*['"]([^'"]+)['"]\s*\)"""),
-            re.compile(r"""^\s*import\s+['"]([^'"]+)['"]""", re.M)],
-    ".java": [re.compile(r"^\s*import\s+(?:static\s+)?([\w.]+)", re.M)],
-    ".cs": [re.compile(r"^\s*using\s+(?:static\s+)?([\w.]+)\s*;", re.M)],
-    ".go": [re.compile(r"""^\s*(?:import\s+)?(?:\w+\s+)?"([^"]+)"\s*$""", re.M)],
-    ".php": [re.compile(r"^\s*use\s+([\w\\]+)", re.M)],
-    ".rb": [re.compile(r"""^\s*require(?:_relative)?\s+['"]([^'"]+)['"]""", re.M)],
-    ".dart": [re.compile(r"""^\s*import\s+['"]([^'"]+)['"]""", re.M)],
-    ".rs": [re.compile(r"^\s*use\s+([\w:]+)", re.M)],
-}
-for _e in (".tsx", ".js", ".jsx", ".mjs", ".cjs", ".vue", ".svelte"):
-    IMPORT_RES[_e] = IMPORT_RES[".ts"]
-IMPORT_RES[".kt"] = IMPORT_RES[".java"]
-IMPORT_RES[".scala"] = IMPORT_RES[".java"]
+IMPORT_RES = aisef_imports.IMPORT_RES  # fonte unica desde a 0.13 (G-06)
 
 
 def is_framework(imp, fw):

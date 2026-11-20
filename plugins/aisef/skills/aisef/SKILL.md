@@ -107,7 +107,7 @@ Cria uma tarefa na feature permanente `FEAT-MAINT`. Na primeira vez gera o pedid
   ```
   python -I CORE/aisef_context.py pack --project . --task T-001
   ```
-  Ele traz as tres camadas: obrigatorio (contrato, requisitos, criterios, decisoes aprovadas), referenciado (arquivos dos paths, docs do blueprint) e sob demanda (memoria de projeto e consultas sugeridas ao grafo). Com o grafo instalado (Graphify + codebase-memory-mcp, via **aisef-tooling**), faca as consultas de impacto sugeridas antes de delegar e mande ao agente so o resultado.
+  Ele traz as tres camadas: obrigatorio (contrato, requisitos, criterios, decisoes aprovadas), referenciado (arquivos dos paths, docs do blueprint) e sob demanda (memoria de projeto e consultas sugeridas ao grafo). Com o grafo instalado (Graphify + codebase-memory-mcp, via **aisef-tooling**), faca as consultas de impacto sugeridas antes de delegar e mande ao agente so o resultado. Sem o Graphify, o pack usa o grafo nativo de imports (`context_mode: native`): quem importa os arquivos da tarefa (inclusive testes) e o que eles importam.
 - **Modelo e effort (roteamento, custo primeiro):** toda chamada de subagente leva `model` e `effort` explicitos, vindos do roteador, nunca o padrao da sessao:
   ```
   python -I CORE/aisef_route.py --project . --task T-001 [--attempt N]

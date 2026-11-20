@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.0 (em andamento): custo, atrito, loop e gateway ([plano](docs/plan/plano-0.13-0.15.md))
+- **Grafo nativo de imports (G-06).** Sem o Graphify, o pacote de contexto passa a ter raio de impacto mesmo assim:
+  - novo `core/aisef_imports.py` (fonte única dos regex de import, também usada pelo radar) resolve cada import para o arquivo do repositório em Python, TypeScript/JavaScript, Java/Kotlin, C#, Go, PHP, Ruby, Dart e Rust; import ambíguo demais é descartado, e biblioteca externa fica de fora;
+  - `aisef_graph.py build-native` grava `.aisef/runtime/graph.json` (fora do Git) no formato do Graphify, e o `pack` o reconstrói sozinho quando um arquivo de código muda, entra ou sai;
+  - o `pack` usa, nesta ordem, o Graphify, o grafo nativo e nenhum. O `context_mode` ganha o valor `native`;
+  - 5.000 arquivos em cerca de 1,2 s; conferir que nada mudou leva cerca de 0,2 s. Testes em `core/test_graph.py`.
+
 ## 0.12.1: correções vindas do uso real e README novo
 - **README novo** (inglês e pt-BR): a equipe de 66 agentes, as ferramentas, o radar de arquitetura e os números do benchmark na frente.
 - **Gateway: leitura do log de auditoria pelo shell.** Um comando só de leitura que cita `.aisef/audit/` ou `.aisef/keys/` (por exemplo `grep ... .aisef/audit/log.jsonl | sort | uniq -c`) era negado como se fosse escrita. Agora passa, com o mesmo critério de leitura do modo Ask: nenhum redirecionamento e só comandos de leitura. Escrever (`>>`, `tee`, `sed -i`, `rm`...) continua negado. Achado no teste do deckloom.
