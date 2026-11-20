@@ -29,3 +29,20 @@ jobs:
           PY
       - name: latencia dos hooks (informativo)
         run: python tools/bench_hooks.py --runs 5
+
+  aisef-verify-demo:
+    # T-01: a Action aisef-verify rodando sobre o projeto de demonstracao (log assinado, chave publica, head versionado)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -I plugins/aisef/core/make_demo_project.py demo/.aisef
+          printf '{"project_id": "PRJ-1", "schema_version": "0.1.0"}' > demo/.aisef/config.json
+      - uses: ./.github/actions/aisef-verify
+        with:
+          project: demo
+          pr: "false"
+          now: "2026-11-05T15:00:00-03:00"

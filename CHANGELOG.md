@@ -1,6 +1,13 @@
 # Changelog
 
 ## 0.15.0 (em andamento): times e mercado ([plano](docs/plan/plano-0.13-0.15.md))
+- **GitHub Action `aisef-verify` (T-01).** Composite action em `.github/actions/aisef-verify/`, que roda o novo `core/aisef_ci.py`, só com as chaves públicas. A Action falha quando:
+  - o log assinado não confere (cadeia de hash, Ed25519 e o `head.json` versionado);
+  - o aisef-check acusa erro (com `strict`, também aviso);
+  - no modo PR, o log não contém mais o último evento da branch base com o mesmo hash. Isso pega o corte do fim do log com um `head.json` antigo restaurado, que tem assinatura válida;
+  - no modo PR, a PR toca uma tarefa (pelo contrato ou por um arquivo do escopo) que está executada e não validada.
+
+  O resumo em markdown vai para o job summary. O CI do próprio repositório roda a Action sobre o projeto de demonstração. Testes com git de verdade em `core/test_ci.py` (11). Para usar em outro repositório: `uses: NowItMakesSense/aisef/.github/actions/aisef-verify@main`, com `fetch-depth: 0` no checkout.
 - **Roadmap em ordem e conferido (H-02).** `docs/roadmap.md` separa as próximas versões das entregues, em ordem, e o `tools/gen_docs.py --check` (que roda no `run_tests.py`) falha quando uma versão do CHANGELOG não aparece no roadmap.
 
 ## 0.14.0: grafo do sistema, workflow declarativo, log em camadas e worktrees ([plano](docs/plan/plano-0.13-0.15.md))
