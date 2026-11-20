@@ -9,7 +9,8 @@ do log, e agentes nunca tocam a chave privada):
     ~/.aisef/keys/<project_id>/audit-key-1.pem   chave PRIVADA do Audit Signer
     ~/.aisef/heads/<project_id>.json             head assinado de referencia
 No projeto ficam a chave PUBLICA (.aisef/keys/) e uma copia do head (.aisef/audit/head.json) para o painel.
-Sem a biblioteca cryptography, o log continua com cadeia de hash, mas sem assinatura (aviso no verify).
+Sem a biblioteca cryptography, o init recusa (0.13, D5) e diz como instalar; projetos antigos sem assinatura
+continuam lendo com cadeia de hash (aviso no verify).
 
 Uso:
     python3 -I aisef_project.py init   --project REPO --project-id ID [--name N] [--environment dev|staging|prod]
@@ -405,6 +406,10 @@ def init(project, project_id, name=None, environment="dev"):
     root = aisef_dir(project)
     if os.path.exists(os.path.join(root, "config.json")):
         raise SystemExit("ja existe %s; nada foi alterado" % os.path.join(root, "config.json"))
+    if not HAS_CRYPTO:  # D5 (0.13): o AISEF nao comeca sem log assinado
+        import aisef_env
+        raise SystemExit("AISEF nao iniciado (nada foi criado): o log precisa ser assinado com Ed25519. "
+                         + aisef_env.advice(aisef_env.missing_libs() or ["cryptography"], found=aisef_env.find_python()))
     for sub in SUBDIRS:
         os.makedirs(os.path.join(root, sub), exist_ok=True)
     write_json(os.path.join(root, "config.json"), {

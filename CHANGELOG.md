@@ -12,6 +12,10 @@
   - projetos existentes não mudam: contratos já criados continuam;
   - `metrics` ganha a seção **Agentes**: tarefas, despachos e 1ª validação por executor, vereditos por revisor, execuções e tokens por papel, e os contratos ativos que nunca trabalharam;
   - novo `tools/agent_usage.py`: soma vários projetos e lista os papéis nunca usados (insumo da revisão do catálogo, C-05).
+- **Doctor que resolve o ambiente (C-02) e init só com log assinado (D5).**
+  - novo `core/aisef_env.py`: quando falta `jsonschema` ou `cryptography`, procura outro Python que tenha as duas (PATH, sem o atalho da Microsoft Store, e `py -0p` no Windows) e diz o valor exato de `AISEF_PYTHON` para o `settings.json`; sem nenhum, mostra o `pip install` só do que falta, no Python dos hooks;
+  - o doctor (SessionStart) usa esse diagnóstico;
+  - **o `init` recusa sem a `cryptography`**, antes de criar qualquer arquivo, com o mesmo conselho. Projetos antigos sem assinatura continuam funcionando.
 
 ## 0.12.1: correções vindas do uso real e README novo
 - **README novo** (inglês e pt-BR): a equipe de 66 agentes, as ferramentas, o radar de arquitetura e os números do benchmark na frente.

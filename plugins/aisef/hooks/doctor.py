@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """AISEF doctor: hook SessionStart. Confere o ambiente uma vez por sessao e so fala quando ha problema
 (sem problema, nao gasta nenhum token). Nunca bloqueia nada. Somente stdlib."""
-import importlib.util
 import json
 import os
 import sys
@@ -15,11 +14,10 @@ def problems(project):
     found = []
     if sys.version_info < (3, 10):
         found.append("Python %d.%d e antigo para o AISEF (precisa de 3.10+)" % sys.version_info[:2])
-    missing = [m for m in ("jsonschema", "cryptography") if importlib.util.find_spec(m) is None]
-    if missing:
-        found.append("faltam bibliotecas no Python dos hooks (%s): %s. Instale com `%s -m pip install %s` ou defina "
-                     "AISEF_PYTHON para um Python que as tenha" % (sys.executable, ", ".join(missing), sys.executable,
-                                                                  " ".join(missing)))
+    import aisef_env
+    libs = aisef_env.diagnose()  # so executa outros Pythons quando falta biblioteca (C-02)
+    if libs:
+        found.append(libs)
     root = os.path.join(project, ".aisef")
     try:
         import aisef_project as ap

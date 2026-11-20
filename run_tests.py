@@ -40,6 +40,7 @@ SUITES = [
     ("Approval Center: request e decide reforcado", [os.path.join(CORE, "test_request_decide.py")]),
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),
+    ("ambiente: Python com as bibliotecas (C-02)", [os.path.join(CORE, "test_env.py")]),
     ("grafo nativo de imports (G-06)", [os.path.join(CORE, "test_graph.py")]),
     ("hook consultivo graph_nudge", [os.path.join(HOOKS, "test_graph_nudge.py")]),
     ("benchmark: fixtures validos (sem modelo)", [os.path.join(ROOT, "tools", "bench_outcomes.py"), "--check-fixtures"]),
