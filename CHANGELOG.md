@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.0 (em andamento): grafo do sistema e saúde do código ([plano](docs/plan/plano-0.13-0.15.md))
+- **Módulos menores, sem mudar comportamento (H-01).** Nenhum módulo do núcleo e dos hooks passa de 500 linhas (antes: `aisef_project.py` 1.300 e `check_project.py` 1.141):
+  - `aisef_project.py` virou fachada com a CLI; o código foi para `aisef_base`, `aisef_audit_log`, `aisef_agents`, `aisef_requests` e `aisef_waves`. Quem faz `import aisef_project` continua igual;
+  - a `check()` do check virou um registro de grupos de regras (`check_project.RULE_GROUPS`) em `check_rules_1..3.py`, com as regras sem mudança (a referência de regras gerada ficou idêntica);
+  - `gateway.py` → `gateway_rules.py` (padrões e classificação), `aisef_context.py` → `aisef_context_aux.py`, `build_panel.py` → `panel_mermaid.py`, `aisef_next.py` → `aisef_guide.py`, `aisef_detect.py` → `aisef_detect_rules.py`, `aisef_new.py` → `aisef_rebase.py`. Cada original reexporta o que saiu. Latência do gateway igual (mediana 154 ms).
+
 ## 0.13.0: custo, atrito, loop e gateway ([plano](docs/plan/plano-0.13-0.15.md))
 - **Grafo nativo de imports (G-06).** Sem o Graphify, o pacote de contexto passa a ter raio de impacto mesmo assim:
   - novo `core/aisef_imports.py` (fonte única dos regex de import, também usada pelo radar) resolve cada import para o arquivo do repositório em Python, TypeScript/JavaScript, Java/Kotlin, C#, Go, PHP, Ruby, Dart e Rust; import ambíguo demais é descartado, e biblioteca externa fica de fora;
