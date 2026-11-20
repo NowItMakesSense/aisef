@@ -2,28 +2,101 @@
 
 <p align="center"><b>English</b> · <a href="README.pt-BR.md">Português</a></p>
 
-AISEF is a Claude Code plugin that turns a plain-language request into a specified feature: broken into vertical slices, implemented test-first by agents running in parallel, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log.
+<h3 align="center">A 66-agent engineering team for Claude Code that reads your architecture, follows your best practices, reviews itself before it asks you, and can prove every step.</h3>
 
-| 148 | 919 | 19 | ~0.2 s |
-|---|---|---|---|
-| consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | recorded architecture decisions ([ADRs](docs/adr/README.md), Portuguese) | per tool call on Windows ([measured](tools/bench_hooks.py)) |
+AISEF is a Claude Code plugin that turns a plain-language request into a specified feature: broken into vertical slices, implemented test-first by agents running in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log.
+
+| **66** | **11** | **33** | **156** | **1,249** | **~0.2 s** |
+|---|---|---|---|---|---|
+| specialist agents, switched on by your stack | architecture styles detected, with recommendations | best-practice rules installed into your project | consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
 <p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="The AISEF live panel: execution map, a pending decision, a task drawer and a subagent drawer, parallel lanes"></p>
 <p align="center"><sub>The live panel on demo data: who is running, who is waiting and why, which subagent each agent spawned, and the lanes over time.</sub></p>
 
+## The toolbox
+
+Everything below ships in one plugin, runs locally with the Python standard library, and works on Windows, macOS and Linux.
+
+| | Tool | What it gives you | How you reach it |
+|---|---|---|---|
+| 👥 | **Agent team** | 66 specialists: executors, reviewers, fixers and advisors. Each one has a signed permission ceiling. | automatic delegation, `aisef:<agent>` |
+| 🧭 | **Architecture radar** | It finds your stack and your style (Clean, hexagonal, DDD, CQRS, modular monolith, microservices, MVC, vertical slices…). It checks the dependency rule and module boundaries from your imports, then recommends improvements. | `aisef_project.py detect` |
+| 📚 | **Best-practice library** | 33 rules: common ones (Clean Code, SOLID, testing, security, Git), one per architecture style with a "when not to use it" section, and one per language. | `aisef_project.py practices --apply` |
+| 🔍 | **Review gate** | Reviewers are picked in code for each task: general, language, database, security, architecture and tests. All of them must approve before the validator runs. High-risk tasks get two independent reviews. | automatic in every wave |
+| ✅ | **verify-loop** | Build → types → lint → tests → secrets in the diff → diff summary, ending in PASS or FAIL, with evidence saved for the task. | `aisef_project.py verify-loop` |
+| 🛡️ | **Execution Gateway** | Every tool call gets allow, ask or deny, enforced in code. Each Git operation needs its own approval. No `--no-verify`. Databases and deploys are denied. Agents cannot loosen lint configs. | always on (hook) |
+| 🧾 | **Signed audit log** | Every operation, and every blocked attempt, goes into a hash-chained log signed with Ed25519. The head is kept outside the repository. | `aisef-check` |
+| 🗳️ | **Approval Center** | Each decision shows its impact, diff, rollback and risk. Only you decide, through the native prompt. | `aisef-approve` |
+| 📊 | **Live panel** | Execution map, who spawned whom, decisions waiting for you, traceability, parallel lanes. | `aisef-panel` |
+| 💸 | **Model router** | Haiku → Sonnet → Opus, chosen by risk and complexity. Each failed attempt moves one level up. | automatic |
+| 🧠 | **Reviewed learning** | Lessons drawn from errors already on record. They apply only after you approve them and lose confidence when they stop helping. | `aisef_learn.py` |
+| 🎨 | **Design authority** | One approved typography, palette and component set per project, checked in the code. | `aisef-design` |
+| ❓ | **Ask mode** | Answers questions without changing anything, researching the web with cited sources. | `/aisef:ask` |
+| 🧪 | **Outcome benchmark** | Hidden tests, AISEF vs. plain Claude Code, with cost and time. | `tools/bench_outcomes.py` |
+
+## Meet the team
+
+Agents load only when they apply. Language and framework agents switch on when the radar detects their stack, so a Python project never pays for the Swift reviewer.
+
+| Kind | What they do | Agents |
+|---|---|---|
+| **Builders** (7) | Implement inside the task contract, test-first | `implementer` (whole vertical slices with TDD), `backend`, `frontend`, `database`, `devops`, `doc-updater`, `e2e-runner` |
+| **Reviewers** (10) | Report with proof; never touch the code | `code-reviewer`, `architecture-reviewer`, `database-reviewer`, `security`, `qa`, `pr-test-analyzer`, `silent-failure-hunter`, `type-design-analyzer`, `comment-analyzer`, `agent-evaluator` |
+| **Language reviewers** (19) | Idioms, security and pitfalls of your stack | Python, Django, FastAPI, TypeScript/JavaScript, React, Vue, Go, Rust, Java (Spring/Quarkus), Kotlin, Swift, C#, F#, C++, PHP/Laravel, Ruby/Rails, Flutter, Godot, plus `a11y-architect` (WCAG 2.2) |
+| **Fixers** (16) | Smallest diff that works; never loosen a rule to pass | `code-simplifier`, `refactor-cleaner`, `performance-optimizer`, and 13 build resolvers (TS/JS, Python, Django, Go, Rust, Java, Kotlin, Swift, Dart/Flutter, C++, PyTorch, HarmonyOS, React) |
+| **Advisors** (10) | Investigate and propose; you decide | `planner`, `architect`, `code-architect`, `code-explorer`, `spec-miner` (specs out of legacy code), `domain`, `docs-lookup`, `commit-reviewer`, `conversation-analyzer`, `harness-optimizer` |
+| **Domain reviewers** (3) | Switched on when the domain shows up | `rag-pipeline-reviewer`, `mle-reviewer`, `healthcare-reviewer` |
+| **Validator** (1) | Independent; never validates its own work; read-only Git | `validator` |
+
+Every reviewer follows the same discipline:
+- it reports only findings it is more than 80% sure of;
+- CRITICAL and HIGH findings need the line, the failure scenario and the reason existing guards miss it;
+- zero findings is a valid result.
+
+Every fixer works under one rule: no `any`, no `# noqa`, no skipped tests to make the build pass.
+
+## The architecture radar
+
+```
+$ python aisef_project.py detect --project .
+Stacks: TypeScript, React, C# / .NET (manager: npm)
+Architecture (heuristic, confirm with the user):
+  - DDD strategic: confidence 0.89 (folder backend/src/Shop.SharedKernel; file docs/glossary.md)
+  - Modular monolith: confidence 0.80 (3 modules in backend/src/Modules/; module with layers: Orders)
+  - Clean Architecture / Onion: confidence 0.67 (folder .../Shop.Orders.Domain; folder .../Shop.Orders.Application)
+  - Vertical slices: confidence 0.67 (folder frontend/src/features; folder frontend/src/shared)
+Module boundaries: 3 module(s), 204 file(s) scanned, 2 cross-module dependencies:
+  suggestions -> accounts (application); suggestions -> accounts (domain, VIOLATION)
+Recommendations (your decision):
+  - REC-DEPENDENCY-RULE: Fix the dependency rule. Suggestions.Infrastructure/EfCatalog.cs:2 imports Shop.Accounts.Domain
+Applicable practices: common, lang/typescript, lang/web, lang/csharp, architecture/modular-monolith, architecture/clean-architecture, ...
+```
+
+The radar was measured on 10 public reference repositories (Clean Architecture templates, eShop, modular-monolith-with-ddd, domain-driven-hexagon and others). It got 9 of them right, with no false dependency violations.
+
+It never changes anything on its own. You adopt a style through the Approval Center, and from then on the `architecture-reviewer` holds every delivery to it. Each practice says when **not** to use it, so AISEF will not push DDD or CQRS onto a simple CRUD app.
+
+## Measured, not claimed
+
+`tools/bench_outcomes.py` runs the same task three ways. The tests are hidden from the agent and only run after it finishes. Results for `feat-slugify`, Sonnet, 3 repetitions:
+
+| Arm | Hidden tests | Median cost | Median time |
+|---|---|---|---|
+| Plain Claude Code | 3/3 runs at 7/7 | US$ 0.13 | 26 s |
+| AISEF with the review gate | 3/3 runs at 7/7 | US$ 1.49 | 335 s |
+| AISEF without reviewers | 3/3 runs at 7/7 | US$ 1.32 | 333 s |
+
+The review gate adds about 13% per slice, which is within run-to-run noise. On a task this small, the full process costs about 11× more than plain Claude Code. What you pay for is the spec, the TDD evidence, independent validation, review and the signed record. Quality gains on larger, real features are being measured next.
+
 ## What's new
 
-- **0.12.0, the team, best practices and architecture (port of everything-claude-code ideas).**
-  - **66 agents from one catalog**, grouped by kind: executors, evaluators (code, architecture, database, security, tests, silent failures, types, comments and 16 language reviewers), fixers (simplifier, dead-code cleaner, performance and 13 build resolvers) and advisors (planner, architect, spec miner, explorer, docs lookup). Language agents are switched on only when their stack is detected. The `frontend` agent is unchanged.
-  - **Architecture detection.** `aisef_project.py detect` finds the stack and the style (Clean, hexagonal, DDD, CQRS, MVC, modular monolith, microservices...), checks the dependency rule from imports and recommends improvements. Adopting a style is your decision and becomes an ADR.
-  - **Best practices** (common, per architecture with "when not to use", per language) installed into `.claude/rules/aisef/`.
-  - **Reviewers chosen in code**, all must approve before the validator, with a double review on high risk. Plus `verify-loop`, no `--no-verify`, and lint configs that agents cannot loosen.
-- **0.10.0, panel v3.** The **execution map** is now the main view: one column per wave, every slice with its state, time and last action, and subagents attached to the agent that spawned them. A new hook records **who spawned whom**; when it cannot be sure, the link says "inferred".
-  - Click a slice for its drawer. Click an agent or subagent for its own drawer: what it was asked, who spawned it, model, time and latest actions.
-  - **Parallel lanes** mark rejections, gateway denials and decision requests at the exact moment.
-  - The dependency graph is drawn natively and highlights the **critical path**.
-  - Global search (`Ctrl K`), keyboard shortcuts, filters that survive a reload, light and dark with AA contrast checked, and a self-test in headless Chrome.
-- **0.9.3, Ask researches the web.** `/aisef:ask` reads primary sources, cites URLs and picks the model by question: Haiku to find something in the project, Sonnet for research (the default), Opus only on request.
+- **0.12.1, field-tested fixes.** These came from running 0.12 on a real project:
+  - architecture decisions can apply to the whole project, so you can adopt a style before the first feature exists;
+  - the radar checks module boundaries and no longer counts skeleton services as microservices;
+  - the gateway no longer blocks read-only commands that touch the audit folder (`grep`, `git check-ignore`, `--dry-run`).
+- **0.12.0, the team, the radar and the practices.** 56 new agents, organized by kind and switched on by stack. Architecture detection with recommendations. 33 best-practice rules. Reviewers chosen in code, with a gate before validation. `verify-loop`. Lint configs that agents cannot loosen. Ideas ported from [everything-claude-code](https://github.com/affaan-m/everything-claude-code) (MIT, see [notices](THIRD_PARTY_NOTICES.md)).
+- **0.11.0, measure.** `metrics` (approvals, rejections, lead time, tokens and cost per task) and the outcome benchmark.
+- **0.10.0, panel v3.** The execution map, who spawned whom, parallel lanes, and the dependency graph with the critical path.
 
 Full history in the [CHANGELOG](CHANGELOG.md) (Portuguese).
 
@@ -38,7 +111,7 @@ Request: *"password reset by email; the link is valid for 30 minutes and can be 
 | It decides on its own that "the link lasts 24 h" and that "the response differs when the email does not exist". Neither was asked for, and the second leaks who has an account. | **Spec** with the test seams you confirmed (`POST /auth/reset`, `POST /auth/reset/confirm`). |
 | It runs a command against the local database "to check the table". Nothing stops it, nothing records it. | Three **vertical slices**; you approve the plan. One call dispatches the wave: two slices in parallel to the `implementer`. |
 | "Done, all tests pass": the tests were written after the code. | The agent tries `psql` and gets **deny** (a database from a session is treated as production). It is logged. |
-| `git push` goes along, because the agent assumed you wanted it. | The `tdd_evidence` shows the test **failing before it passed**, and the check verifies the order. A different model validates. Code review, your acceptance, and `git push` goes through the native prompt that only you can answer. |
+| `git push` goes along, because the agent assumed you wanted it. | The `tdd_evidence` shows the test **failing before it passed**, and the check verifies the order. Specialist reviewers approve, then a different model validates. Your acceptance, and `git push` goes through the native prompt that only you can answer. |
 
 On the left, the work is fast and opaque. On the right, every decision was yours, every requirement has a test and evidence, and six months from now the panel and the log show exactly what happened.
 
@@ -64,21 +137,24 @@ The work follows Matt Pocock's method (grill → spec → tickets → TDD), with
 
 ```mermaid
 flowchart LR
-  DS[Discovery] --> GR[Grill]
+  RD[Architecture radar<br/>+ best practices] --> DS[Discovery]
+  DS --> GR[Grill]
   GR --> SP[Spec<br/>+ test seams]
   SP --> FT[Vertical slices]
   FT -->|you approve| ON[Parallel wave<br/>TDD per slice]
-  ON --> PC{precheck<br/>no model}
+  ON --> VL[verify-loop]
+  VL --> PC{precheck<br/>no model}
   PC -->|failed| ON
-  PC --> VA[Independent<br/>validator]
+  PC --> RV[Review gate<br/>specialists in parallel]
+  RV -->|WARNING or BLOCK| ON
+  RV --> VA[Independent<br/>validator]
   VA -->|rejected| ON
-  VA --> CR[Code review]
-  CR --> AC[Your acceptance]
+  VA --> AC[Your acceptance]
 ```
 
 | Layer | What it does |
 |---|---|
-| **Process (SDD + TDD)** | Discovery, grill, spec, vertical slices, parallel test-first execution, independent validation, code review and your acceptance. Each requirement points to its slice, criterion, test and evidence (RTM). |
+| **Process (SDD + TDD)** | Architecture radar, discovery, grill, spec, vertical slices, parallel test-first execution, the review gate, independent validation and your acceptance. Each requirement points to its slice, criterion, test and evidence (RTM). |
 | **Enforcement** | A `PreToolUse` gateway applies the policy to Bash, PowerShell, file tools, WebFetch and MCP. Each Git operation needs its own approval, secrets ask, databases and deploys are denied, and each subagent is capped by its Agent Contract. |
 | **Evidence** | Every operation and every blocked attempt goes to a hash-chained log signed with Ed25519. The signed head is kept outside the repository. |
 | **Cost** | Model and effort are routed per task by risk and complexity, from Haiku to Opus; each failed attempt moves one level up. |
@@ -157,7 +233,7 @@ If the Python with `cryptography` is not the first one on your PATH, set `AISEF_
 ## Start in 5 minutes
 
 1. In a project folder, say **"start AISEF in this project"**. On an existing codebase, AISEF investigates before proposing anything.
-2. Approve the agents and the native second-layer rules when asked.
+2. Approve the agents and the native second-layer rules when asked. On an existing codebase, the **architecture radar** runs and presents your stack, your style and its recommendations. You adopt a style and install the matching **best practices** with one approval each.
 3. Describe what you want. AISEF tells you which phase you are in and walks you through Grill → Spec → Slices up to the plan you approve.
 4. Watch it live: `aisef-panel` opens the panel with the execution map, who spawned whom, the decisions waiting for you and the parallel lanes.
 5. Just a question? `/aisef:ask <question>` answers without changing anything: it reads the project and, when the question calls for it, researches the web with cited sources, choosing the model by the question. `/aisef:modo ask` keeps the whole session read-only until `/aisef:modo exec`. See [how it compares to Cursor's Ask](docs/guide/ask-mode.md) (Portuguese).
