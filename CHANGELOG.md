@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.3: tempo ativo e mapa com altura fixa no painel
+- **Tempo ativo no topo.** No modo ao vivo (`--serve`), o indicador passa a mostrar há quanto tempo o painel está aberto ("ao vivo · ativo há 12 min"). Antes, ele mostrava o tempo desde a última leitura do servidor, que volta a zero a cada 3 s e por isso ficava sempre em "há 0–3 s". A hora em que o painel abriu e a última leitura ficam no texto que aparece ao passar o mouse. O texto também deixou de sumir entre 761 e 1180 px de largura.
+- **Os tempos decorridos andam sozinhos.** "Rodando há", "esperando você há" e os tempos do mapa e das raias congelavam entre uma mudança e outra do `.aisef/`. No modo ao vivo, o painel agora redesenha a cada 30 s quando nada mudou, mantendo a rolagem (também a vertical), os detalhes abertos e a gaveta. Isso não acontece se você estiver digitando, selecionando texto ou com o zoom ou a busca abertos.
+- **Mapa de execução com altura fixa (600 px).** Na tela Agora, com duas colunas, o mapa tem altura fixa e rola por dentro. Os blocos da direita (decisões pendentes e custo de atenção) dividem essa altura em partes iguais, e cada um rola por dentro quando o conteúdo não cabe. O link "Ver as N decisões" fica com a altura natural. Com uma coluna (até 1100 px), nada muda.
+
 ## 0.15.2: maturidade, combinações de modos e números do README
 - **Teste de combinações de modos (H-04).** Novo `core/test_modes.py`, com git de verdade. Roda o ciclo inteiro de uma feature em 48 combinações: perfil (solo, team, regulated) × pedido (pequeno, com comportamento) × paralelismo (`paths`, `worktree`) × telemetria (`split`, `signed`) × log por pessoa (desligado, ligado). O ciclo passa por triagem, contrato ou caminho rápido, aprovação, despacho, edição pelo hook de auditoria, relatório com TDD, revisores, validação e conclusão. Depois rodam todos os leitores: check, verify do log, next, metrics, painel, grafo do sistema, OpenTelemetry, pacote de evidência e CI. Em cada combinação, o teste confere que:
   - o log verifica e o check não acusa erro;

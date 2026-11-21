@@ -122,11 +122,16 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: stretch; }
-/* o mapa acompanha a altura da coluna da direita; a coluna empurra o ultimo bloco ate o fim */
+/* tela Agora: o mapa tem altura fixa (rola por dentro) e os blocos da direita dividem essa altura em partes iguais */
+:root { --map-h: 600px; }
 @media (min-width: 1101px) {
-  .grid2 > #p-map { display: flex; flex-direction: column; }
-  .grid2 > #p-map > :last-child { flex: 1; display: flex; flex-direction: column; }
-  .grid2 > #p-map .mapwrap { flex: 1; display: flex; }  /* as faixas das ondas descem ate a legenda, que fica no pe */
+  .grid2.nowgrid { grid-template-rows: var(--map-h); }
+  .grid2 > #p-map { display: flex; flex-direction: column; min-height: 0; }
+  .grid2 > #p-map > :last-child { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .grid2 > #p-map .mapwrap { flex: 1; display: flex; min-height: 0; }  /* as faixas das ondas descem ate a legenda, que fica no pe */
+  .grid2.nowgrid > .rcol { min-height: 0; }
+  .grid2.nowgrid > .rcol > .share { flex: 1 1 0; min-height: 0; overflow: auto; }
+  .grid2.nowgrid > .rcol > .more { flex: none; }
 }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); min-width: 0; }
 .phead { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--rule); }
@@ -182,7 +187,7 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
 
 /* coluna direita */
 .rcol { display: flex; flex-direction: column; gap: 20px; }
-.grid2 > .rcol > :last-child { flex: 1; }
+.grid2:not(.nowgrid) > .rcol > :last-child { flex: 1; }
 .decision { background: var(--you-soft); border: 1px solid color-mix(in srgb, var(--you) 35%, transparent); border-radius: var(--r-card); padding: 16px 18px; display: grid; gap: 10px; }
 .decision .k { display: flex; gap: 8px; align-items: center; color: var(--you); font-weight: 600; font-size: 13px; }
 .decision h3 { margin: 0; font: 600 15px/1.3 var(--display); }
@@ -472,7 +477,7 @@ figure.mm svg .cluster rect { fill: var(--raised) !important; stroke: var(--rule
 .crumb span:last-child { overflow: hidden; text-overflow: ellipsis; }
 .search { flex: 0 1 460px; min-width: 150px; width: auto; }
 .seal, .live, .calm { white-space: nowrap; flex: none; }
-@media (max-width: 1180px) { .seal span:not(.sr-only), .live span { display: none; } .search kbd { display: none; } }
+@media (max-width: 1180px) { .seal span:not(.sr-only) { display: none; } .search kbd { display: none; } }  /* o tempo ativo (.live span) continua visivel ate o celular */
 .sub-node { max-width: 202px; }
 .flag { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 .now::before { left: auto; right: 4px; }
@@ -1116,9 +1121,9 @@ a.btn.primary { color: var(--ground); }
   function rightCol() {
     var pend = D.approvals.pending || [];
     var col = el("div", { cls: "rcol" });
-    if (pend.length) pend.slice(0, 3).forEach(function (a) { col.appendChild(decisionBlock(a)); });
-    if (pend.length > 3) col.appendChild(el("a", { cls: "btn", href: "#gov", text: "Ver as " + pend.length + " decisões em Governança" }));
-    col.appendChild(attentionPanel());
+    if (pend.length) pend.slice(0, 3).forEach(function (a) { var b = decisionBlock(a); b.classList.add("share"); col.appendChild(b); });
+    if (pend.length > 3) col.appendChild(el("a", { cls: "btn more", href: "#gov", text: "Ver as " + pend.length + " decisões em Governança" }));
+    var att = attentionPanel(); att.classList.add("share"); col.appendChild(att);
     return col;
   }
   function attentionPanel() {
@@ -1145,7 +1150,7 @@ a.btn.primary { color: var(--ground); }
       if (running) acts.push(el("button", { cls: "btn", type: "button", "data-open": running.task_id }, [icon("i-eye"), "Ver " + running.task_id + " rodando"]));
       if (pend.length) acts.push(el("a", { cls: "btn primary", href: "#gov" }, [icon("i-hand"), "Revisar " + pend[0].request_id]));
       return [titleRow("Agora", { strong: b.headline, rest: b.detail }, acts), stateStrip(),
-        el("div", { cls: "grid2" }, [mapPanel(), rightCol()]), lanesPanel(), slicesPanel()];
+        el("div", { cls: "grid2 nowgrid" }, [mapPanel(), rightCol()]), lanesPanel(), slicesPanel()];
     },
     mapa: function () {
       return [titleRow("Mapa dos agentes", "Quem está fazendo o quê, quem depende de quem e quem disparou quem."), mapPanel(), lanesPanel(),
@@ -1464,27 +1469,37 @@ a.btn.primary { color: var(--ground); }
       " até a sequência " + (m.source.head_sequence === null ? "—" : m.source.head_sequence) + (IS_LIVE ? "" : " · página estática: use build_panel.py --serve para acompanhar ao vivo");
     tickLive();
   }
-  var lastOk = Date.now(), fails = 0, pendingData = null, lastGen = null;
+  var openedAt = Date.now(), lastOk = Date.now(), fails = 0, pendingData = null, lastGen = null, lastPaint = Date.now();
   function tickLive() {
     var li = document.getElementById("live"), tx = document.getElementById("livetxt");
-    if (!IS_LIVE) { li.setAttribute("data-s", "static"); tx.textContent = "estático · gerado " + when(D.manifest.generated_at); return; }
+    if (!IS_LIVE) { li.setAttribute("data-s", "static"); tx.textContent = "estático · gerado " + when(D.manifest.generated_at); li.title = ""; return; }
     var age = (Date.now() - lastOk) / 1000, s = fails >= 3 ? "down" : fails >= 1 ? "retry" : age > 10 ? "stale" : "live";
     li.setAttribute("data-s", s);
-    tx.textContent = s === "down" ? "servidor parou" : s === "retry" ? "reconectando…" : s === "stale" ? "parado há " + Math.round(age) + " s" : "ao vivo · há " + Math.max(0, Math.round(age)) + " s";
+    /* tempo ativo: desde que o painel abriu; a ultima leitura do servidor fica no title */
+    tx.textContent = s === "down" ? "servidor parou" : s === "retry" ? "reconectando…" : s === "stale" ? "parado há " + Math.round(age) + " s"
+      : "ao vivo · ativo há " + dur(Date.now() - openedAt);
+    li.title = "Aberto às " + hhmm(new Date(openedAt).toISOString()) + " · última leitura há " + Math.max(0, Math.round(age)) + " s";
+  }
+  /* os tempos decorridos (rodando há, esperando você há) andam sozinhos: repinta a cada 30 s quando nada mudou */
+  function tickClock() {
+    if (!IS_LIVE || document.hidden || busy() || Date.now() - lastPaint < 30000) return;
+    render(false);
   }
 
   /* ====================================== render e reconciliacao ====================================== */
   function render(first) {
     var y = window.scrollY, open = {};
     Array.prototype.forEach.call(view.querySelectorAll("details[data-dk]"), function (d) { open[d.getAttribute("data-dk")] = d.open; });
-    var scrolls = {}; Array.prototype.forEach.call(view.querySelectorAll(".mapwrap,.lanes"), function (w, i) { scrolls[i] = w.scrollLeft; });
+    var SCR = ".mapwrap,.lanes,.rcol > .share", scrolls = {};
+    Array.prototype.forEach.call(view.querySelectorAll(SCR), function (w, i) { scrolls[i] = [w.scrollLeft, w.scrollTop]; });
     renderRail(); renderTop();
     var sec = el("section", { cls: "screen", "data-screen": cur });
     SCREENS[cur]().forEach(function (n) { if (n) sec.appendChild(n); });
     sec.appendChild(el("div", { cls: "foot", id: "foot-mirror" }));
     view.textContent = ""; view.appendChild(sec);
     Array.prototype.forEach.call(view.querySelectorAll("details[data-dk]"), function (d) { if (open[d.getAttribute("data-dk")]) d.open = true; });
-    Array.prototype.forEach.call(view.querySelectorAll(".mapwrap,.lanes"), function (w, i) { if (scrolls[i]) w.scrollLeft = scrolls[i]; });
+    Array.prototype.forEach.call(view.querySelectorAll(SCR), function (w, i) { if (scrolls[i]) { w.scrollLeft = scrolls[i][0]; w.scrollTop = scrolls[i][1]; } });
+    lastPaint = Date.now();
     document.getElementById("foot-mirror").textContent = document.getElementById("foot").textContent;
     if (drawerId && drawerId.indexOf("agent:") === 0) openAgent(drawerId.slice(6), false); else if (drawerId) openDrawer(drawerId, false);
     document.title = NAMES[cur] + " · Painel AISEF";
@@ -1603,7 +1618,7 @@ a.btn.primary { color: var(--ground); }
       if (mq.addEventListener) mq.addEventListener("change", onTheme); else if (mq.addListener) mq.addListener(onTheme);
     }
     route();
-    setInterval(function () { if (!document.hidden) tickLive(); }, 1000);
+    setInterval(function () { if (!document.hidden) { tickLive(); tickClock(); } }, 1000);
     if (IS_LIVE) setTimeout(poll, 3000);
     if (/[?&]selftest=1/.test(location.search)) selftest();
   }

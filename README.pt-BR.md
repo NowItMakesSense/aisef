@@ -110,6 +110,7 @@ Os recursos da 0.13 em diante têm cobertura no CI, incluindo um teste que roda 
 
 ## Novidades
 
+- **0.15.3, correções no painel.** O indicador ao vivo mostra há quanto tempo o painel está aberto, os tempos decorridos continuam andando entre as atualizações e, na tela Agora, o mapa de execução tem altura fixa, dividida em partes iguais entre as decisões e o custo de atenção.
 - **0.15.2, o que está provado e o que não está.** Uma tabela de maturidade separa o que já rodou em uso real do que só tem CI, com o padrão e o jeito de voltar atrás de cada recurso. Um teste novo roda o ciclo inteiro de uma feature nas 48 combinações de modos. Os números do README passam a ser conferidos contra o código.
 - **0.15.1, custo de atenção e impacto no painel.** A tela Agora mostra quantas vezes você precisou parar (aprovações e perguntas do gateway por tarefa concluída, aprovação de primeira, tokens por tarefa), e a Rastreabilidade ganha o filtro "Impacto de": digite um requisito, uma tarefa ou um arquivo e veja só os requisitos ligados a ele.
 - **0.15.0, para times e auditores.** A GitHub Action `aisef-verify` em cada pull request, um pacote de evidência por feature que se verifica sozinho, com os controles SOC 2 e ISO 27001, exportação OpenTelemetry com as convenções GenAI, um log de auditoria por pessoa (o merge nunca conflita e cada aprovação é assinada por quem a deu) e um roadmap conferido contra o CHANGELOG.
