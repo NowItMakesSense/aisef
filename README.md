@@ -6,7 +6,7 @@
 
 AISEF is a Claude Code plugin for teams that must show what the AI did, not just ship faster. A plain-language request becomes a specified feature: triaged in code, split into vertical slices, built test-first by agents in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log that CI can verify on each pull request.
 
-| **166** | **2,500+** | **138** | **66** | **~0.2 s** |
+| **166** | **2,500+** | **144** | **66** | **~0.2 s** |
 |---|---|---|---|---|
 | consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 48 of them bypass attempts, none get through | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
@@ -110,6 +110,7 @@ Features from 0.13 on are covered by CI, including a test that runs a whole feat
 
 ## What's new
 
+- **0.15.5, the remote before the first push.** `next` and the doctor flag a project with no Git repository or no remote, and the init asks whether the project already exists on GitHub before creating one. Adding or changing a remote, and creating a GitHub repository, are now your decision.
 - **0.15.4, panel.** A single card in the right column keeps half the map's height instead of stretching to the full height.
 - **0.15.3, panel fixes.** The live indicator shows how long the panel has been open, elapsed times keep moving between updates, and on the Now screen the execution map has a fixed height that the decisions and the attention card split evenly.
 - **0.15.2, what is proven and what is not.** A maturity table tells real-use features from CI-only ones, with the default and the way back for each. A new test runs a whole feature cycle through all 48 mode combinations. The README numbers are now checked against the code.

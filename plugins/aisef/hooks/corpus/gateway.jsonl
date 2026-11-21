@@ -136,3 +136,9 @@
 {"name": "ancora: bash -c", "tool": "Bash", "command": "bash -c 'cat ~/.aisef/anchors/PRJ-X.jsonl'", "expect": "deny", "bypass": true}
 {"name": "chave: PowerShell USERPROFILE", "tool": "PowerShell", "command": "Get-Content $env:USERPROFILE\\.aisef\\keys\\PRJ-X\\audit-key-1.pem", "expect": "deny", "bypass": true}
 {"name": "chave publica do projeto continua so pedindo", "tool": "Bash", "command": "cat .aisef/keys/audit-key-1.pem", "expect": "ask", "bypass": false}
+{"name": "remote: listar continua livre", "tool": "Bash", "command": "git remote -v", "expect": "allow", "bypass": false}
+{"name": "remote: ls-remote so le (H-37)", "tool": "Bash", "command": "git ls-remote origin", "expect": "allow", "bypass": false}
+{"name": "remote: ligar um repositorio e decisao do usuario", "tool": "Bash", "command": "git remote add origin https://github.com/exemplo/app.git", "expect": "ask", "bypass": false}
+{"name": "remote: trocar a URL e decisao do usuario", "tool": "Bash", "command": "git remote set-url origin git@github.com:outro/app.git", "expect": "ask", "bypass": false}
+{"name": "GitHub: criar repositorio na conta do usuario", "tool": "Bash", "command": "gh repo create app --private --source . --remote origin", "expect": "ask", "bypass": false}
+{"name": "GitHub: ver repositorio continua livre", "tool": "Bash", "command": "gh repo view exemplo/app --json nameWithOwner,url", "expect": "allow", "bypass": false}

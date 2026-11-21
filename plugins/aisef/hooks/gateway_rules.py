@@ -16,6 +16,9 @@ PATTERNS_PATH = os.path.join(HERE, "sensitive_patterns.json")
 
 # opcoes globais antes do subcomando (-C dir, -c chave=valor, --no-pager, --git-dir=x, -p...) sao puladas (F-02):
 # sem isso, `git -c a=b push --force` virava "subcomando nao classificado" e so perguntava
+# remote: add/set-url/remove/rename mudam para onde vao os pushes; gh repo create/delete/rename/... mexe na conta do usuario
+REMOTE_WRITE_RE = re.compile(r"^\s*(?:add|set-url|remove|rm|rename|set-head|set-branches|prune)\b")
+GH_REPO_WRITE_RE = re.compile(r"\bgh\s+repo\s+(?:create|delete|rename|archive|unarchive|edit|fork|set-default)\b")
 GIT_RE = re.compile(r"(?:^|[;&|(]\s*|\s)git(?:\s+(?:-[Cc]\s+\S+|--[a-z][a-z-]*(?:=\S+)?|-[a-zA-Z]))*\s+([a-z][a-z-]*)([^;&|]*)", re.I)
 DEPLOY_RE = re.compile(
     r"\b(?:terraform\s+(?:apply|destroy)|tofu\s+apply|pulumi\s+up|kubectl\s+(?:apply|delete|rollout)|"
@@ -258,7 +261,9 @@ def _classify_text(cmd, patterns, env, ctx=None):
         found.append(("sensitive_files", "read_content", env, False, "comando que cita arquivo sensivel"))
     for m in GIT_RE.finditer(cmd):
         sub, rest = m.group(1).lower(), m.group(2)
-        if sub in ("status", "log", "diff", "show", "blame", "fetch", "remote", "rev-parse", "ls-files", "describe",
+        if sub == "remote" and REMOTE_WRITE_RE.search(rest):
+            op = "remote_config"  # para onde vao os pushes: decisao do usuario
+        elif sub in ("status", "log", "diff", "show", "blame", "fetch", "remote", "ls-remote", "rev-parse", "ls-files", "describe",
                    "shortlog", "grep", "check-ignore", "check-attr", "ls-tree", "rev-list", "for-each-ref", "cat-file",
                    "merge-base", "name-rev") or (sub in GIT_DRY_RUN_OK and GIT_DRY_RUN_RE.search(rest)) or (sub == "branch" and not re.search(r"\s-(?:d|D|-delete)\b", rest)):
             op = "status_log_diff"
@@ -317,6 +322,8 @@ def _classify_text(cmd, patterns, env, ctx=None):
                     (sub == "restore" and "--staged" not in rest) or
                     (sub == "stash" and re.search(r"\s(?:drop|clear)\b", rest)))
         found.append(("git", op, env, op in ("force_push", "branch_delete") or bool(discards), "git " + sub))
+    if GH_REPO_WRITE_RE.search(cmd):
+        found.append(("git", "remote_config", env, False, "criar ou alterar repositorio no GitHub"))
     if re.search(r"\bgh\s+pr\s+create\b", cmd):
         found.append(("git", "pull_request", env, False, "abertura de pull request"))
     if re.search(r"\bgh\s+(?:release\s+create|pr\s+merge)\b|\bnpm\s+publish\b|\btwine\s+upload\b|\bcargo\s+publish\b", cmd):
@@ -366,7 +373,7 @@ READONLY_CMDS = {"ls", "dir", "cat", "type", "head", "tail", "wc", "grep", "rg",
                  "format-list", "get-item", "gi", "test-path", "sort", "uniq", "cut", "jq"}
 GIT_DRY_RUN_OK = {"add", "rm", "clean", "mv"}  # com -n/--dry-run so mostram o que fariam
 GIT_DRY_RUN_RE = re.compile(r"\s(?:-n|--dry-run)\b")
-READONLY_GIT = {"status", "log", "diff", "show", "blame", "ls-files", "rev-parse", "describe", "shortlog", "grep", "remote",
+READONLY_GIT = {"status", "log", "diff", "show", "blame", "ls-files", "rev-parse", "describe", "shortlog", "grep", "remote", "ls-remote",
                 "check-ignore", "check-attr", "ls-tree", "rev-list", "for-each-ref", "cat-file", "merge-base", "name-rev"}
 READONLY_AISEF_RE = re.compile(r"(?:aisef_project\.py\s+(?:next|status|verify|waves|precheck|mode)\b(?![^;&|]*--set)|"
                                r"check_project\.py|design_check\.py\s+(?:scan|validate)|aisef_context\.py\s+(?:pack|graph)|"
@@ -389,6 +396,8 @@ def read_only_command(cmd):
             if sub not in READONLY_GIT and not (sub == "branch" and not re.search(r"\s-(?:d|D|m|M|-delete|-move)\b", seg)) \
                     and not (sub in GIT_DRY_RUN_OK and GIT_DRY_RUN_RE.search(seg)):
                 return False
+            if sub == "remote" and REMOTE_WRITE_RE.search(seg.split("remote", 1)[1]):
+                return False  # git remote add/set-url/remove muda o destino dos pushes
         elif head in ("python", "python3", "py"):
             if not READONLY_AISEF_RE.search(seg):
                 return False

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.15.5: repositório remoto conferido antes do primeiro push
+Veio do uso real: no projeto de teste, os pushes não funcionavam porque ninguém conferiu se o projeto tinha repositório no GitHub.
+- **`next` com a ação `setup_remote`.** Quando o projeto usa o fluxo de branch (`git.branch_per_feature` ou `git.delete_branch_after_merge`) e não é repositório Git, ou não tem o remote, o `next` mostra a ação com:
+  - o `check` (`gh repo view <nome>`);
+  - o `if_exists` (`git remote add`);
+  - o `if_missing` (`gh repo create --private --source . --remote origin`);
+  - sem repositório, também o `git init -b <base>`.
+
+  É só um aviso: não conta como trabalho pendente e não impede o `stop_reason`. O `git_state` passa a ler a URL do remote, sem rede.
+- **Doctor avisa no início da sessão.** Avisa quando o repositório não tem o remote, ou quando não é repositório Git mas o fluxo de branch está ligado. O aviso manda perguntar ao usuário se o projeto já existe no GitHub antes de criar outro.
+- **aisef-init e aisef.** O init confere o repositório e o remote antes de qualquer commit, e nunca supõe que o repositório não existe: pergunta ao usuário o dono e o nome e confere com `gh repo view`.
+- **Gateway: remoto é decisão do usuário.** `git remote add/set-url/remove/rename` e `gh repo create/delete/rename/edit/archive/fork` viram a operação nova `remote_config` (`approve_operation`), na política e nos schemas. Antes, os dois passavam sem perguntar. `git remote add` também deixou de contar como leitura no modo Ask. `git ls-remote` passou a ser leitura e não pergunta mais. O corpus ganhou 6 casos (144).
+
 ## 0.15.4: coluna da direita na altura do artefato
 - **Um bloco só não estica mais.** Na tela Agora, quando a coluna da direita tem um bloco só (sem decisão pendente, só o custo de atenção), ele fica com metade da altura do mapa (cerca de 290 px), a mesma de quando há dois blocos, como no artefato aprovado. Antes, ele esticava até os 600 px do mapa e ficava com um vazio grande. Com dois ou mais blocos, eles continuam dividindo a altura em partes iguais.
 

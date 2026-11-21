@@ -12,6 +12,8 @@ Le contratos, aprovacoes, relatorios e o log de auditoria e devolve o que fazer 
     feature_acceptance   feature com todas as tarefas concluidas e sem pedido de aceite
     create_branch        (git.branch_per_feature) a feature vai comecar fora da branch dela
     delete_merged_branch (git.delete_branch_after_merge) feature aceita com a branch ainda local
+    setup_remote         (git.*) o projeto nao e repositorio Git ou nao tem o remote: antes do primeiro push,
+                         conferir se ja existe repositorio no GitHub e ligar ou criar (aviso; nao impede o stop)
     idle                 nada a fazer
 
 `guide` diz a fase (discovery, specify, approve_plan, execute, review, decide, done) e o proximo passo com a
@@ -78,8 +80,9 @@ def feature_branch(feature_id, prefix="feat/"):
     return prefix + slug
 
 
-def git_state(project):
-    """Branch atual e branches locais (somente leitura). Fora de um repositorio: {current: None, branches: None}."""
+def git_state(project, remote="origin"):
+    """Branch atual, branches locais e a URL do remote (somente leitura, sem rede).
+    Fora de um repositorio: {current: None, branches: None, remote_url: None}."""
     def run(*args):
         try:
             r = subprocess.run(["git", "-C", project] + list(args), capture_output=True, text=True, timeout=15)
@@ -88,9 +91,32 @@ def git_state(project):
         return r.stdout if r.returncode == 0 else None
     cur = run("rev-parse", "--abbrev-ref", "HEAD")
     if cur is None:
-        return {"current": None, "branches": None}
+        if run("rev-parse", "--git-dir") is None:
+            return {"current": None, "branches": None, "remote_url": None}
+        cur = "HEAD"  # repositorio sem nenhum commit ainda
     heads = run("for-each-ref", "--format=%(refname:short)", "refs/heads")
-    return {"current": cur.strip(), "branches": set((heads or "").split())}
+    url = run("remote", "get-url", remote)
+    return {"current": cur.strip(), "branches": set((heads or "").split()), "remote_url": url.strip() if url else None}
+
+
+def remote_setup(project, gitcfg, gs):
+    """Acao setup_remote quando o projeto nao tem repositorio Git ou nao tem o remote: antes do primeiro push,
+    conferir se o repositorio ja existe no GitHub e ligar ou criar (decisao do usuario; o gateway pergunta)."""
+    if gs is None or "remote_url" not in gs or (gs.get("current") is not None and gs.get("remote_url")):
+        return None  # sem leitura do remote (git_state antigo ou passado sem a chave), ou tudo certo
+    remote, base = gitcfg["remote"], gitcfg["base_branch"]
+    name = os.path.basename(os.path.abspath(project)) or "projeto"
+    act = {"kind": "setup_remote", "status": "no_git" if gs.get("current") is None else "no_remote",
+           "remote": remote, "repo_name": name,
+           "check": "gh repo view %s --json nameWithOwner,url" % name,
+           "if_exists": "git remote add %s <url devolvida pelo gh repo view>" % remote,
+           "if_missing": "gh repo create %s --private --source . --remote %s" % (name, remote),
+           "hint": "antes do primeiro push: pergunte ao usuario se o projeto ja tem repositorio no GitHub (com outro "
+                   "nome ou dono, use o dele) e rode o check; ligar ou criar o repositorio e decisao dele"}
+    if act["status"] == "no_git":
+        act["init"] = "git init -b %s" % base
+        act["hint"] = "o projeto nao e um repositorio Git: crie com o init antes da primeira feature; depois, " + act["hint"]
+    return act
 
 
 def slice_worktree_info(project, feature_id, task_id, gitcfg):
@@ -412,7 +438,8 @@ def compute_next(project, feature=None, now=None, git_state=None):
 
     # ---- branch por feature
     branch_actions, cleanup = [], []
-    gs = git_state if git_state is not None else (git_state_fn(project) if gitcfg["branch_per_feature"] or gitcfg["delete_branch_after_merge"] else None)
+    gs = git_state if git_state is not None else (git_state_fn(project, gitcfg["remote"]) if gitcfg["branch_per_feature"] or gitcfg["delete_branch_after_merge"] else None)
+    remote_act = remote_setup(project, gitcfg, gs)  # so aviso: nao conta como trabalho pendente nem impede o stop
     if gs and gs.get("current") is not None:
         if gitcfg["branch_per_feature"]:
             for fid in sorted({d["feature_id"] for d in dispatch}):
@@ -453,7 +480,7 @@ def compute_next(project, feature=None, now=None, git_state=None):
     rebase_now = [a for a in req_changed if not a["started"]]  # o orquestrador resolve sozinho (rebase-req)
     decisions += [a for a in req_changed if a["started"]]        # reabrir e decisao do usuario
     automatable = rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions
-    actions = critical + budget_stop + exhausted + decisions + rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions + wait_actions + cleanup
+    actions = critical + budget_stop + exhausted + decisions + ([remote_act] if remote_act else []) + rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions + wait_actions + cleanup
     if critical:
         stop, detail = "critical_risk", "risco critico: pare na hora e leve ao usuario"
     elif budget_stop:
