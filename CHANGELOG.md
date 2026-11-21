@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.15.4: coluna da direita na altura do artefato
+- **Um bloco só não estica mais.** Na tela Agora, quando a coluna da direita tem um bloco só (sem decisão pendente, só o custo de atenção), ele fica com metade da altura do mapa (cerca de 290 px), a mesma de quando há dois blocos, como no artefato aprovado. Antes, ele esticava até os 600 px do mapa e ficava com um vazio grande. Com dois ou mais blocos, eles continuam dividindo a altura em partes iguais.
+
 ## 0.15.3: tempo ativo e mapa com altura fixa no painel
 - **Tempo ativo no topo.** No modo ao vivo (`--serve`), o indicador passa a mostrar há quanto tempo o painel está aberto ("ao vivo · ativo há 12 min"). Antes, ele mostrava o tempo desde a última leitura do servidor, que volta a zero a cada 3 s e por isso ficava sempre em "há 0–3 s". A hora em que o painel abriu e a última leitura ficam no texto que aparece ao passar o mouse. O texto também deixou de sumir entre 761 e 1180 px de largura.
 - **Os tempos decorridos andam sozinhos.** "Rodando há", "esperando você há" e os tempos do mapa e das raias congelavam entre uma mudança e outra do `.aisef/`. No modo ao vivo, o painel agora redesenha a cada 30 s quando nada mudou, mantendo a rolagem (também a vertical), os detalhes abertos e a gaveta. Isso não acontece se você estiver digitando, selecionando texto ou com o zoom ou a busca abertos.

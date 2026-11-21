@@ -110,6 +110,7 @@ Features from 0.13 on are covered by CI, including a test that runs a whole feat
 
 ## What's new
 
+- **0.15.4, panel.** A single card in the right column keeps half the map's height instead of stretching to the full height.
 - **0.15.3, panel fixes.** The live indicator shows how long the panel has been open, elapsed times keep moving between updates, and on the Now screen the execution map has a fixed height that the decisions and the attention card split evenly.
 - **0.15.2, what is proven and what is not.** A maturity table tells real-use features from CI-only ones, with the default and the way back for each. A new test runs a whole feature cycle through all 48 mode combinations. The README numbers are now checked against the code.
 - **0.15.1, attention cost and impact in the panel.** The Now screen shows how often you had to stop (approvals and gateway prompts per completed task, first-pass validation, tokens per task), and Traceability gains an "Impact of" filter: type a requirement, task or file and see only the requirements it touches.

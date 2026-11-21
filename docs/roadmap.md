@@ -15,6 +15,7 @@ O detalhe de cada versão está no [CHANGELOG](../CHANGELOG.md), e as decisões 
 
 | Versão | Entrega |
 |---|---|
+| 0.15.4 | Painel: com um bloco só, a coluna da direita fica com metade da altura do mapa, como no artefato aprovado |
 | 0.15.3 | Painel: tempo ativo no topo, tempos decorridos que andam sozinhos, mapa de execução com altura fixa dividida em partes iguais pelos blocos da direita |
 | 0.15.2 | Tabela de maturidade (uso real ou só CI), teste do ciclo inteiro nas 48 combinações de modos, números do README conferidos contra o código |
 | 0.15.1 | Painel: custo de atenção na tela Agora (F-09), filtro "impacto de" na Rastreabilidade (G-07), tela Agora sem o bloco "Próximo passo" |
