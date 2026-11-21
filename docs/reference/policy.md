@@ -20,6 +20,7 @@ Em `bypassPermissions`, o que pediria aprovação vira `deny`. Erro interno do g
 |---|---|
 | **Git:** status, log, diff, show, blame, fetch | livre |
 | **Git:** commit, push, pull request (`gh pr create`), merge, release, tag | aprovação por operação, cada uma a sua |
+| **Repositório remoto:** `git remote add/set-url/remove`, `gh repo create/delete/rename/edit` | aprovação por operação (`remote_config`): decide para onde vão os pushes e mexe na conta do usuário |
 | **Git:** force push, `commit --amend`, rebase, `reset --hard`, apagar branch | reforçada |
 | **Descartar trabalho local:** `git clean -f`, `checkout --`, `restore`, `stash drop` | sobe um nível (T1) |
 | **Arquivos sensíveis:** `.env`, chaves, credenciais (por Read, Edit ou comando) | aprovação por operação |

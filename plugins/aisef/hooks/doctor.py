@@ -19,6 +19,32 @@ def _aisef_root(project):
     except Exception:
         return project
 
+def remote_advice(project, cfg):
+    """Projeto sem repositorio Git, ou sem o remote: nenhum push vai funcionar. Le so o .git local (sem rede)."""
+    import subprocess
+    import aisef_project as ap
+    gitcfg, _ = ap.git_settings(cfg)
+    remote = gitcfg["remote"]
+
+    def git(*args):
+        try:
+            r = subprocess.run(["git", "-C", project] + list(args), capture_output=True, text=True, timeout=5)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return r.stdout.strip() if r.returncode == 0 else None
+    if git("rev-parse", "--git-dir") is None:
+        if not (gitcfg["branch_per_feature"] or gitcfg["delete_branch_after_merge"]):
+            return None  # projeto sem Git e sem fluxo de branch configurado: nada a avisar
+        return ("o projeto nao e um repositorio Git: nenhum commit nem push vai funcionar. Pergunte ao usuario se o "
+                "projeto ja existe no GitHub (gh repo view <nome>) e, com o OK dele, rode git init -b %s e ligue "
+                "ou crie o repositorio (acao setup_remote do next)" % gitcfg["base_branch"])
+    if not git("remote", "get-url", remote):
+        return ("o repositorio Git nao tem o remote '%s': nenhum push vai funcionar. Antes do primeiro push, pergunte "
+                "ao usuario se o projeto ja tem repositorio no GitHub (gh repo view <nome>) e ligue (git remote add) "
+                "ou crie (gh repo create --private --source . --remote %s); as duas sao decisao dele" % (remote, remote))
+    return None
+
+
 def problems(project):
     found = []
     if sys.version_info < (3, 10):
@@ -78,6 +104,9 @@ def problems(project):
         elif gst["stale"]:
             found.append("o grafo do Graphify esta velho (%s mudou depois dele): regenere antes de delegar "
                          "(aisef-tooling, secao 6)" % gst["newer_source"])
+        remote_warn = remote_advice(project, cfg)
+        if remote_warn:
+            found.append(remote_warn)
         settings = os.path.join(project, ".claude", "settings.json")
         perms = {}
         if os.path.exists(settings):

@@ -31,6 +31,17 @@ Isso cria `.aisef/{contracts/{features,tasks,agents},blueprints,approvals,author
 
 Pergunte tambem se o usuario quer **uma branch por feature** (e apagar a branch depois do merge do PR). Se sim, com o OK, acrescente em `config.json` (a edicao pede aprovacao): `"git": {"branch_per_feature": true, "delete_branch_after_merge": true, "branch_prefix": "feat/"}`. Detalhes na skill **aisef**, secao "Branch por feature".
 
+**Repositorio Git e GitHub (antes de qualquer commit ou push).** Confira sem rede:
+```
+git rev-parse --git-dir
+git remote get-url origin
+```
+- Sem repositorio: com o OK do usuario, `git init -b main` (o doctor e o `next` avisam enquanto isso faltar).
+- Sem remote: **nao suponha que o repositorio nao existe**. Pergunte ao usuario se o projeto ja tem repositorio no GitHub e qual (dono e nome), e confira com `gh repo view <dono>/<nome> --json nameWithOwner,url`.
+  - Existe: `git remote add origin <url>`.
+  - Nao existe: proponha `gh repo create <nome> --private --source . --remote origin` (publico so se ele pedir).
+  Ligar ou criar o repositorio e decisao do usuario: o gateway pergunta (`remote_config`). Sem remote, nenhum push funciona; o `next` mostra a acao `setup_remote` ate isso ser resolvido.
+
 ## 3b. Projeto existente: detecte stack e arquitetura
 ```
 python -I CORE/aisef_project.py detect --project .

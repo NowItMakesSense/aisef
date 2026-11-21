@@ -72,10 +72,11 @@
       "pull_request":    "approve_operation",
       "merge":           "approve_operation",
       "release_publish": "approve_operation",
+      "remote_config":   "approve_operation",
       "force_push":      "approve_reinforced",
       "history_rewrite": "approve_reinforced",
       "branch_delete":   "approve_reinforced",
-      "$rule": "Aprovar commit nao aprova push, pull request, merge ou release. Cada operacao exige sua propria aprovacao. F-03 (ADR 0025): commit_feature (commit numa branch de feature, em dev ou staging) e local_staging (add, switch, checkout -b) sao livres; o push da branch de feature e o recurso git_feature_branch. L-02: worktree_local (git worktree, git branch -d de slice/*, merge da feature na fatia e merge --abort) e livre; o merge da fatia na branch da feature e git_feature_branch/merge."
+      "$rule": "Aprovar commit nao aprova push, pull request, merge ou release. remote_config (git remote add/set-url/remove, gh repo create/delete/rename...) decide para onde vao os pushes e mexe na conta do usuario: sempre decisao dele. Cada operacao exige sua propria aprovacao. F-03 (ADR 0025): commit_feature (commit numa branch de feature, em dev ou staging) e local_staging (add, switch, checkout -b) sao livres; o push da branch de feature e o recurso git_feature_branch. L-02: worktree_local (git worktree, git branch -d de slice/*, merge da feature na fatia e merge --abort) e livre; o merge da fatia na branch da feature e git_feature_branch/merge."
     }
   },
 

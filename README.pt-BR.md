@@ -6,7 +6,7 @@
 
 O AISEF é um plugin do Claude Code para times que precisam mostrar o que a IA fez, não só entregar mais rápido. Um pedido em linguagem natural vira uma feature especificada: triada em código, quebrada em fatias verticais, construída com testes primeiro por agentes em paralelo, revisada por especialistas, validada por outro agente e aceita por você. Toda chamada de ferramenta passa por uma política aplicada em código, e cada passo vai para um log assinado, à prova de adulteração, que o CI verifica em cada pull request.
 
-| **166** | **2.500+** | **138** | **66** | **~0,2 s** |
+| **166** | **2.500+** | **144** | **66** | **~0,2 s** |
 |---|---|---|---|---|
 | regras de consistência no `aisef-check` | verificações automáticas, CI em Linux e Windows | casos do gateway, 48 deles tentativas de contorno, nenhuma passa | agentes especialistas (15 ativos num projeto Python novo) | custo do gateway por chamada no Windows ([medido](tools/bench_hooks.py)) |
 
@@ -110,6 +110,7 @@ Os recursos da 0.13 em diante têm cobertura no CI, incluindo um teste que roda 
 
 ## Novidades
 
+- **0.15.5, o repositório remoto antes do primeiro push.** O `next` e o doctor avisam quando o projeto não é repositório Git ou não tem remote, e o init pergunta se o projeto já existe no GitHub antes de criar outro. Ligar ou trocar o remote e criar repositório no GitHub passam a ser decisão sua.
 - **0.15.4, painel.** Um bloco sozinho na coluna da direita fica com metade da altura do mapa, em vez de esticar até a altura inteira.
 - **0.15.3, correções no painel.** O indicador ao vivo mostra há quanto tempo o painel está aberto, os tempos decorridos continuam andando entre as atualizações e, na tela Agora, o mapa de execução tem altura fixa, dividida em partes iguais entre as decisões e o custo de atenção.
 - **0.15.2, o que está provado e o que não está.** Uma tabela de maturidade separa o que já rodou em uso real do que só tem CI, com o padrão e o jeito de voltar atrás de cada recurso. Um teste novo roda o ciclo inteiro de uma feature nas 48 combinações de modos. Os números do README passam a ser conferidos contra o código.

@@ -333,5 +333,36 @@ ap.write_json(os.path.join(ap.aisef_dir(gr), "config.json"), cfg)
 ev(gr, "task_executed", "T-1", actor=("agent", "backend"))
 check("Graphify desligado: nunca sugere", nx.compute_next(gr, git_state=NOGIT)["guide"]["graph_refresh"] is None)
 
+# ---- setup_remote: antes do primeiro push, conferir se o repositorio existe no GitHub (uso real, HireMe)
+import shutil  # noqa: E402
+if shutil.which("git"):
+    rp = os.path.join(work, "remote-check")
+    os.makedirs(rp)
+    ap.init(rp, "PRJ-RM")
+    cfg = ap.load_config(rp)
+    cfg["git"] = {"branch_per_feature": True}
+    ap.write_json(os.path.join(rp, ".aisef", "config.json"), cfg)
+
+    def remote_act():
+        return [a for a in nx.compute_next(rp)["actions"] if a["kind"] == "setup_remote"]
+    a = remote_act()
+    check("sem repositorio Git: setup_remote no_git com git init e o check no GitHub",
+          len(a) == 1 and a[0]["status"] == "no_git" and a[0]["init"] == "git init -b main"
+          and a[0]["check"].startswith("gh repo view ") and "--private" in a[0]["if_missing"], a)
+    check("setup_remote e so aviso: nao impede o stop", nx.compute_next(rp)["stop_reason"] == "nothing_ready")
+    subprocess.run(["git", "-C", rp, "init", "-q", "-b", "main"], capture_output=True)
+    a = remote_act()
+    check("repositorio sem commit e sem remote: setup_remote no_remote", len(a) == 1 and a[0]["status"] == "no_remote", a)
+    subprocess.run(["git", "-C", rp, "remote", "add", "origin", "https://github.com/exemplo/remote-check.git"], capture_output=True)
+    check("com o remote: sem setup_remote", remote_act() == [])
+    check("git_state le a URL do remote", nx.git_state(rp)["remote_url"] == "https://github.com/exemplo/remote-check.git")
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "hooks"))
+    import doctor  # noqa: E402
+    check("doctor: com o remote, sem aviso", doctor.remote_advice(rp, ap.load_config(rp)) is None)
+    subprocess.run(["git", "-C", rp, "remote", "remove", "origin"], capture_output=True)
+    w = doctor.remote_advice(rp, ap.load_config(rp)) or ""
+    check("doctor: sem o remote, avisa e manda perguntar ao usuario se ja existe no GitHub",
+          "nao tem o remote 'origin'" in w and "gh repo view" in w, w)
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)
