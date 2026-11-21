@@ -34,9 +34,11 @@ Pergunte tambem se o usuario quer **uma branch por feature** (e apagar a branch 
 **Repositorio Git e GitHub (antes de qualquer commit ou push).** Confira sem rede:
 ```
 git rev-parse --git-dir
+git rev-parse --verify HEAD
 git remote get-url origin
 ```
 - Sem repositorio: com o OK do usuario, `git init -b main` (o doctor e o `next` avisam enquanto isso faltar).
+- Sem nenhum commit (`rev-parse --verify HEAD` falha): o verify pula a varredura de segredos e o diff, e nao ha ponto fixo para code-review nem PR. Leve ao usuario o commit inicial (pede aprovacao: `git_operation` commit, via **aisef-approve**); o `next` mostra a acao `first_commit` ate isso ser feito.
 - Sem remote: **nao suponha que o repositorio nao existe**. Pergunte ao usuario se o projeto ja tem repositorio no GitHub e qual (dono e nome), e confira com `gh repo view <dono>/<nome> --json nameWithOwner,url`.
   - Existe: `git remote add origin <url>`.
   - Nao existe: proponha `gh repo create <nome> --private --source . --remote origin` (publico so se ele pedir).

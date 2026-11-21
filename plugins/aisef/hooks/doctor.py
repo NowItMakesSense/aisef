@@ -19,6 +19,24 @@ def _aisef_root(project):
     except Exception:
         return project
 
+def commit_advice(project, cfg):
+    """Repositorio Git sem nenhum commit: o verify pula a varredura de segredos e o diff sem ninguem perceber.
+    Le so o .git local. Fora de um repositorio, quem avisa e o remote_advice."""
+    import subprocess
+
+    def git(*args):
+        try:
+            return subprocess.run(["git", "-C", project] + list(args), capture_output=True, text=True,
+                                  timeout=5).returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            return None
+    if not git("rev-parse", "--git-dir") or git("rev-parse", "--verify", "--quiet", "HEAD"):
+        return None
+    return ("o repositorio Git nao tem nenhum commit: o verify pula a varredura de segredos e o diff, e nao ha ponto "
+            "fixo para code-review nem PR. Leve ao usuario o commit inicial (pede aprovacao: git_operation commit; "
+            "acao first_commit do next)")
+
+
 def remote_advice(project, cfg):
     """Projeto sem repositorio Git, ou sem o remote: nenhum push vai funcionar. Le so o .git local (sem rede)."""
     import subprocess
@@ -107,6 +125,9 @@ def problems(project):
         remote_warn = remote_advice(project, cfg)
         if remote_warn:
             found.append(remote_warn)
+        commit_warn = commit_advice(project, cfg)
+        if commit_warn:
+            found.append(commit_warn)
         settings = os.path.join(project, ".claude", "settings.json")
         perms = {}
         if os.path.exists(settings):
