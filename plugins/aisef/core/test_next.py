@@ -246,6 +246,11 @@ check("feature aceita com a branch ainda local: sugere apagar remota e local, ca
       and all(o["request"] is None for o in dm[0]["operations"]) and "merge" in dm[0]["requires"], r)
 r = nx.compute_next(p11, git_state={"current": "main", "branches": {"main"}})
 check("branch local ja apagada: nada a sugerir", not action(r, "delete_merged_branch"), r)
+r = nx.compute_next(p11, git_state={"current": "main", "branches": {"main", "feat/login"}, "remote_url": None})
+dm = action(r, "delete_merged_branch")
+check("sem o remote: limpeza so da branch local, com merge local em vez de PR",
+      dm and [o["command"] for o in dm[0]["operations"]] == ["git branch -d feat/login"]
+      and "PR" not in dm[0]["requires"] and "git branch --merged main" in dm[0]["requires"], r)
 
 
 print("--- relatorio fora do schema")
@@ -363,6 +368,25 @@ if shutil.which("git"):
     w = doctor.remote_advice(rp, ap.load_config(rp)) or ""
     check("doctor: sem o remote, avisa e manda perguntar ao usuario se ja existe no GitHub",
           "nao tem o remote 'origin'" in w and "gh repo view" in w, w)
+
+    # ---- repositorio sem nenhum commit (uso real, HireMe: o verify pulou segredos e diff sem ninguem avisar)
+    gs0 = nx.git_state(rp)
+    check("git_state sem commit: has_head falso e a branch vem do HEAD simbolico (nao 'HEAD')",
+          gs0.get("has_head") is False and gs0["current"] == "main", str(gs0))
+
+    def commit_act():
+        return [a for a in nx.compute_next(rp)["actions"] if a["kind"] == "first_commit"]
+    a = commit_act()
+    check("sem commit: acao first_commit com o motivo (verify pula segredos e diff) e o pedido de aprovacao",
+          len(a) == 1 and "segredos" in a[0]["hint"] and a[0]["approval"] == "git_operation commit", a)
+    check("first_commit e so aviso: nao impede o stop", nx.compute_next(rp)["stop_reason"] == "nothing_ready")
+    w = doctor.commit_advice(rp, ap.load_config(rp)) or ""
+    check("doctor: repositorio sem commit avisa que o verify pula segredos e diff", "nenhum commit" in w and "segredos" in w, w)
+    subprocess.run(["git", "-C", rp, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false",
+                    "commit", "-q", "--allow-empty", "-m", "inicio"], capture_output=True)
+    check("com commit: has_head verdadeiro, sem first_commit e sem aviso do doctor",
+          nx.git_state(rp).get("has_head") is True and commit_act() == []
+          and doctor.commit_advice(rp, ap.load_config(rp)) is None)
 
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

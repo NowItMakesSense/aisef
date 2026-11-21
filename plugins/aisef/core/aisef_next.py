@@ -14,6 +14,8 @@ Le contratos, aprovacoes, relatorios e o log de auditoria e devolve o que fazer 
     delete_merged_branch (git.delete_branch_after_merge) feature aceita com a branch ainda local
     setup_remote         (git.*) o projeto nao e repositorio Git ou nao tem o remote: antes do primeiro push,
                          conferir se ja existe repositorio no GitHub e ligar ou criar (aviso; nao impede o stop)
+    first_commit         (git.*) o repositorio nao tem nenhum commit: o verify pula segredos e diff; leve o commit
+                         inicial ao usuario (aviso; nao impede o stop)
     idle                 nada a fazer
 
 `guide` diz a fase (discovery, specify, approve_plan, execute, review, decide, done) e o proximo passo com a
@@ -81,22 +83,39 @@ def feature_branch(feature_id, prefix="feat/"):
 
 
 def git_state(project, remote="origin"):
-    """Branch atual, branches locais e a URL do remote (somente leitura, sem rede).
-    Fora de um repositorio: {current: None, branches: None, remote_url: None}."""
+    """Branch atual, branches locais, a URL do remote e se ja ha commit (somente leitura, sem rede).
+    Fora de um repositorio: {current: None, branches: None, remote_url: None, has_head: False}."""
     def run(*args):
         try:
             r = subprocess.run(["git", "-C", project] + list(args), capture_output=True, text=True, timeout=15)
         except (OSError, subprocess.SubprocessError):
             return None
         return r.stdout if r.returncode == 0 else None
+    has_head = True
     cur = run("rev-parse", "--abbrev-ref", "HEAD")
     if cur is None:
         if run("rev-parse", "--git-dir") is None:
-            return {"current": None, "branches": None, "remote_url": None}
-        cur = "HEAD"  # repositorio sem nenhum commit ainda
+            return {"current": None, "branches": None, "remote_url": None, "has_head": False}
+        # repositorio sem nenhum commit ainda: o rev-parse falha, mas o HEAD simbolico ja diz a branch
+        has_head = False
+        cur = run("symbolic-ref", "--short", "HEAD") or "HEAD"
     heads = run("for-each-ref", "--format=%(refname:short)", "refs/heads")
     url = run("remote", "get-url", remote)
-    return {"current": cur.strip(), "branches": set((heads or "").split()), "remote_url": url.strip() if url else None}
+    return {"current": cur.strip(), "branches": set((heads or "").split()), "remote_url": url.strip() if url else None,
+            "has_head": has_head}
+
+
+def commit_setup(gs):
+    """Acao first_commit quando o repositorio existe mas nao tem nenhum commit: o verify pula a varredura de segredos
+    e o diff, e revisao por diff (code-review, PR) fica sem ponto fixo. So aviso; o commit pede aprovacao."""
+    if not gs or gs.get("current") is None or gs.get("has_head") is not False:
+        return None  # sem repositorio (setup_remote cuida), git_state antigo sem a chave, ou ja ha commit
+    return {"kind": "first_commit", "branch": gs["current"],
+            "commands": ["git add -A", "git commit -m \"chore: estado inicial\""],
+            "approval": "git_operation commit",
+            "hint": "o repositorio nao tem nenhum commit: o verify pula a varredura de segredos e o diff, e nao ha "
+                    "ponto fixo para code-review nem PR. Leve ao usuario o commit inicial (aisef-approve) antes de "
+                    "executar a primeira feature"}
 
 
 def remote_setup(project, gitcfg, gs):
@@ -440,6 +459,10 @@ def compute_next(project, feature=None, now=None, git_state=None):
     branch_actions, cleanup = [], []
     gs = git_state if git_state is not None else (git_state_fn(project, gitcfg["remote"]) if gitcfg["branch_per_feature"] or gitcfg["delete_branch_after_merge"] else None)
     remote_act = remote_setup(project, gitcfg, gs)  # so aviso: nao conta como trabalho pendente nem impede o stop
+    commit_act = commit_setup(gs)                   # idem
+    # Sem o remote (lido pelo git_state), nao ha branch remota a apagar nem PR a confirmar. git_state antigo, sem a
+    # chave remote_url, mantem o comportamento anterior (remota + local).
+    has_remote = not (gs and "remote_url" in gs and not gs["remote_url"])
     if gs and gs.get("current") is not None:
         if gitcfg["branch_per_feature"]:
             for fid in sorted({d["feature_id"] for d in dispatch}):
@@ -458,14 +481,18 @@ def compute_next(project, feature=None, now=None, git_state=None):
                 if b not in (gs.get("branches") or set()):
                     continue
                 ops = []
-                for scope, command in (("remote", "git push %s --delete %s" % (gitcfg["remote"], b)),
-                                       ("local", "git branch -d %s" % b)):
+                targets = ([("remote", "git push %s --delete %s" % (gitcfg["remote"], b))] if has_remote else []) \
+                    + [("local", "git branch -d %s" % b)]
+                for scope, command in targets:
                     req = next((a for a in approvals if a.get("request_type") in ("git_operation", "reinforced_approval")
                                 and (a.get("operation") or {}).get("operation", "").strip() == command), None)
                     ops.append({"scope": scope, "command": command,
                                 "request": {"request_id": req["request_id"], "status": req["status"]} if req else None})
                 cleanup.append({"kind": "delete_merged_branch", "feature_id": fid, "branch": b, "operations": ops,
-                                "requires": "merge do PR confirmado pelo usuario (gh pr view %s --json state,mergedAt)" % b,
+                                "requires": ("merge do PR confirmado pelo usuario (gh pr view %s --json state,mergedAt)" % b
+                                             if has_remote else
+                                             "merge local em %s confirmado (git branch --merged %s); sem o remote, so "
+                                             "a branch local" % (gitcfg["base_branch"], gitcfg["base_branch"])),
                                 "hint": "cada exclusao e operacao Git reforcada: um pedido git_operation branch_delete "
                                         "+ autorizacao reforcada com a operation exata"
                                         + ("; saia da branch antes (git switch <base>)" if gs["current"] == b else "")})
@@ -480,7 +507,7 @@ def compute_next(project, feature=None, now=None, git_state=None):
     rebase_now = [a for a in req_changed if not a["started"]]  # o orquestrador resolve sozinho (rebase-req)
     decisions += [a for a in req_changed if a["started"]]        # reabrir e decisao do usuario
     automatable = rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions
-    actions = critical + budget_stop + exhausted + decisions + ([remote_act] if remote_act else []) + rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions + wait_actions + cleanup
+    actions = critical + budget_stop + exhausted + decisions + ([remote_act] if remote_act else []) + ([commit_act] if commit_act else []) + rebase_now + complete + validate + acceptance + branch_actions + dispatch_actions + wait_actions + cleanup
     if critical:
         stop, detail = "critical_risk", "risco critico: pare na hora e leve ao usuario"
     elif budget_stop:
