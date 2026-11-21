@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/img/banner.svg" width="100%" alt="AISEF. Fast agents are easy. Agents you can audit are not."></p>
 
-<p align="center"><b>English</b> · <a href="README.pt-BR.md">Português</a></p>
+<p align="center"><b>English</b> · <a href="README.pt-BR.md">Português</a> · <a href="README.zh-CN.md">简体中文</a></p>
 
 <h3 align="center">The evidence trail for AI-assisted engineering. Rules enforced in code, every step in a signed log, every requirement traced to its proof, and a package your auditor can verify on their own.</h3>
 

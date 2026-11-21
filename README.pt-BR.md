@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/img/banner.pt-BR.svg" width="100%" alt="AISEF. Agentes rápidos são fáceis. Agentes que você pode auditar, não."></p>
 
-<p align="center"><a href="README.md">English</a> · <b>Português</b></p>
+<p align="center"><a href="README.md">English</a> · <b>Português</b> · <a href="README.zh-CN.md">简体中文</a></p>
 
 <h3 align="center">A trilha de evidência da engenharia com IA. Regras aplicadas em código, cada passo num log assinado, cada requisito ligado à sua prova e um pacote que o seu auditor verifica sozinho.</h3>
 
