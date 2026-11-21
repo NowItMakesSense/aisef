@@ -132,6 +132,8 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
   .grid2.nowgrid > .rcol { min-height: 0; }
   .grid2.nowgrid > .rcol > .share { flex: 1 1 0; min-height: 0; overflow: auto; }
   .grid2.nowgrid > .rcol > .more { flex: none; }
+  /* um bloco so: mesma altura de quando ha dois (metade do mapa), sem esticar ate o fim */
+  .grid2.nowgrid > .rcol.single > .share { flex: 0 0 calc((var(--map-h) - 20px) / 2); }
 }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); min-width: 0; }
 .phead { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--rule); }
@@ -1124,6 +1126,7 @@ a.btn.primary { color: var(--ground); }
     if (pend.length) pend.slice(0, 3).forEach(function (a) { var b = decisionBlock(a); b.classList.add("share"); col.appendChild(b); });
     if (pend.length > 3) col.appendChild(el("a", { cls: "btn more", href: "#gov", text: "Ver as " + pend.length + " decisões em Governança" }));
     var att = attentionPanel(); att.classList.add("share"); col.appendChild(att);
+    if (col.querySelectorAll(".share").length === 1) col.classList.add("single");
     return col;
   }
   function attentionPanel() {
