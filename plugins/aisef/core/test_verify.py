@@ -90,6 +90,22 @@ check("CLI com --task sai 0", av.main(["--project", proj, "--task", "T-010"]) ==
 path = os.path.join(proj, ".aisef", "evidence", "VERIFY-T-010.json")
 check("--task grava a evidencia", os.path.exists(path) and json.load(open(path, encoding="utf-8"))["task_id"] == "T-010")
 
+# ---------------------------------------------------------------- repositorio sem nenhum commit (uso real, HireMe)
+fresh = os.path.join(work, "novo")
+os.makedirs(fresh)
+subprocess.run(["git", "init", "-q", fresh], capture_output=True, check=True)
+with open(os.path.join(fresh, ".env"), "w", encoding="utf-8") as fh:
+    fh.write('token = "%s"\n' % key)
+rep = av.verify(fresh, only={"secrets", "diff"})
+st = {s["phase"]: s for s in rep["steps"]}
+check("sem commit e nada no index: segredos e diff nao pulam (PASS, nada para o commit levar)",
+      st["secrets"]["result"] == "PASS" and st["diff"]["result"] == "PASS", rep["steps"])
+subprocess.run(["git", "-C", fresh, "add", "-A"], capture_output=True, check=True)
+rep = av.verify(fresh, only={"secrets"})
+sec = rep["steps"][0]
+check("sem commit: segredo no index (o que o commit inicial levaria) reprova",
+      sec["result"] == "FAIL" and sec["findings"][0]["file"] == ".env", sec)
+
 shutil.rmtree(work, ignore_errors=True)
 print("%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

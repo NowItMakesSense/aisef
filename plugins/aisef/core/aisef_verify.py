@@ -92,8 +92,24 @@ def git(project, *args):
         return None
 
 
+def diff_base(project):
+    """HEAD; num repositorio sem nenhum commit, a arvore vazia (o diff cobre tudo que esta no index, ou seja, o que o
+    commit inicial levaria); fora de um repositorio, None."""
+    if git(project, "rev-parse", "--verify", "--quiet", "HEAD") is not None:
+        return "HEAD"
+    if git(project, "rev-parse", "--git-dir") is None:
+        return None
+    try:  # hash da arvore vazia no formato do repositorio (SHA-1 ou SHA-256)
+        r = subprocess.run(["git", "hash-object", "-t", "tree", "--stdin"], cwd=project, input="",
+                           capture_output=True, text=True, timeout=60)
+        return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
 def secret_scan(project):
-    diff = git(project, "diff", "--unified=0", "--no-color", "HEAD")
+    base = diff_base(project)
+    diff = git(project, "diff", "--unified=0", "--no-color", base) if base else None
     if diff is None:
         return {"result": "SKIP", "why": "sem git ou sem HEAD", "findings": []}
     findings, cur, line = [], None, 0
@@ -114,7 +130,8 @@ def secret_scan(project):
 
 
 def diff_summary(project):
-    stat = git(project, "diff", "--shortstat", "HEAD")
+    base = diff_base(project)
+    stat = git(project, "diff", "--shortstat", base) if base else None
     untracked = git(project, "ls-files", "--others", "--exclude-standard")
     if stat is None:
         return {"result": "SKIP", "why": "sem git ou sem HEAD"}

@@ -38,7 +38,7 @@ git rev-parse --verify HEAD
 git remote get-url origin
 ```
 - Sem repositorio: com o OK do usuario, `git init -b main` (o doctor e o `next` avisam enquanto isso faltar).
-- Sem nenhum commit (`rev-parse --verify HEAD` falha): o verify pula a varredura de segredos e o diff, e nao ha ponto fixo para code-review nem PR. Leve ao usuario o commit inicial (pede aprovacao: `git_operation` commit, via **aisef-approve**); o `next` mostra a acao `first_commit` ate isso ser feito.
+- Sem nenhum commit (`rev-parse --verify HEAD` falha): nao ha ponto fixo para o diff das tarefas, code-review nem PR. Leve ao usuario o commit inicial (pede aprovacao: `git_operation` commit, via **aisef-approve**); o `next` mostra a acao `first_commit` ate isso ser feito. Antes de commitar, `git add -A` e a varredura de segredos do verify (`--only secrets,diff`), que sem commit compara o index com a arvore vazia: se reprovar, tire o arquivo (`git rm --cached`, `.gitignore`) em vez de commitar.
 - Sem remote: **nao suponha que o repositorio nao existe**. Pergunte ao usuario se o projeto ja tem repositorio no GitHub e qual (dono e nome), e confira com `gh repo view <dono>/<nome> --json nameWithOwner,url`.
   - Existe: `git remote add origin <url>`.
   - Nao existe: proponha `gh repo create <nome> --private --source . --remote origin` (publico so se ele pedir).

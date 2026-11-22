@@ -377,11 +377,16 @@ if shutil.which("git"):
     def commit_act():
         return [a for a in nx.compute_next(rp)["actions"] if a["kind"] == "first_commit"]
     a = commit_act()
-    check("sem commit: acao first_commit com o motivo (verify pula segredos e diff) e o pedido de aprovacao",
+    check("sem commit: acao first_commit com o motivo e o pedido de aprovacao",
           len(a) == 1 and "segredos" in a[0]["hint"] and a[0]["approval"] == "git_operation commit", a)
+    cmds = a[0]["commands"] if a else []
+    check("first_commit: varredura de segredos no index entre o add e o commit",
+          len(cmds) == 3 and cmds[0] == "git add -A" and "aisef_verify.py" in cmds[1] and "--only secrets" in cmds[1]
+          and cmds[2].startswith("git commit"), cmds)
     check("first_commit e so aviso: nao impede o stop", nx.compute_next(rp)["stop_reason"] == "nothing_ready")
     w = doctor.commit_advice(rp, ap.load_config(rp)) or ""
-    check("doctor: repositorio sem commit avisa que o verify pula segredos e diff", "nenhum commit" in w and "segredos" in w, w)
+    check("doctor: repositorio sem commit avisa e manda varrer segredos antes do commit inicial",
+          "nenhum commit" in w and "segredos" in w, w)
     subprocess.run(["git", "-C", rp, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false",
                     "commit", "-q", "--allow-empty", "-m", "inicio"], capture_output=True)
     check("com commit: has_head verdadeiro, sem first_commit e sem aviso do doctor",

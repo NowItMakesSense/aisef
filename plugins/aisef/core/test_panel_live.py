@@ -96,6 +96,39 @@ check("tarefas do painel usam o estado efetivo (delegada = em andamento, mesmo c
 check("bundle com a visao 'live' valida no schema do painel",
       not ap.validate(json.load(open(os.path.join(out, "panel-data.json"), encoding="utf-8")), "panel-data.schema.v0.1.json"))
 
+# ligacao disparo -> start (mapa de agentes: subagente novo caia na onda de uma fatia antiga)
+import aisef_runtime as art  # noqa: E402
+
+
+def sp(at, task, pid="orq"):
+    return {"event": "spawn", "at": at, "parent_id": pid, "subagent_type": "aisef:implementer",
+            "description": "%s: x" % task, "task_id": task}
+
+
+def st(at, aid):
+    return {"event": "start", "at": at, "agent_id": aid, "agent_type": "aisef:implementer"}
+
+
+m = art.match_parents([sp("2026-11-21T10:00:00-03:00", "T-010"),  # disparo orfao: nunca virou start (negado)
+                       sp("2026-11-21T12:00:00-03:00", "T-030"), st("2026-11-21T12:00:02-03:00", "ag-a"),
+                       sp("2026-11-21T12:30:00-03:00", "T-040"), st("2026-11-21T12:30:01-03:00", "ag-b")])
+check("disparo orfao antigo nao e herdado: cada start fica com o disparo da sua hora (sem escorregar uma fatia)",
+      m["ag-a"][4] == "T-030" and m["ag-b"][4] == "T-040", m)
+m = art.match_parents([st("2026-11-21T12:00:02-03:00", "ag-a"), sp("2026-11-21T12:00:03-03:00", "T-030"),
+                       sp("2026-11-21T12:30:00-03:00", "T-040"), st("2026-11-21T12:30:01-03:00", "ag-b")])
+check("disparo gravado depois do start (hook assincrono): liga ao seu start e nao sobra para o proximo",
+      m["ag-a"][4] == "T-030" and m["ag-b"][4] == "T-040", m)
+m = art.match_parents([sp("2026-11-21T12:00:00-03:00", "T-030"), sp("2026-11-21T12:00:00-03:00", "T-031"),
+                       st("2026-11-21T12:00:01-03:00", "ag-a"), st("2026-11-21T12:00:02-03:00", "ag-b")])
+check("onda com disparos em paralelo do mesmo papel: ordem de disparo mantida",
+      m["ag-a"][4] == "T-030" and m["ag-b"][4] == "T-031", m)
+m = art.match_parents([sp("2026-11-21T10:00:00-03:00", "T-010"), st("2026-11-21T12:00:02-03:00", "ag-a")])
+check("start sem disparo por perto: sem pai nem fatia (nao chuta um disparo velho)", m["ag-a"][4] is None and m["ag-a"][0] is None, m)
+hk = json.load(open(os.path.join(HOOKS, "hooks.json"), encoding="utf-8"))
+agent_hook = [h for g in hk["hooks"]["PreToolUse"] if g["matcher"] == "Agent|Task" for h in g["hooks"]]
+check("hook do disparo (PreToolUse Agent|Task) e sincrono: o disparo fica gravado antes do SubagentStart",
+      agent_hook and not any(h.get("async") for h in agent_hook), agent_hook)
+
 check("etapas: sem plano aprovado = Plano; tudo concluido = Revisao; fechada = Encerrada",
       panel_live.feature_stage({"feature_id": "F", "approval": {"plan": {"status": "pending"}}, "spec": {"solution": "x"}}, []) == "plan"
       and panel_live.feature_stage({"feature_id": "F", "approval": {"plan": {"status": "approved"}}},

@@ -26,19 +26,42 @@ def task_from_description(description):
     return m.group(1) if m else None
 
 
+SPAWN_MAX_LAG = 300  # s: o SubagentStart vem segundos depois do disparo; disparo mais velho que isso ficou orfao
+SPAWN_SKEW = 60      # s: o disparo pode ter sido gravado depois do start (hook antigo assincrono, relogio)
+
+
+def _ts(s):
+    import datetime
+    try:
+        d = datetime.datetime.fromisoformat((s or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return d if d.tzinfo else d.replace(tzinfo=datetime.timezone.utc)
+
+
 def match_parents(events):
-    """Liga cada `start` ao `spawn` que o disparou: o mais antigo ainda livre, do mesmo papel, ate o start.
+    """Liga cada `start` ao `spawn` que o disparou: o mais antigo ainda livre, do mesmo papel, perto do start (de
+    SPAWN_MAX_LAG antes ate SPAWN_SKEW depois).
+
+    A janela importa: sem ela, um disparo que nunca virou start (negado, cancelado) ou que foi gravado depois do seu
+    start ficava livre para sempre, e cada start seguinte do mesmo papel herdava o disparo anterior, com a fatia
+    errada: no mapa, o subagente novo caia na onda de uma fatia antiga.
 
     Devolve {agent_id: (parent_id, description, inferred, model, task_id)}. `inferred` e verdadeiro quando os
     candidatos tinham pais diferentes (nao ha como saber qual deles disparou)."""
-    spawns = [dict(e, used=False) for e in events if e.get("event") == "spawn"]
+    spawns = [dict(e, used=False, _t=_ts(e.get("at"))) for e in events if e.get("event") == "spawn"]
     parents = {}
+
+    def near(s, t):
+        if t is None or s["_t"] is None:  # sem hora para comparar: so a ordem do texto, como antes
+            return (s.get("at") or "") <= (e.get("at") or "~")
+        d = (t - s["_t"]).total_seconds()
+        return -SPAWN_SKEW <= d <= SPAWN_MAX_LAG
     for e in events:
         if e.get("event") != "start" or e.get("agent_id") in parents:
             continue  # o mesmo agente comecando de novo nao consome outro disparo (F-04)
-        r = role(e.get("agent_type"))
-        cands = [s for s in spawns if not s["used"] and role(s.get("subagent_type")) == r
-                 and (s.get("at") or "") <= (e.get("at") or "~")]
+        r, t = role(e.get("agent_type")), _ts(e.get("at"))
+        cands = [s for s in spawns if not s["used"] and role(s.get("subagent_type")) == r and near(s, t)]
         if not cands:
             parents[e.get("agent_id")] = (None, None, True, None, None)  # sem registro do disparo
             continue
