@@ -48,7 +48,9 @@ def _parse(s):
 
 
 def _key(path):
-    return os.path.normcase(os.path.normpath(os.path.abspath(path)))
+    # realpath: o `git worktree list` devolve o caminho resolvido (nome longo no Windows, sem o 8.3 "RUNNER~1" do
+    # TEMP; sem o link /tmp -> /private/tmp no macOS); sem resolver, a mesma pasta parecia duas
+    return os.path.normcase(os.path.realpath(os.path.abspath(path)))
 
 
 def _dir(project):
