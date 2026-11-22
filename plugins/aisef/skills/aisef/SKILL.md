@@ -91,6 +91,13 @@ O `next` so sugere; quem executa e voce, e o gateway continua decidindo.
 
 **Escopo de push da feature (ADR 0025).** Junto com o pedido `plan_approval`, crie um pedido `scope_authorization` com `scope_proposal` = `{"environment": "dev", "resources": ["git_feature_branch"], "operations": ["push"], "resource_filters": {"branches": ["feat/<id>"]}, "valid_until": <ate 7 dias>}` e leve os dois juntos ao usuario (**aisef-approve**). Aprovado, a autorizacao gerada leva o mesmo `resource_filters.branches`. Dai em diante, `git push` da branch da feature para ela mesma passa sem prompt; para `main`, `--force`, tags ou exclusao, nada muda.
 
+## Outra sessao no mesmo projeto (coordenacao)
+Duas sessoes do Claude Code no mesmo projeto (na mesma pasta ou em worktrees) se enxergam por `.aisef/runtime/sessions/` (fora do Git). O objetivo e cada uma trabalhar numa parte separada, sem refazer nem atropelar o trabalho da outra:
+- **Quando o doctor ou o gateway avisar** ("outra sessao esta trabalhando neste projeto"), mostre ao usuario o que a outra esta fazendo (areas reservadas e mudancas sem commit: `python -I CORE/aisef_sessions.py status --project . --session <id> --diff`) e proponha a divisao antes de editar.
+- **Reserve a sua area** antes de editar: `python -I CORE/aisef_sessions.py claim --project . --session <id> --paths '<globs>' --note '<o que vai fazer>'`. Ao disparar uma fatia, a reserva e automatica (`scope.paths_allowed` + `exclusive_files`) e e solta quando o executor entrega; solte a manual com `release`. `claim` sai 3 quando a area cruza a de outra sessao: leve ao usuario e combine.
+- **Fique fora da area da outra.** Editar nela, ou num arquivo que ela tem alterado sem commit, faz o gateway perguntar. Se o pedido do usuario cai la, diga isso a ele em vez de seguir.
+- **Antes de commit, push, PR ou merge**, o gateway mostra as mudancas sem commit da outra sessao (inclusive na mesma pasta, onde um `git add -A` levaria o trabalho dela). Nao comite arquivos dela; mostre ao usuario e siga so com os seus.
+
 ## Caminho rapido (mudancas pequenas)
 Use quando a triagem der `quick` (ela confere os criterios abaixo em codigo). Os criterios, **todos** verdadeiros: nao muda comportamento observavel; nao toca API, schema de banco, seguranca, CI/CD, configuracao de producao nem dependencia com quebra; cabe em poucos arquivos (guia: ate ~50 linhas). Exemplos: typo, texto, renomear variavel local, patch de dependencia, ajuste de lint. Na duvida, nao e rapido.
 ```

@@ -206,7 +206,30 @@ def on_stop(project, data):
     with open(aisef_runtime.usage_path(os.path.join(project, ".aisef")), "a", encoding="utf-8") as fh:
         fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
     try:
-        lifecycle_stop(project, start, usage)
+        done = lifecycle_stop(project, start, usage)
+    except Exception:
+        done = None
+    if done == "task_executed" and data.get("session_id") and start.get("task_id"):
+        try:  # fatia entregue: a area volta a ficar livre (o que ficou sem commit segue coberto por overlap)
+            import aisef_sessions
+            aisef_sessions.release(project, data["session_id"], start["task_id"])
+        except Exception:
+            pass
+
+
+def claim_task_area(project, session_id, tid):
+    """Disparo de uma fatia: a sessao reserva a area dela (scope.paths_allowed + exclusive_files), para as outras
+    sessoes do projeto trabalharem em pontos separados (aisef_sessions). Acessorio: falha nunca derruba o hook."""
+    if not session_id or not tid:
+        return
+    t = _task(project, tid)
+    scope = (t or {}).get("scope") or {}
+    paths = list(scope.get("paths_allowed") or []) + list(scope.get("exclusive_files") or [])
+    if not paths:
+        return
+    try:
+        import aisef_sessions
+        aisef_sessions.claim(project, session_id, paths, note=(t.get("title") or "")[:80] or None, task_id=tid)
     except Exception:
         pass
 
@@ -226,10 +249,12 @@ def main():
         inp = data.get("tool_input") or {}
         desc = inp.get("description") or ""
         stype = inp.get("subagent_type") or "general-purpose"
+        tid = aisef_runtime.task_from_description(desc) if stype.startswith("aisef:") else None
         runtime_append(project, {"event": "spawn", "parent_id": data.get("agent_id"), "parent_type": data.get("agent_type"),
                                  "subagent_type": stype, "description": desc[:200], "model": inp.get("model"),
-                                 "task_id": aisef_runtime.task_from_description(desc) if stype.startswith("aisef:") else None,
+                                 "task_id": tid,
                                  "background": bool(inp.get("run_in_background")), "session_id": data.get("session_id")})
+        claim_task_area(project, data.get("session_id"), tid)
     elif event == "SubagentStart":
         on_start(project, data)
     elif event == "SubagentStop":

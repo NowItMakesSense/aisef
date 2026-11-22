@@ -404,6 +404,11 @@ def decide(data, project, policy, patterns, config, now):
         if lvl != "allow":
             why.append("%s (%s/%s) -> %s" % (label, resource, action or "nao classificado", lvl))
 
+    conc = concurrency(data, project, tool, inp, items, now)
+    if conc:
+        worst = stricter(worst, "approve_operation")
+        why.append(conc)
+
     if worst == "allow":
         return None, None
     reason = "AISEF: " + "; ".join(why)
@@ -421,6 +426,61 @@ def decide(data, project, policy, patterns, config, now):
     return "deny", reason
 
 
+PUBLISH_OPS = ("commit", "commit_feature", "push", "pull_request", "merge", "release_publish")
+
+
+def concurrency(data, project, tool, inp, items, now):
+    """Outra sessao no mesmo projeto: editar o arquivo que ela tem alterado sem commit, ou commitar/publicar sem ver as
+    mudancas dela, gera retrabalho ou leva o trabalho dela junto. Devolve o motivo (vira pergunta ao usuario) ou None.
+    Falha no registro nunca bloqueia: o gateway segue com o resto das regras."""
+    sid = data.get("session_id")
+    try:
+        sys.path.insert(0, CORE) if CORE not in sys.path else None
+        import aisef_sessions as ses
+        if tool in EDIT_TOOLS:
+            hits = []
+            paths = [inp[k] for k in ("file_path", "notebook_path") if isinstance(inp.get(k), str) and inp[k]]
+            for p in paths:
+                hits += ses.overlap(project, sid, p, now)
+            if not hits:
+                c = next((x for x in (ses.claimed_by_other(project, sid, p, now) for p in paths) if x), None)
+                if not c:
+                    return None
+                return ("%s esta na area reservada pela %s. Para uma sessao nao afetar o trabalho da outra, trabalhe "
+                        "numa parte separada; se o pedido exige mesmo esse arquivo, mostre ao usuario e combine a "
+                        "divisao com ele antes (ver: python3 -I %s status --project . --session %s)"
+                        % (c["file"], ses._label(c), os.path.join(CORE, "aisef_sessions.py").replace("\\", "/"), sid or "<id>"))
+            h = hits[0]
+            where = "nesta mesma pasta" if h["same_dir"] else "em %s (branch %s)" % (h["worktree"], h["branch"] or "?")
+            return ("outra sessao (%s, %s%s) tem %s alterado sem commit %s: editar aqui duplica o trabalho ou conflita. "
+                    "Mostre ao usuario e combine quem segue com esse arquivo (ver: python3 -I %s status --project . "
+                    "--session %s --diff)" % (h["session"], "ativa, " if h["active"] else "", h["ago"], h["file"], where,
+                                              os.path.join(CORE, "aisef_sessions.py").replace("\\", "/"), sid or "<id>"))
+        if tool in SHELL_TOOLS and any(a in PUBLISH_OPS for _r, a, _e, _d, _l in items):
+            found = ses.concurrent(project, sid, data.get("cwd") or project, now)
+            if not found:
+                return None
+            return ("antes de commit, push, PR ou merge, mostre ao usuario as mudancas sem commit de outra sessao neste "
+                    "projeto (retrabalho ou trabalho dela indo junto no commit):\n%s" % ses.render(found))
+    except Exception as exc:
+        sys.stderr.write("AISEF: checagem de outras sessoes falhou (%s)\n" % exc)
+    return None
+
+
+def heartbeat(data, project):
+    """Batimento desta sessao em .aisef/runtime/sessions/ (fora do Git), para as outras sessoes a enxergarem.
+    Devolve o aviso de coordenacao (uma vez por mudanca nas areas das outras sessoes) ou None."""
+    if not data.get("session_id"):
+        return None
+    try:
+        sys.path.insert(0, CORE) if CORE not in sys.path else None
+        import aisef_sessions as ses
+        ses.touch(project, data["session_id"], data.get("cwd"))
+        return ses.coordination_notice(project, data["session_id"])
+    except Exception:
+        return None
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -431,6 +491,7 @@ def main():
     config_path = os.path.join(project, ".aisef", "config.json")
     if not os.path.exists(config_path):
         sys.exit(0)  # projeto sem AISEF: o gateway nao interfere
+    notice = None
     try:
         config = load_json(config_path)
         policy = load_json(POLICY_PATH)
@@ -439,6 +500,7 @@ def main():
             policy = merge_policy(policy, load_json(local))
         patterns = load_patterns()
         now = datetime.datetime.now(datetime.timezone.utc)
+        notice = heartbeat(data, project)
         decision, reason = decide(data, project, policy, patterns, config, now)
     except Decision as d:
         decision, reason = d.level, "AISEF: " + d.reason
@@ -446,9 +508,11 @@ def main():
         emit("deny", "AISEF: erro no Execution Gateway (%s); falha fechada" % exc)
     if decision:
         record_attempt(project, data, decision, reason)
-        emit(decision, reason)
-    if data.get("tool_name") in ("Grep", "Glob"):
-        nudge(data, project)
+        emit(decision, reason + ("\n\n" + notice if notice else ""))
+    extra = [t for t in (notice, nudge(data, project) if data.get("tool_name") in ("Grep", "Glob") else None) if t]
+    if extra:  # um JSON so: o aviso de coordenacao e o lembrete do grafo juntos
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": "\n\n".join(extra)}},
+                         ensure_ascii=False))
     sys.exit(0)
 
 
@@ -458,12 +522,9 @@ def nudge(data, project):
         sys.path.insert(0, CORE)
         sys.path.insert(1, HERE)
         import graph_nudge
-        text = graph_nudge.nudge_context(data, project)
+        return graph_nudge.nudge_context(data, project)
     except Exception:
-        return
-    if text:
-        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": text}},
-                         ensure_ascii=False))
+        return None
 
 
 if __name__ == "__main__":

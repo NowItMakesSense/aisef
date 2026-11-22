@@ -37,6 +37,29 @@ def commit_advice(project, cfg):
             "varredura de segredos do verify no index antes de commitar")
 
 
+def concurrency_advice(project, data):
+    """Outra sessao com mudancas sem commit neste projeto: avisar ja no inicio evita refazer o trabalho dela."""
+    try:
+        import aisef_sessions as ses
+        sid = data.get("session_id")
+        found = ses.concurrent(project, sid, data.get("cwd") or project)
+        claims = ses.others_claims(project, sid)
+    except Exception:
+        return None
+    if not found and not claims:
+        return None
+    me = os.path.join(os.path.dirname(HERE), "core", "aisef_sessions.py").replace("\\", "/")
+    parts = ["outra sessao esta trabalhando neste projeto. Antes de comecar, mostre ao usuario o que ela esta fazendo e "
+             "combine a divisao, para cada sessao ficar numa parte separada (nao refaca nem edite a area dela; o gateway "
+             "pergunta antes). Reserve a sua area: python3 -I %s claim --project . --session %s --paths '<globs>' "
+             "--note '<o que vai fazer>'" % (me, sid or "<id>")]
+    if claims:
+        parts.append("areas reservadas:\n" + "\n".join("- " + ses._label(c) for c in claims))
+    if found:
+        parts.append("mudancas sem commit:\n" + ses.render(found))
+    return "\n".join(parts)
+
+
 def remote_advice(project, cfg):
     """Projeto sem repositorio Git, ou sem o remote: nenhum push vai funcionar. Le so o .git local (sem rede)."""
     import subprocess
@@ -176,6 +199,9 @@ def main():
     if not os.path.exists(os.path.join(project, ".aisef", "config.json")):
         return
     found = problems(project)
+    conc = concurrency_advice(project, data)
+    if conc:
+        found.append(conc)
     parts = []
     if found:
         parts.append("AISEF doctor encontrou problemas; avise o usuario:\n- " + "\n- ".join(found))

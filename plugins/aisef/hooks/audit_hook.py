@@ -68,6 +68,13 @@ def main():
         detail["subagent"] = data.get("agent_type") or data.get("agent_id")
     if len(summary) < 3:
         summary = "tool_used"
+    if data.get("session_id") and tool in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
+        try:  # outras sessoes passam a ver que esta mexeu no arquivo (aisef_sessions.overlap/concurrent)
+            import aisef_sessions
+            aisef_sessions.touch(project, data["session_id"], data.get("cwd"),
+                                 inp.get("file_path") or inp.get("notebook_path"))
+        except Exception:
+            pass
     import aisef_telemetry
     if aisef_telemetry.routes_to_telemetry(aisef_project.load_config(project), tool):
         # F-05: edicao de arquivo e MCP liberados vao para a telemetria (cadeia de hash, sem assinatura)
