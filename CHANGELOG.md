@@ -1,6 +1,7 @@
 # Changelog
 
 ## Não lançado: repositório sem commit e limpeza de branch sem remoto
+- **Painel: arrastar para navegar.** O mapa de execução e as raias "Em paralelo" rolam segurando o botão esquerdo do mouse e arrastando (a mão aparece quando há o que rolar). Um arrasto não vira clique, então o clique simples num nó continua abrindo a gaveta; o toque segue com a rolagem nativa; a atualização ao vivo espera o arrasto terminar. Coberto pelo autoteste no Chrome.
 Também veio do uso real (HireMe): o projeto tinha `git init`, mas nenhum commit, e o verify pulou a varredura de segredos e o diff sem que ninguém avisasse.
 - **Verify sem commit.** A varredura de segredos e o resumo do diff não pulam mais num repositório sem commit: comparam com a árvore vazia, o que cobre tudo que está no index (o que o commit inicial levaria). Antes, o commit inicial, o que mais leva `.env` e chave, passava sem varredura nenhuma.
 - **Ação `first_commit` no `next`.** Quando o repositório existe e não tem nenhum commit, o `next` mostra a ação com os comandos (`git add -A`, varredura de segredos do verify no index, commit) e o pedido de aprovação (`git_operation commit`). É só aviso, como o `setup_remote`: não conta como trabalho pendente e não impede o `stop_reason`. O doctor avisa o mesmo no início da sessão (`commit_advice`).
