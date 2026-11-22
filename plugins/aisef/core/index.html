@@ -19,6 +19,7 @@
   --wait: #6b7180; --wait-soft: #eef0f3;
   --glass: rgba(255,255,255,.62); --glass-border: rgba(255,255,255,.75); --glass-shadow: 0 10px 30px rgba(20,24,33,.10);
   --edge: #c7ccd6; --edge-active: #2862c4;
+  --rev: #6f45c9; --rev-soft: #efe8fb;
   --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "Cascadia Mono", "SF Mono", Consolas, ui-monospace, monospace;
@@ -31,7 +32,7 @@
     --run: #6aa2ff; --run-soft: #17233a; --done: #4cc38a; --done-soft: #14281f; --you: #f0b04a; --you-soft: #2c2312;
     --fail: #ff6b7f; --fail-soft: #2e171c; --wait: #8d93a0; --wait-soft: #1f2228;
     --glass: rgba(24,26,31,.58); --glass-border: rgba(255,255,255,.08); --glass-shadow: 0 12px 34px rgba(0,0,0,.45);
-    --edge: #3a3f49; --edge-active: #6aa2ff; color-scheme: dark;
+    --edge: #3a3f49; --edge-active: #6aa2ff; color-scheme: dark; --rev: #b49cff; --rev-soft: #241c3a;
   }
 }
 :root[data-theme="dark"] {
@@ -40,7 +41,7 @@
   --run: #6aa2ff; --run-soft: #17233a; --done: #4cc38a; --done-soft: #14281f; --you: #f0b04a; --you-soft: #2c2312;
   --fail: #ff6b7f; --fail-soft: #2e171c; --wait: #8d93a0; --wait-soft: #1f2228;
   --glass: rgba(24,26,31,.58); --glass-border: rgba(255,255,255,.08); --glass-shadow: 0 12px 34px rgba(0,0,0,.45);
-  --edge: #3a3f49; --edge-active: #6aa2ff; color-scheme: dark;
+  --edge: #3a3f49; --edge-active: #6aa2ff; color-scheme: dark; --rev: #b49cff; --rev-soft: #241c3a;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--ground); color: var(--text); font: 14px/1.45 var(--font); }
@@ -564,6 +565,181 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
 .phead .tools > .seg { max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
 .phead .tools .seg button { white-space: nowrap; flex: none; }
 @media (max-width: 760px) { .hist li { grid-template-columns: 44px 24px 1fr; } .hist .seq { display: none; } }
+/* ---- mapa dos agentes: fluxo por feature, linha do tempo comprimida e arvore por fatia ---- */
+.phd { display: inline-block; width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.ph-exec { --ph: var(--run); } .ph-rev { --ph: var(--rev); } .ph-val { --ph: var(--done); } .ph-aux { --ph: var(--wait); }
+.phd { background: var(--ph); }
+.phd.live, .tl-bar.live { background-image: repeating-linear-gradient(-45deg, transparent 0 4px, rgba(255,255,255,.35) 4px 8px); background-size: 22px 22px; animation: stripes 1s linear infinite; }
+.legend .lsep { margin-left: 8px; }
+.flows { display: grid; gap: 8px; padding: 6px 0 12px; min-width: max-content; }
+.fsec { padding: 10px 18px 6px; }
+.fsec + .fsec { border-top: 1px solid var(--rule); }
+.fhead { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin-bottom: 12px; font-size: 13px; position: sticky; left: 18px; max-width: calc(100cqw - 36px); }
+.mapwrap { container-type: inline-size; }
+.fhead .glyph { width: 22px; height: 22px; } .fhead .glyph::before { inset: -2px; border-width: 1.5px; } .fhead .glyph svg.i { width: 11px; height: 11px; }
+.fhead .fh-t, details.grp .fh-t { max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fh-s { color: var(--faint); font-size: 12.5px; font-weight: 400; }
+.fhead.muted b { color: var(--muted); }
+.flow { position: relative; }
+.flow svg.edges { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.fedge { fill: none; stroke-width: 1.6; }
+.fedge.e-done { stroke: var(--edge); }
+.fedge.e-run { stroke: var(--run); stroke-dasharray: 6 5; animation: flow 1s linear infinite; }
+.fedge.e-you { stroke: var(--you); stroke-dasharray: 3 4; }
+.fedge.e-wait { stroke: var(--edge); stroke-dasharray: 2 4; }
+.ah { stroke: none; } .ah-done, .ah-wait { fill: var(--edge); } .ah-run { fill: var(--run); } .ah-you { fill: var(--you); }
+.fcol-h { position: absolute; top: 0; display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: var(--faint); white-space: nowrap; }
+.fcol-h b { color: var(--muted); font-weight: 600; }
+.fcard { position: absolute; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color .12s, box-shadow .12s; }
+.fcard:hover { border-color: var(--edge); box-shadow: 0 6px 18px rgba(0,0,0,.07); }
+.fcard.s-run, .fcard.s-val { border-color: color-mix(in srgb, var(--run) 50%, var(--border)); }
+.fcard.s-you { border-color: color-mix(in srgb, var(--you) 55%, var(--border)); }
+.fcard.s-fail { border-color: color-mix(in srgb, var(--fail) 55%, var(--border)); }
+.fcard.close { background: var(--raised); }
+.fcard.dim { opacity: .35; }
+.fc-main { flex: 1; min-height: 0; display: grid; grid-template-rows: auto auto auto; align-content: start; gap: 4px; padding: 10px 12px 6px; border: 0; background: none; text-align: left; color: inherit; font: inherit; }
+button.fc-main { cursor: pointer; }
+.fc-main[aria-pressed="true"] { box-shadow: inset 3px 0 0 var(--run); }
+.fc-h { display: flex; gap: 8px; align-items: center; min-width: 0; font-size: 12px; }
+.fc-h .glyph { width: 20px; height: 20px; } .fc-h .glyph::before { inset: -2px; border-width: 1.5px; } .fc-h .glyph svg.i { width: 10px; height: 10px; }
+.fc-id { font: 600 11.5px var(--mono); color: var(--muted); flex: none; }
+.fc-st { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-h .chip { margin-left: auto; }
+.fc-t { font-weight: 600; font-size: 13.5px; line-height: 1.3; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; min-height: 2.6em; }
+.fc-m { font-size: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-ag { display: flex; gap: 5px; padding: 0 10px 10px; flex-wrap: nowrap; overflow: hidden; min-height: 32px; align-items: center; }
+.fc-none { font-size: 12px; color: var(--faint); padding-left: 2px; }
+.pill { display: inline-flex; gap: 5px; align-items: center; height: 24px; padding: 0 7px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--ph) 35%, var(--border));
+  background: color-mix(in srgb, var(--ph) 9%, var(--surface)); color: var(--text); font-size: 12px; white-space: nowrap; cursor: pointer; min-width: 0; flex: none; }
+.pill b { font-weight: 650; margin-right: -1px; }
+.pill span { overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.pill:hover, .pill.live { border-color: var(--ph); }
+.pill .phd { width: 8px; height: 8px; border-radius: 50%; }
+
+.lanes { padding: 0 0 12px; overflow: auto; }
+.tl-body { position: relative; min-width: 100%; }
+.tl-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--rule); }
+.tl-lbl { position: sticky; left: 0; z-index: 3; flex: none; width: 248px; display: flex; gap: 8px; align-items: center; min-width: 0; padding: 6px 12px 6px 18px;
+  background: var(--surface); border: 0; border-right: 1px solid var(--rule); color: inherit; font: inherit; font-size: 13px; text-align: left; }
+button.tl-lbl { cursor: pointer; } button.tl-lbl:hover { background: var(--raised); }
+.tl-lbl .glyph { width: 20px; height: 20px; flex: none; } .tl-lbl .glyph::before { inset: -2px; border-width: 1.5px; } .tl-lbl .glyph svg.i { width: 10px; height: 10px; }
+.tl-axisrow { position: sticky; top: 0; z-index: 4; background: var(--surface); }
+.tl-axisrow .tl-lbl .fh-s { font-size: 11.5px; }
+.tl-axis { position: relative; height: 40px; flex: none; }
+.tl-axis .tk { position: absolute; bottom: 6px; padding-left: 4px; border-left: 1px solid var(--rule); font: 11px var(--mono); color: var(--faint); white-space: nowrap; }
+.tl-axis .tk.major { color: var(--muted); font-weight: 600; border-left-color: var(--edge); }
+.tl-axis .tk.cut { top: 4px; bottom: auto; border: 0; padding: 0; text-align: center; color: var(--faint); font-weight: 600; font-size: 10.5px; }
+.tl-head .tl-lbl, .tl-head > div:last-child { background: var(--raised); font-size: 12.5px; }
+.tl-row.agg .tl-lbl { color: var(--muted); }
+.tl-track { position: relative; flex: none; }
+.tl-bar { position: absolute; height: 9px; padding: 0; border: 0; border-radius: 3px; background: var(--ph); cursor: pointer; }
+.tl-bar:hover, .tl-bar:focus-visible { outline: 2px solid color-mix(in srgb, var(--ph) 45%, transparent); outline-offset: 1px; z-index: 2; }
+.tl-mk { position: absolute; top: 2px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1.5px solid currentColor; z-index: 2; }
+.tl-mk svg.i { width: 10px; height: 10px; }
+.legend .tl-mk.lmk { position: static; margin: 0; display: inline-grid; }
+.tl-none { position: sticky; display: inline-block; margin-top: 8px; left: 8px; z-index: 2; background: var(--surface); padding: 0 4px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--faint); white-space: nowrap; }
+.tl-over { position: absolute; top: 0; bottom: 0; pointer-events: none; z-index: 1; }
+.tl-cut { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(-60deg, transparent 0 5px, var(--rule) 5px 7px); border-left: 1px dashed var(--edge); border-right: 1px dashed var(--edge); }
+.tl-cutsw { display: inline-block; width: 18px; height: 12px; border: 1px dashed var(--edge); background: repeating-linear-gradient(-60deg, transparent 0 3px, var(--rule) 3px 5px); }
+.tl-now { position: absolute; top: 0; bottom: 0; border-left: 1.5px solid var(--run); }
+
+.wtree { padding: 4px 0 8px; }
+.wt-root { display: flex; gap: 10px; align-items: center; padding: 10px 18px 12px; font-size: 13.5px; }
+details.grp > summary .glyph { width: 22px; height: 22px; } details.grp > summary .glyph::before { inset: -2px; border-width: 1.5px; } details.grp > summary .glyph svg.i { width: 11px; height: 11px; }
+.wt-task { margin: 0 18px 12px 38px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.wt-th { display: flex; gap: 8px; align-items: center; width: 100%; padding: 8px 12px; border: 0; border-bottom: 1px solid var(--rule); background: var(--raised); color: inherit; font: inherit; font-size: 13px; text-align: left; min-width: 0; }
+button.wt-th { cursor: pointer; } button.wt-th:hover { background: var(--ground-2); }
+.wt-th .glyph { width: 20px; height: 20px; flex: none; } .wt-th .glyph::before { inset: -2px; border-width: 1.5px; } .wt-th .glyph svg.i { width: 10px; height: 10px; }
+.wt-th .fh-s { margin-left: auto; white-space: nowrap; flex: none; }
+.wt-list { list-style: none; margin: 0; padding: 0; }
+.wt-row { display: grid; grid-template-columns: 92px 210px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 6px 12px; border: 0; border-top: 1px solid var(--rule);
+  background: none; color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.wt-list li:first-child .wt-row { border-top: 0; }
+.wt-row:hover { background: var(--raised); }
+.wt-row time { color: var(--faint); font-size: 12px; }
+.wt-who { display: flex; gap: 7px; align-items: center; min-width: 0; padding-left: calc(var(--d, 0) * 16px); }
+.wt-who b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wt-who .glyph { width: 18px; height: 18px; flex: none; } .wt-who .glyph::before { inset: -2px; border-width: 1.5px; } .wt-who .glyph svg.i { width: 9px; height: 9px; }
+.wt-sub, .wt-verb, .wt-dur { color: var(--faint); }
+.wt-what { color: var(--muted); }
+.wt-dur { font-size: 12px; white-space: nowrap; }
+.titlerow, .titlerow > * { min-width: 0; }
+.titlerow .act { min-width: 0; max-width: 100%; }
+.titlerow .act .seg button { white-space: nowrap; flex: none; }
+.titlerow .act .seg { max-width: min(100%, 860px); overflow-x: auto; }
+@media (max-width: 760px) {
+  .wt-task { margin: 0 8px 10px 8px; }
+  .wt-row { grid-template-columns: 1fr auto; } .wt-row time { display: none; } .wt-what { grid-column: 1 / -1; }
+  .tl-lbl { width: 150px; padding-left: 10px; }
+}
+/* ---- visao geral: cartoes de feature ---- */
+.flows.ov { min-width: 0; }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.fgc { display: grid; gap: 10px; align-content: start; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+  color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.fgc:hover { border-color: var(--edge); box-shadow: 0 8px 22px rgba(0,0,0,.08); transform: translateY(-1px); }
+.fgc.s-run { border-color: color-mix(in srgb, var(--run) 50%, var(--border)); }
+.fgc.s-you { border-color: color-mix(in srgb, var(--you) 55%, var(--border)); }
+.fg-h { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.fg-h .glyph { width: 22px; height: 22px; } .fg-h .glyph::before { inset: -2px; border-width: 1.5px; } .fg-h .glyph svg.i { width: 11px; height: 11px; }
+.fg-h .chip { margin-left: auto; white-space: nowrap; }
+.fg-t { font: 600 14.5px/1.35 var(--display); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; min-height: 2.7em; overflow-wrap: anywhere; }
+.fg-flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 10px; border-radius: 9px; background: var(--raised); }
+.fg-w { display: inline-flex; gap: 3px; padding: 3px; border-radius: 7px; border: 1px dashed var(--border); }
+i.fg-s { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+i.fg-s::before { content: none; }
+i.fg-s.g-done { background: var(--done); } i.fg-s.g-run, i.fg-s.g-val { background: var(--run); } i.fg-s.g-you { background: var(--you); }
+i.fg-s.g-fail { background: var(--fail); } i.fg-s.g-dep, i.fg-s.g-todo, i.fg-s.g-off { background: var(--edge); box-shadow: none; border: 0; }
+.fg-ar { width: 12px; height: 1.5px; background: var(--edge); position: relative; display: inline-block; }
+.fg-ar::after { content: ""; position: absolute; right: -1px; top: -3px; border: 3.5px solid transparent; border-left: 5px solid var(--edge); border-right: 0; }
+.fg-end { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); background: var(--wait-soft); }
+.fg-end.ok { color: var(--done); background: var(--done-soft); }
+.fg-end svg.i { width: 11px; height: 11px; }
+.fg-k { font-size: 12.5px; color: var(--muted); }
+.fg-k b { color: var(--text); font-weight: 600; }
+.fg-bar { display: flex; gap: 2px; height: 6px; border-radius: 4px; overflow: hidden; }
+.fg-bar i { display: block; background: var(--ph); }
+.fg-ph { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.fg-ph span { display: inline-flex; gap: 5px; align-items: center; }
+.fg-d { font-size: 12px; color: var(--faint); border-top: 1px solid var(--rule); padding-top: 8px; }
+
+/* ---- barras de rolagem: finas e na cor do tema ---- */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 40%, transparent) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--muted) 35%, transparent); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+
+/* ---- gaveta: mais larga, opaca e com texto maior ---- */
+.drawer { width: min(560px, calc(100vw - 96px)); background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; border-color: var(--border); }
+.drawer header { align-items: flex-start; padding: 18px 20px 16px; border-bottom-color: var(--rule); }
+.drawer header h3 { font: 600 17px/1.35 var(--display); white-space: normal; overflow: visible; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow-wrap: anywhere; }
+.drawer header #d-sub { font-size: 13px !important; margin-top: 3px; }
+.drawer .body { padding: 16px 20px 24px; gap: 20px; font-size: 14px; }
+.drawer .kv { grid-template-columns: 136px 1fr; gap: 8px 14px; font-size: 14px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--raised); }
+.drawer .kv dd { overflow-wrap: anywhere; }
+.drawer h4 { margin: 0 0 8px; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.drawer .ask p { font-size: 14px; line-height: 1.5; }
+.drawer .dec-opt { font-size: 13.5px; }
+.drawer .steps { gap: 0; font-size: 13.5px; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.drawer .steps li { grid-template-columns: 104px 1fr; gap: 12px; padding: 8px 12px; border-top: 1px solid var(--rule); }
+.drawer .steps li:first-child { border-top: 0; }
+.drawer .steps time { font-size: 12.5px; padding-top: 1px; }
+.drawer .steps span { overflow-wrap: anywhere; white-space: pre-wrap; line-height: 1.45; }
+.drawer .steps .mono { font-size: 12.5px; }
+.drawer .agent-link { padding: 10px 12px; }
+.dagents { display: grid; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.dag-ph { display: flex; gap: 8px; align-items: center; padding: 7px 12px; background: var(--raised); font-size: 12px; font-weight: 600; color: var(--muted); border-top: 1px solid var(--rule); text-transform: capitalize; }
+.dag-ph:first-child { border-top: 0; }
+.dag-ph span { margin-left: auto; font: 12px var(--mono); color: var(--faint); }
+.dag-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; width: 100%; padding: 9px 12px; border: 0; border-top: 1px solid var(--rule);
+  background: var(--surface); color: inherit; font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.dag-row:hover { background: var(--raised); }
+.dag-row .glyph { width: 20px; height: 20px; margin-top: 1px; } .dag-row .glyph::before { inset: -2px; border-width: 1.5px; } .dag-row .glyph svg.i { width: 10px; height: 10px; }
+.dag-main { display: grid; gap: 2px; min-width: 0; }
+.dag-desc { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.dag-when { display: grid; justify-items: end; gap: 2px; font-size: 12px; color: var(--faint); white-space: nowrap; }
+@media (max-width: 760px) { .drawer { width: auto; } .drawer .kv { grid-template-columns: 110px 1fr; } .drawer .steps li { grid-template-columns: 1fr; gap: 2px; } }
 </style>
 </head>
 <body>
@@ -817,144 +993,280 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
   var govType = store("govtype") || "", govFeat = store("govfeat") || "", govAll = store("govall") === "1", bpSel = store("bp") || "", showHash = store("hashes") === "1";
   function visible(t) { return !feat || t.feature_id === feat; }
 
-  /* ====================================== mapa de execucao ====================================== */
-  var NODE_W = 240, NODE_H = 90, COL_W = 264, LEFT = 16, TOP = 12, ORCH_W = 150, X0 = 196, GAP = 18, SUB_H = 40, FLAG_H = 22, BHEAD = 62, BCOLL = 42, BGAP = 14;
-  function subsOf(tid) {
-    var b = B();
-    var mine = b.agents.filter(function (a) { return a.parent_id && a.task_id === tid && a.running; });
-    var val = b.agents.filter(function (a) { return a.role === "validator" && a.running && !a.parent_id && (a.validating || [])[0] === tid; });
-    return mine.concat(val);
+  /* ====================================== agentes por feature e por fatia ====================================== */
+  // Todo agente registrado (hooks SubagentStart/Stop) vai para a fatia em que trabalhou: o task_id, o que ele valida ou o
+  // primeiro id de fatia citado na descricao ("Validar onda: T-017"). Sem fatia, vai para a feature citada ("FEAT-005
+  // review: Spec axis") e entra no fechamento dela; sem nenhuma, fica "fora de feature". A fase diz o que ele fez ali.
+  // Mapa, linha do tempo e "quem disparou quem" leem este mesmo modelo, entao contam a mesma historia.
+  var PH = { exec: { lab: "executar", verb: "executou" }, rev: { lab: "revisar", verb: "revisou" }, val: { lab: "validar", verb: "validou" }, aux: { lab: "apoio", verb: "apoiou" } };
+  var PH_ORDER = ["exec", "rev", "val", "aux"];
+  var REV_ROLE = /review|analyzer|hunter|simplifier|security|qa\b|a11y|evaluator/i, EXEC_ROLE = /implementer|backend|frontend|devops|database$|resolver|refactor|e2e|doc-updater/i;
+  function phaseOf(a) {
+    var r = a.role || a.agent_type || "", d = a.description || "";
+    // o papel decide primeiro ("correcoes da revisao" de um implementer e execucao); a descricao so classifica
+    // agentes genericos (general-purpose e afins)
+    if (r === "validator") return "val";
+    if (REV_ROLE.test(r)) return "rev";
+    if (EXEC_ROLE.test(r)) return "exec";
+    if (/^valid/i.test(d)) return "val";
+    if (/\b(review|revis)/i.test(d)) return "rev";
+    if (a.task_id || /^(implement|execut|corrig|fix)/i.test(d)) return "exec";
+    return "aux";
   }
-  function loose() { return B().agents.filter(function (a) { return a.running && !a.task_id && a.role !== "validator" && !(a.validating || []).length; }); }
+  var TID_RE = /\bT-[A-Z0-9]+(?:-[A-Z0-9]+)*\b/gi, FID_RE = /\bFEAT-[A-Z0-9]+(?:-[A-Z0-9]+)*\b/i;
+  function taskOfAgent(a, depth) {
+    if (a.task_id && byId(a.task_id)) return a.task_id;
+    var v = (a.validating || []).filter(byId)[0]; if (v) return v;
+    var m = String(a.description || "").match(TID_RE) || [];
+    for (var i = 0; i < m.length; i++) if (byId(m[i].toUpperCase())) return m[i].toUpperCase();
+    var p = a.parent_id && (depth || 0) < 4 ? agentById(a.parent_id) : null;  // subagente herda a fatia de quem o disparou
+    return p ? taskOfAgent(p, (depth || 0) + 1) : null;
+  }
+  function agentEnd(a, s, now) {
+    if (a.running) return now;
+    var e = ptime(a.ended_at) || ptime(a.last_action_at) || s + 60000;  // fim nao registrado: ate a ultima acao vista
+    return Math.max(e, s + 30000);
+  }
+  var wmCache = { d: null, m: null };
+  function workModel() {
+    if (wmCache.d === D && wmCache.m && Date.now() - wmCache.at < 10000) return wmCache.m;
+    var b = B(), now = nowMs(), feats = {}, order = [], loose = [], taskRec = {};
+    var fwBy = {}, fdBy = {};
+    ((L().board || {}).feature_waves || []).forEach(function (g) { fwBy[g.feature_id] = g; });
+    (D.features || []).forEach(function (f) { fdBy[f.feature_id] = f; });
+    function F(fid) {
+      if (feats[fid]) return feats[fid];
+      var g = fwBy[fid] || {}, fd = fdBy[fid] || {}, status = g.status || fstatus(fd) || "";
+      feats[fid] = { fid: fid, title: g.title || fd.title || "", status: status, accepted_at: g.accepted_at || fd.accepted_at,
+        active: g.active !== undefined ? !!g.active : !isClosedF(status), waves: g.waves || null, tasks: [], agents: [], all: [], first: null, last: null };
+      order.push(fid);
+      return feats[fid];
+    }
+    Object.keys(fwBy).forEach(F);
+    b.tasks.forEach(function (t) { var f = F(t.feature_id || "—"), r = { t: t, agents: [] }; taskRec[t.task_id] = r; f.tasks.push(r); });
+    b.agents.forEach(function (a) {
+      var s = ptime(a.started_at); if (!s) return;
+      var x = { a: a, ph: phaseOf(a), s: s, e: agentEnd(a, s, now), tid: taskOfAgent(a), fid: null };
+      if (x.tid) { x.fid = byId(x.tid).feature_id; taskRec[x.tid].agents.push(x); }
+      else {
+        var fm = String(a.description || "").match(FID_RE);
+        if (fm && feats[fm[0].toUpperCase()]) { x.fid = fm[0].toUpperCase(); feats[x.fid].agents.push(x); }
+        else loose.push(x);
+      }
+      if (x.fid) feats[x.fid].all.push(x);
+    });
+    function bySt(p, q) { return p.s - q.s; }
+    order.forEach(function (fid) {
+      var f = feats[fid];
+      f.agents.sort(bySt); f.all.sort(bySt);
+      f.tasks.forEach(function (r) { r.agents.sort(bySt); });
+      if (!f.waves) {  // dados antigos, sem feature_waves: ondas pela posicao da fatia
+        var ws = {};
+        f.tasks.forEach(function (r) { var w = r.t.feature_wave || r.t.wave || 1; (ws[w] = ws[w] || []).push(r.t.task_id); });
+        f.waves = Object.keys(ws).sort(function (p, q) { return p - q; }).map(function (w) { return { wave: +w, tasks: ws[w] }; });
+      }
+      var times = f.all.map(function (x) { return x.s; }), ends = f.all.map(function (x) { return x.e; });
+      f.tasks.forEach(function (r) { var s = ptime(r.t.started_at), e = ptime(r.t.ended_at); if (s) times.push(s); if (e) ends.push(e); });
+      f.first = times.length ? Math.min.apply(null, times) : null;
+      f.last = ends.length ? Math.max.apply(null, ends) : null;
+      f.running = f.all.some(function (x) { return x.a.running; }) || f.tasks.some(function (r) { return r.t.st === "run" || r.t.st === "val"; });
+    });
+    loose.sort(bySt);
+    // features em andamento primeiro; dentro de cada grupo, a mais recente antes
+    order.sort(function (p, q) { var a = feats[p], c = feats[q]; return (c.active ? 1 : 0) - (a.active ? 1 : 0) || (c.last || 0) - (a.last || 0); });
+    wmCache = { d: D, at: Date.now(), m: { feats: feats, order: order, loose: loose, taskRec: taskRec } };
+    return wmCache.m;
+  }
+  /* Feature em foco: a escolhida no seletor; sem escolha, as que estao em andamento. Sem nenhuma em andamento, os
+     paineis mostram a visao geral (uma linha por feature) e o clique numa feature foca nela. */
+  // Sem escolha, o mapa abre sempre num fluxo: as features em andamento ou, sem nenhuma, a mais recente. A lista com
+  // todas as features so aparece quando a pessoa pede a "Visao geral".
+  var mapAll = store("mapall") === "1";
+  function focusSet(m) {
+    if (feat) return [feat];
+    if (mapAll) return [];
+    var act = m.order.filter(function (fid) { return m.feats[fid].active && m.feats[fid].tasks.length; });
+    if (act.length) return act;
+    var withTasks = m.order.filter(function (fid) { return m.feats[fid].tasks.length; });
+    var recent = withTasks.filter(function (fid) { return !/MAINT/i.test(fid); })[0] || withTasks[0];
+    return recent ? [recent] : [];
+  }
+  function anyActive() { var m = workModel(); return m.order.some(function (fid) { return m.feats[fid].active && m.feats[fid].tasks.length; }); }
+  function focusFeat(fid) { mapAll = fid === "*"; store("mapall", mapAll ? "1" : "0"); feat = mapAll ? "" : fid; store("feat", feat); render(false); }
+  function span2(a, c) { return a ? stamp(new Date(a).toISOString()) + (c ? " → " + stamp(new Date(c).toISOString()) : "") : "sem atividade registrada"; }
+  function featState(f) { return f.running ? "run" : isClosedF(f.status) ? "done" : FSTATE_CHIP[f.status] === "you" ? "you" : f.tasks.every(function (r) { return r.t.st === "done"; }) && f.tasks.length ? "done" : "todo"; }
+  function featChip(f) { return f.status ? el("span", { cls: "chip " + (FSTATE_CHIP[f.status] || ""), text: lab(f.status) + (f.accepted_at && isClosedF(f.status) ? " em " + stamp(f.accepted_at) : "") }) : null; }
+  function phDot(ph) { return el("i", { cls: "phd ph-" + ph, "aria-hidden": "true" }); }
+
+  /* ====================================== mapa de execucao ====================================== */
+  // Por feature: as ondas em colunas, cada fatia num cartao com os agentes que trabalharam nela (executor, revisores,
+  // validador) e, no fim, o fechamento da feature (revisoes finais e aceite). As setas sao as dependencias.
+  var CARD_W = 296, CARD_H = 134, COL_W = 340, ROW_GAP = 16, HEAD_H = 30, CLOSE_W = 232;
+  function agentPills(list) {
+    var by = {};
+    list.forEach(function (x) { (by[x.ph] = by[x.ph] || []).push(x); });
+    // Contagem sempre visivel: com ate duas fases cabe o nome inteiro; com tres ou mais, o nome curto (a cor e a legenda dizem a fase).
+    var phs = PH_ORDER.filter(function (ph) { return by[ph]; }), compact = phs.length > 2;
+    var FULL = { exec: ["executor", "executores"], rev: ["revisor", "revisores"], val: ["validador", "validadores"], aux: ["apoio", "apoios"] };
+    var SHORT = { exec: "exec", rev: "rev", val: "valid", aux: "apoio" };
+    return phs.map(function (ph) {
+      var xs = by[ph], last = xs[xs.length - 1], run = xs.some(function (x) { return x.a.running; });
+      var full = plural(xs.length, FULL[ph][0], FULL[ph][1]), txt = compact ? SHORT[ph] : full.replace(/^\d+ /, "");
+      var tip = PH[ph].lab + ":\n" + xs.map(function (x) { return "· " + (x.a.role || "agente") + (x.a.description ? " — " + x.a.description : "") + " (" + stamp(x.a.started_at) + ")"; }).join("\n") + "\nclique para abrir o mais recente";
+      return el("button", { cls: "pill ph-" + ph + (run ? " live" : ""), type: "button", "data-agent": last.a.agent_id, title: tip, "aria-label": PH[ph].lab + ": " + full + (run ? ", rodando" : "") },
+        [phDot(ph), el("b", { cls: "num", text: String(xs.length) }), el("span", { text: txt })]);
+    });
+  }
+  function cardMeta(t) {
+    if (t.approval) return { cls: "st-you", text: "aprovação " + t.approval };
+    if (t.denied) return { cls: "st-fail", text: "gateway negou: " + clip(t.denied.text, 40) };
+    return { cls: "", text: nodeMeta(t) };
+  }
   function nodeMeta(t) {
     if (t.st === "run") return "há " + since(t.started_at) + (t.last_action ? " · " + clip(act(t.last_action), 60) : "");
-    if (t.st === "val") return "validador · tentativa " + (t.attempt || 1);
+    if (t.st === "val") return "validando · tentativa " + (t.attempt || 1);
     if (t.st === "you") return "parada · " + t.approval;
     if (t.st === "dep") return "aguarda " + t.waiting_on.join(" e ");
-    if (t.st === "done") return t.started_at && t.ended_at ? "levou " + dur(ptime(t.ended_at) - ptime(t.started_at)) : "";
+    if (t.st === "done") return (t.started_at && t.ended_at ? "levou " + dur(ptime(t.ended_at) - ptime(t.started_at)) : "concluída") + ((t.attempt || 1) > 1 ? " · " + t.attempt + " tentativas" : "");
     if (t.st === "fail") return "reprovada " + t.rejections + "× · volta ao executor";
-    return t.role;
+    return t.role ? "executor: " + t.role : "";
   }
-  function subPill(a) {
-    var isVal = a.role === "validator";
-    var txt = isVal ? "validator · valida " + (a.validating || []).join(", ") : (a.role || "subagente") + (a.description ? " · " + a.description : "");
-    var full = txt + (a.last_action ? " — " + act(a.last_action) : "");
-    return el("button", { cls: "sub-node", type: "button", "data-agent": a.agent_id, "aria-pressed": String(drawerId === "agent:" + a.agent_id), title: full + (a.parent_inferred ? " (ligação inferida)" : "") + " · clique para ver o agente" }, [
-      el("i", { cls: "glyph " + (isVal ? "g-val" : "g-run") + " mini", "aria-hidden": "true" }, [icon(isVal ? "i-eye" : "i-term")]),
-      el("span", { cls: "lbl", text: clip(txt, 46) }), a.parent_inferred && !isVal ? el("span", { cls: "inf", text: "inferido" }) : null]);
+  function taskCard(r, x, y) {
+    var t = r.t, s = ST[t.st] || ST.todo, meta = cardMeta(t), dim = !!(stFilter && t.st !== stFilter);
+    var pills = agentPills(r.agents);
+    return el("div", { cls: "fcard s-" + t.st + (dim ? " dim" : ""), style: "left:" + x + "px;top:" + y + "px;width:" + CARD_W + "px;height:" + CARD_H + "px" }, [
+      el("button", { cls: "fc-main", type: "button", "data-open": t.task_id, "aria-pressed": String(drawerId === t.task_id), title: t.task_id + " · " + t.title + (meta.text ? "\n" + meta.text : ""),
+        "aria-label": t.task_id + " " + t.title + ", " + s.lab + (meta.text ? ", " + meta.text : "") }, [
+        el("span", { cls: "fc-h" }, [glyph(t.st), el("span", { cls: "fc-id", text: t.task_id }), el("span", { cls: "fc-st " + s.txt, text: s.lab })]),
+        el("span", { cls: "fc-t", text: t.title }),
+        el("span", { cls: "fc-m " + meta.cls, text: meta.text || " " })]),
+      el("div", { cls: "fc-ag" }, pills.length ? pills : [el("span", { cls: "fc-none", text: t.started_at || t.st === "done" || t.st === "fail" || t.st === "off" ? "sem agentes registrados" : "nenhum agente ainda" })])]);
   }
-  /* Na visao "Todas" o mapa tem uma faixa por feature, cada uma com as suas ondas (numeradas dentro da feature) e a data
-     do despacho. Features ativas primeiro; aceitas e encerradas ficam recolhidas numa linha (o clique abre). */
-  var mapOpen = {};
-  (store("mapopen") || "").split(",").forEach(function (k) { if (k) mapOpen[k.slice(1)] = k.charAt(0) === "+"; });
-  function saveMapOpen() { store("mapopen", Object.keys(mapOpen).map(function (k) { return (mapOpen[k] ? "+" : "-") + k; }).join(",")); }
-  function mapGroups() {
-    var b = B(), fw = (L().board || {}).feature_waves;
-    if (!fw || !fw.length) {  // dados antigos, sem feature_waves: uma faixa so, com as ondas globais
-      fw = [{ feature_id: "", title: "", status: "", active: true, tasks_total: b.tasks.length, tasks_done: 0,
-              waves: b.waves.map(function (w) { return { wave: w.wave, tasks: w.tasks, dispatched_at: w.dispatched_at }; }) }];
-    }
-    return fw.filter(function (g) { return !feat || !g.feature_id || g.feature_id === feat; });
-  }
-  function bandOpen(g) { if (feat || !g.feature_id) return true; return Object.prototype.hasOwnProperty.call(mapOpen, g.feature_id) ? mapOpen[g.feature_id] : g.active; }
-  function renderMap() {
-    var b = B(), map = el("div", { cls: "map" }), pos = {}, maxCols = 1;
-    if (!b.tasks.length) return empty("Nenhuma fatia ainda. O mapa aparece quando houver Task Contracts.");
-    var groups = mapGroups(), y = TOP, bands = [];
-    groups.forEach(function (g) {
-      var open = bandOpen(g), top = y, bottom = y + BCOLL;
-      if (open) {
-        bottom = y + BHEAD;
-        g.waves.forEach(function (w, i) {
-          var x = X0 + i * COL_W, yy = y + BHEAD;
-          w.tasks.forEach(function (tid) {
-            var t = byId(tid); if (!t) return;
-            if (t.approval || t.denied) yy += FLAG_H;  // espaco para o selo acima do no
-            pos[tid] = { x: x, y: yy }; yy += NODE_H + subsOf(tid).length * SUB_H + GAP;
-          });
-          bottom = Math.max(bottom, yy - GAP + 12);
-        });
-        maxCols = Math.max(maxCols, g.waves.length);
-      }
-      bands.push({ g: g, y: top, h: bottom - top, open: open });
-      y = bottom + BGAP;
-    });
-    var height = Math.max(y - BGAP + 4, TOP + NODE_H);
-    var exp = bands.filter(function (x) { return x.open; });
-    var mid = exp.length ? (exp[0].y + exp[exp.length - 1].y + exp[exp.length - 1].h) / 2 : (TOP + height) / 2;
-    var free = loose();
-    var oy = Math.max(TOP, mid - NODE_H / 2 - free.length * SUB_H / 2);
-    height = Math.max(height, oy + NODE_H + free.length * SUB_H + GAP) + 4;
-    var width = Math.max(X0 + (maxCols - 1) * COL_W + NODE_W + 24, X0 + 640);
-    map.style.width = width + "px"; map.style.minHeight = height + "px";  // min: na tela Agora o mapa estica ate a coluna da direita
-    bands.forEach(function (bd) {
-      var g = bd.g, kids = [];
-      if (g.feature_id && !feat) {
-        var tg = el("button", { type: "button", cls: "tg", "aria-expanded": String(bd.open), "aria-label": (bd.open ? "Recolher " : "Mostrar as fatias de ") + g.feature_id,
-          title: bd.open ? "Recolher" : "Mostrar as fatias", text: bd.open ? "▾" : "▸" });
-        tg.addEventListener("click", function () { mapOpen[g.feature_id] = !bd.open; saveMapOpen(); render(false); });
-        kids.push(tg);
-      }
-      map.appendChild(el("div", { cls: "mband" + (g.active ? " active" : ""), style: "left:" + (X0 - 14) + "px;top:" + bd.y + "px;height:" + bd.h + "px" }));
-      if (g.feature_id) kids.push(chip(g.feature_id));
-      if (g.title) kids.push(el("span", { cls: "ft", text: g.title, title: g.title }));
-      if (g.status) kids.push(el("span", { cls: "chip " + (FSTATE_CHIP[g.status] || ""), text: lab(g.status) + (g.accepted_at ? " em " + stamp(g.accepted_at) : "") }));
-      if (!bd.open) kids.push(el("span", { text: g.tasks_done + "/" + g.tasks_total + " fatias concluídas" + (g.last_at ? " · última " + stamp(g.last_at) : "") }));
-      map.appendChild(el("div", { cls: "mbandhead", style: "left:" + X0 + "px;top:" + (bd.y + 9) + "px;max-width:" + (width - X0 - 12) + "px;overflow:hidden" }, kids));
-      if (bd.open) g.waves.forEach(function (w, i) {
-        var x = X0 + i * COL_W;
-        if (i) map.appendChild(el("div", { cls: "colband", style: "left:" + (x - 12) + "px;top:" + (bd.y + 36) + "px;bottom:auto;height:" + (bd.h - 44) + "px" }));
-        map.appendChild(el("div", { cls: "colhead", style: "left:" + x + "px;top:" + (bd.y + 36) + "px" },
-          [el("b", { text: "Onda " + w.wave }), w.dispatched_at ? "despachada " + stamp(w.dispatched_at) : "aguardando"]));
+  function featFlow(f) {
+    var NS = "http://www.w3.org/2000/svg", pos = {}, maxRows = 1, x = 0;
+    var waves = f.waves.filter(function (w) { return w.tasks.some(byId); });
+    var box = el("div", { cls: "flow" });
+    waves.forEach(function (w, i) {
+      x = i * COL_W;
+      box.appendChild(el("div", { cls: "fcol-h", style: "left:" + x + "px;width:" + CARD_W + "px" }, [el("b", { text: "Onda " + w.wave }),
+        el("span", { text: w.dispatched_at ? stamp(w.dispatched_at) : waveStart(w) })]));
+      var rows = 0;
+      w.tasks.forEach(function (tid) {
+        var r = workModel().taskRec[tid]; if (!r) return;
+        pos[tid] = { x: x, y: HEAD_H + rows * (CARD_H + ROW_GAP) };
+        box.appendChild(taskCard(r, pos[tid].x, pos[tid].y));
+        rows++;
       });
+      maxRows = Math.max(maxRows, rows);
     });
-    var activeT = {};
-    groups.forEach(function (g) { if (g.active) g.waves.forEach(function (w) { w.tasks.forEach(function (id) { activeT[id] = 1; }); }); });
-    var NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg");
+    var cx = waves.length * COL_W, hasClose = f.agents.length || isClosedF(f.status) || f.status === "awaiting_acceptance";
+    var height = HEAD_H + maxRows * (CARD_H + ROW_GAP) - ROW_GAP, cy = HEAD_H + Math.max(0, (height - HEAD_H - CARD_H) / 2);
+    if (hasClose) {
+      var st = isClosedF(f.status) ? "done" : f.status === "awaiting_acceptance" ? "you" : f.agents.some(function (z) { return z.a.running; }) ? "run" : "todo";
+      box.appendChild(el("div", { cls: "fcol-h", style: "left:" + cx + "px;width:" + CLOSE_W + "px" }, [el("b", { text: "Fechamento" }), el("span", { text: "revisão final e aceite" })]));
+      box.appendChild(el("div", { cls: "fcard close s-" + st, style: "left:" + cx + "px;top:" + cy + "px;width:" + CLOSE_W + "px;height:" + CARD_H + "px" }, [
+        el("div", { cls: "fc-main" }, [el("span", { cls: "fc-h" }, [glyph(st), el("span", { cls: "fc-id", text: f.fid }), el("span", { cls: "fc-st " + ST[st].txt, text: "fechamento" })]),
+          el("span", { cls: "fc-t", text: isClosedF(f.status) ? "Feature aceita" + (f.accepted_at ? " em " + stamp(f.accepted_at) : "") : f.status === "awaiting_acceptance" ? "Esperando o seu aceite" : "Ainda não chegou ao aceite" }),
+          el("span", { cls: "fc-m", text: f.agents.length ? plural(f.agents.length, "agente", "agentes") + " no fechamento" : "sem revisão final registrada" })]),
+        el("div", { cls: "fc-ag" }, agentPills(f.agents))]));
+    }
+    var width = (hasClose ? cx + CLOSE_W : cx - COL_W + CARD_W) + 8;
+    box.style.width = width + "px"; box.style.height = height + "px";
+    var svg = document.createElementNS(NS, "svg");
     svg.setAttribute("class", "edges"); svg.setAttribute("width", width); svg.setAttribute("height", height); svg.setAttribute("aria-hidden", "true");
-    function path(a, c, cls) {
-      var p = document.createElementNS(NS, "path"), mx = (a.x + c.x) / 2;
-      p.setAttribute("d", "M" + a.x + " " + a.y + " C" + mx + " " + a.y + " " + mx + " " + c.y + " " + c.x + " " + c.y);
-      p.setAttribute("class", "edge " + cls); svg.appendChild(p);
+    var defs = document.createElementNS(NS, "defs");
+    ["done", "run", "you", "wait"].forEach(function (k) {
+      var mk = document.createElementNS(NS, "marker"); mk.setAttribute("id", "fa-" + f.fid + "-" + k); mk.setAttribute("viewBox", "0 0 8 8"); mk.setAttribute("refX", "7"); mk.setAttribute("refY", "4");
+      mk.setAttribute("markerWidth", "6"); mk.setAttribute("markerHeight", "6"); mk.setAttribute("orient", "auto");
+      var p = document.createElementNS(NS, "path"); p.setAttribute("d", "M0 0.8 L7 4 L0 7.2 Z"); p.setAttribute("class", "ah ah-" + k); mk.appendChild(p); defs.appendChild(mk);
+    });
+    svg.appendChild(defs);
+    function link(a, c, k) {
+      var x1 = a.x, y1 = a.y, x2 = c.x - 2, y2 = c.y, mx = (x1 + x2) / 2, p = document.createElementNS(NS, "path");
+      p.setAttribute("d", "M" + x1 + " " + y1 + " C" + mx + " " + y1 + " " + mx + " " + y2 + " " + x2 + " " + y2);
+      p.setAttribute("class", "fedge e-" + k); p.setAttribute("marker-end", "url(#fa-" + f.fid + "-" + k + ")"); svg.appendChild(p);
     }
-    b.tasks.forEach(function (t) {
-      var p = pos[t.task_id]; if (!p) return;
-      var ds = t.depends_on.filter(function (d) { return pos[d]; });
-      var hot = t.st === "run" || t.st === "val" ? "active" : t.st === "you" ? "blocked" : "";
-      if (!t.depends_on.length && activeT[t.task_id]) path({ x: LEFT + ORCH_W, y: oy + NODE_H / 2 }, { x: p.x, y: p.y + NODE_H / 2 }, t.started_at ? hot : "");
-      ds.forEach(function (d) { path({ x: pos[d].x + NODE_W, y: pos[d].y + NODE_H / 2 }, { x: p.x, y: p.y + NODE_H / 2 }, hot); });
-      subsOf(t.task_id).forEach(function (a, i) {
-        var sp = document.createElementNS(NS, "path"), sy = p.y + NODE_H + 8 + i * SUB_H + 15;
-        sp.setAttribute("d", "M" + (p.x + 14) + " " + (p.y + NODE_H) + " V" + sy + " H" + (p.x + 26)); sp.setAttribute("class", "edge spawn"); svg.appendChild(sp);
+    function kind(dst) { var t = byId(dst); return !t ? "wait" : t.st === "run" || t.st === "val" ? "run" : t.st === "you" ? "you" : t.st === "done" ? "done" : "wait"; }
+    var hasOut = {};
+    f.tasks.forEach(function (r) {
+      var t = r.t, c = pos[t.task_id]; if (!c) return;
+      t.depends_on.forEach(function (d) { var a = pos[d]; if (!a) return; hasOut[d] = 1; link({ x: a.x + CARD_W, y: a.y + CARD_H / 2 }, { x: c.x, y: c.y + CARD_H / 2 }, kind(t.task_id)); });
+    });
+    if (hasClose) f.tasks.forEach(function (r) {
+      var p = pos[r.t.task_id]; if (!p || hasOut[r.t.task_id]) return;
+      link({ x: p.x + CARD_W, y: p.y + CARD_H / 2 }, { x: cx, y: cy + CARD_H / 2 }, r.t.st === "done" ? "done" : "wait");
+    });
+    box.insertBefore(svg, box.firstChild);
+    return box;
+  }
+  function waveStart(w) {
+    var ts = w.tasks.map(function (id) { var t = byId(id); return t && ptime(t.started_at); }).filter(Boolean);
+    if (ts.length) return stamp(new Date(Math.min.apply(null, ts)).toISOString());
+    return w.tasks.every(function (id) { var t = byId(id); return t && (t.st === "done" || t.st === "off"); }) ? "" : "aguardando";
+  }
+  function featHead(f, closable) {
+    var kids = [glyph(featState(f)), chip(f.fid), el("b", { cls: "fh-t", text: f.title, title: f.title }), featChip(f),
+      el("span", { cls: "fh-s", text: plural(f.tasks.length, "fatia", "fatias") + " · " + plural(f.all.length, "agente", "agentes") + " · " + span2(f.first, f.last) })];
+    if (closable) {
+      var bt = el("button", { cls: "btn sm", type: "button", text: "Ver todas as features" });
+      bt.addEventListener("click", function () { focusFeat("*"); });
+      kids.push(bt);
+    }
+    return el("div", { cls: "fhead" }, kids);
+  }
+  function featGrid(fids, m) {
+    var grid = el("div", { cls: "fgrid" });
+    fids.forEach(function (fid) {
+      var f = m.feats[fid], done = f.tasks.filter(function (r) { return r.t.st === "done"; }).length, st = featState(f);
+      var cnt = { exec: 0, rev: 0, val: 0, aux: 0 };
+      f.all.forEach(function (x) { cnt[x.ph]++; });
+      var flow = el("div", { cls: "fg-flow", "aria-hidden": "true" });
+      f.waves.forEach(function (w, i) {
+        if (i) flow.appendChild(el("i", { cls: "fg-ar" }));
+        flow.appendChild(el("span", { cls: "fg-w", title: "Onda " + w.wave }, w.tasks.map(function (id) {
+          var t = byId(id); return el("i", { cls: "fg-s " + (t ? (ST[t.st] || ST.todo).cls : "g-todo"), title: id + (t ? " · " + t.title : "") });
+        })));
       });
+      flow.appendChild(el("i", { cls: "fg-ar" }));
+      flow.appendChild(el("span", { cls: "fg-end " + (isClosedF(f.status) ? "ok" : ""), title: isClosedF(f.status) ? "aceita" : "sem aceite" }, [icon(isClosedF(f.status) ? "i-check" : "i-clock")]));
+      var tot = f.all.length || 1;
+      var bar = el("div", { cls: "fg-bar", "aria-hidden": "true" }, PH_ORDER.filter(function (ph) { return cnt[ph]; }).map(function (ph) {
+        return el("i", { cls: "ph-" + ph, style: "flex:" + cnt[ph], title: cnt[ph] + " · " + PH[ph].lab });
+      }));
+      var PHN = { exec: ["execução", "execuções"], rev: ["revisão", "revisões"], val: ["validação", "validações"], aux: ["apoio", "apoios"] };
+      var phTxt = PH_ORDER.filter(function (ph) { return cnt[ph]; }).map(function (ph) { return el("span", {}, [phDot(ph), plural(cnt[ph], PHN[ph][0], PHN[ph][1])]); });
+      var dt = f.first && f.last ? dur(f.last - f.first) : null;
+      var bt = el("button", { cls: "fgc s-" + st, type: "button", title: "Ver o fluxo, a linha do tempo e os agentes de " + fid,
+        "aria-label": fid + " " + f.title + ", " + lab(f.status) + ", " + done + " de " + f.tasks.length + " fatias, " + plural(f.all.length, "agente", "agentes") }, [
+        el("span", { cls: "fg-h" }, [glyph(st), el("span", { cls: "fc-id", text: fid }), featChip(f)]),
+        el("span", { cls: "fg-t", text: f.title }),
+        flow,
+        el("span", { cls: "fg-k" }, [el("b", { cls: "num", text: done + "/" + f.tasks.length }), " fatias · ", el("b", { cls: "num", text: String(f.all.length) }), " agentes" + (dt ? " · " + dt : "")]),
+        f.all.length ? bar : null,
+        f.all.length ? el("span", { cls: "fg-ph" }, phTxt) : null,
+        el("span", { cls: "fg-d num", text: span2(f.first, f.last) })]);
+      bt.addEventListener("click", function () { focusFeat(fid); });
+      grid.appendChild(bt);
     });
-    free.forEach(function (a, i) {
-      var sp = document.createElementNS(NS, "path"), sy = oy + NODE_H + 8 + i * SUB_H + 15;
-      sp.setAttribute("d", "M" + (LEFT + 14) + " " + (oy + NODE_H) + " V" + sy + " H" + (LEFT + 26)); sp.setAttribute("class", "edge spawn"); svg.appendChild(sp);
-    });
-    map.appendChild(svg);
-    var n = L().next || {};
-    map.appendChild(el("div", { cls: "node orch", style: "left:" + LEFT + "px;top:" + oy + "px;height:" + NODE_H + "px", role: "img", "aria-label": "Orquestrador, sessão principal" }, [
-      el("i", { cls: "glyph g-run", "aria-hidden": "true" }, [icon("i-orch")]),
-      el("span", { cls: "t1" }, [el("span", { cls: "title", text: "Orquestrador" })]),
-      el("span", { cls: "t2" }, [el("span", { cls: "meta", text: PHASE[n.phase] ? clip(PHASE[n.phase], 22) : "sessão principal" })])]));
-    free.forEach(function (a, i) { var s = subPill(a); s.style.left = (LEFT + 26) + "px"; s.style.maxWidth = (X0 - LEFT - 26 - 24) + "px"; s.style.top = (oy + NODE_H + 8 + i * SUB_H) + "px"; map.appendChild(s); });
-    b.tasks.forEach(function (t) {
-      var p = pos[t.task_id]; if (!p) return;
-      var s = ST[t.st] || ST.todo, dim = !visible(t) || (stFilter && t.st !== stFilter);
-      var meta = nodeMeta(t), dn = !t.denied && t.denials ? t.denials : null;
-      map.appendChild(el("button", { cls: "node s-" + t.st + (dim ? " dim" : ""), type: "button", style: "left:" + p.x + "px;top:" + p.y + "px;width:" + NODE_W + "px;height:" + NODE_H + "px",
-        "aria-pressed": String(drawerId === t.task_id), "aria-label": t.task_id + " " + t.title + ", " + s.lab + (meta ? ", " + meta : ""), "data-open": t.task_id, title: t.task_id + " · " + t.title + (meta ? "\n" + meta : "") }, [
-        glyph(t.st),
-        el("span", { cls: "t1" }, [el("span", { cls: "title", text: t.title })]),
-        el("span", { cls: "t2" }, [el("span", { cls: "id", text: t.task_id }), el("span", { cls: "st " + s.txt, text: s.lab })]),
-        el("span", { cls: "t3", text: meta }),
-        dn ? el("span", { cls: "nden", title: plural(dn.count, "negação", "negações") + " do gateway nesta fatia (histórico, não bloqueou). Detalhe na gaveta." }, [icon("i-ban")]) : null]));
-      if (t.approval) map.appendChild(el("span", { cls: "flag you", style: "left:" + (p.x + 8) + "px;top:" + (p.y - FLAG_H - 2) + "px" }, [icon("i-hand"), "aprovação " + t.approval]));
-      else if (t.denied) map.appendChild(el("span", { cls: "flag fail", style: "left:" + (p.x + 8) + "px;top:" + (p.y - FLAG_H - 2) + "px", title: "Gateway negou: " + t.denied.text + (t.denied.reason ? "\n" + t.denied.reason : "") }, [icon("i-ban"), "gateway negou " + clip(t.denied.text, 18)]));
-      subsOf(t.task_id).forEach(function (a, i) { var sp = subPill(a); sp.style.left = (p.x + 26) + "px"; sp.style.top = (p.y + NODE_H + 8 + i * SUB_H) + "px"; map.appendChild(sp); });
-    });
-    return el("div", { cls: "mapwrap" }, [map]);
+    return grid;
+  }
+  function renderMap() {
+    var m = workModel(), focus = focusSet(m);
+    if (!B().tasks.length) return empty("Nenhuma fatia ainda. O mapa aparece quando houver Task Contracts.");
+    var wrap = el("div", { cls: "mapwrap", "data-k": "map:" + feat + (mapAll ? "*" : "") }), inner = el("div", { cls: "flows" });
+    focus.forEach(function (fid) { var f = m.feats[fid]; if (!f) return; inner.appendChild(el("section", { cls: "fsec" }, [featHead(f, true), featFlow(f)])); });
+    var rest = focus.length ? [] : m.order.filter(function (fid) { return m.feats[fid].tasks.length; });
+    if (rest.length) {
+      inner.classList.add("ov");
+      var nT = 0, nA = m.loose.length, nOpen = 0;
+      rest.forEach(function (fid) { nT += m.feats[fid].tasks.length; nA += m.feats[fid].all.length; if (!isClosedF(m.feats[fid].status)) nOpen++; });
+      inner.appendChild(el("section", { cls: "fsec" }, [
+        el("div", { cls: "fhead" }, [el("b", { text: plural(rest.length, "feature", "features") }),
+          el("span", { cls: "fh-s", text: plural(nT, "fatia", "fatias") + " · " + plural(nA, "agente", "agentes") + " · " + (nOpen ? nOpen + " em aberto" : "todas aceitas") + " · clique numa feature para ver o fluxo dela" })]),
+        featGrid(rest, m)]));
+    }
+    wrap.appendChild(inner);
+    return wrap;
   }
   function mobileList() {
     var ml = el("div", { cls: "mobilelist" });
@@ -971,19 +1283,25 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     });
     return ml;
   }
+  function phLegend() {
+    return PH_ORDER.map(function (ph) { return el("span", {}, [phDot(ph), PH[ph].lab]); });
+  }
   function legend() {
-    function ln(color, dash) { var NS = "http://www.w3.org/2000/svg", s = document.createElementNS(NS, "svg"); s.setAttribute("class", "ln"); s.setAttribute("viewBox", "0 0 28 8"); s.setAttribute("aria-hidden", "true");
-      var p = document.createElementNS(NS, "path"); p.setAttribute("d", "M0 4h28"); p.setAttribute("stroke", color); p.setAttribute("stroke-width", "1.5"); p.setAttribute("stroke-dasharray", dash); s.appendChild(p); return s; }
-    return el("div", { cls: "legend map-legend" }, ["run", "val", "dep", "you", "done", "fail"].map(function (st) { return el("span", {}, [glyph(st), st === "fail" ? "reprovada / negado" : ST[st].lab]); })
-      .concat([el("span", {}, [ln("var(--edge-active)", "6 6"), "dependência ativa"]), el("span", {}, [ln("var(--you)", "3 5"), "bloqueada por você"]), el("span", {}, [ln("var(--edge)", "2 4"), "subagente disparado"])]));
+    function ln(k) { var NS = "http://www.w3.org/2000/svg", s = document.createElementNS(NS, "svg"); s.setAttribute("class", "ln"); s.setAttribute("viewBox", "0 0 28 8"); s.setAttribute("aria-hidden", "true");
+      var p = document.createElementNS(NS, "path"); p.setAttribute("d", "M0 4h28"); p.setAttribute("class", "fedge e-" + k); s.appendChild(p); return s; }
+    return el("div", { cls: "legend map-legend" }, ["run", "val", "dep", "you", "done", "fail"].map(function (st) { return el("span", {}, [glyph(st), ST[st].lab]); })
+      .concat([el("span", { cls: "lsep" }, ["agentes:"])]).concat(phLegend())
+      .concat([el("span", { cls: "lsep" }, [ln("done"), "dependência"]), el("span", {}, [ln("run"), "libera quem roda"]), el("span", {}, [ln("you"), "presa a você"])]));
   }
   function featSeg() {
     var fs = (D.features || []).map(function (f) { return f.feature_id; });
     if (fs.length < 2) return null;
     var seg = el("div", { cls: "seg", role: "group", "aria-label": "Feature" });
-    [""].concat(fs).forEach(function (f) {
-      var bt = el("button", { type: "button", "aria-pressed": String(feat === f), text: f || "Todas" });
-      bt.addEventListener("click", function () { feat = f; store("feat", f); render(); });
+    var focus = focusSet(workModel());
+    ["*"].concat(fs).forEach(function (f) {
+      var on = f === "*" ? !focus.length : feat ? feat === f : focus.indexOf(f) >= 0;
+      var bt = el("button", { type: "button", "aria-pressed": String(on), text: f === "*" ? "Visão geral" : f, title: f === "*" ? "Todas as features, uma linha por feature" : null });
+      bt.addEventListener("click", function () { focusFeat(f); });
       seg.appendChild(bt);
     });
     return seg;
@@ -1069,43 +1387,151 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     cp.addEventListener("click", function () { copyText(code, cp); });
     return el("div", {}, [el("div", { cls: "dagwrap" }, [box]), leg, code ? el("div", { cls: "dagfoot" }, [cp]) : null]);
   }
-  function mapPanel() {
-    return panel("p-map", "Mapa de execução", "quem faz o quê, quem espera quem", el("div", {}, [renderMap(), mobileList(), legend()]), featSeg());
+  function mapPanel(noSeg) {
+    return panel("p-map", "Mapa de execução", "as ondas de cada feature e os agentes de cada fatia", el("div", {}, [renderMap(), mobileList(), legend()]), noSeg ? null : featSeg());
   }
 
-  /* ====================================== raias em paralelo ====================================== */
-  function lanesPanel() {
-    var b = B(), now = nowMs(), box = el("div", { cls: "lanegrid" });
-    if (!b.lanes.length) return panel("p-lanes", "Em paralelo", "uma raia por agente", empty("Nada despachado ainda."));
-    var t0 = ptime(b.since) || now;
-    var end = now, start = Math.max(t0, end - 6 * 3600 * 1000);  // janela de no maximo 6 h
-    b.lanes.forEach(function (r) { r.bars.forEach(function (x) { var e = ptime(x.end); if (e && e > end) end = e; }); });
-    var span = Math.max(60000, end - start);
-    function pct(t) { return Math.max(0, Math.min(100, (t - start) / span * 100)); }
-    var axis = el("div", { cls: "axis" });
-    for (var i = 0; i <= 3; i++) axis.appendChild(el("span", { text: new Date(start + span * i / 4).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }));
-    box.appendChild(axis);
-    var grid = el("div", { style: "position:relative" });
-    var MK = { done: ["done", "i-check"], fail: ["fail", "i-x"], deny: ["fail", "i-ban"], deny_old: ["todo", "i-ban"], you: ["you", "i-hand"] };
-    var MKLAB = { done: "concluída", fail: "reprovada", deny: "gateway negou", deny_old: "gateway negou (histórico, não bloqueou)", you: "pediu sua decisão" };
-    var BARLAB = { run: "rodando", done: "executando", val: "validando", fail: "tentativa reprovada", you: "esperando você" };
-    b.lanes.forEach(function (r) {
-      var tr = el("div", { cls: "track" });
-      r.bars.forEach(function (x) {
-        var s = ptime(x.start) || start, e = ptime(x.end) || now, l = pct(s), wv = Math.max(0.6, pct(e) - l);
-        tr.appendChild(el("span", { cls: "bar " + x.kind, style: "left:" + l + "%;width:calc(" + wv + "% - 2px)", title: (r.task_id || r.label) + " · " + BARLAB[x.kind] + " · " + stamp(x.start) + "–" + (x.end ? stamp(x.end) : "agora") }));
-      });
-      r.marks.forEach(function (m) { var k = MK[m.kind] || MK.done; tr.appendChild(el("span", { cls: "mk " + ST[k[0]].txt, style: "left:clamp(11px, " + pct(ptime(m.at) || now) + "%, calc(100% - 11px))", title: MKLAB[m.kind] + " · " + stamp(m.at) }, [icon(k[1])])); });
-      var who = el("div", { cls: "who" }, [glyph(r.st), clipped("span", "", r.label, 28)]);
-      grid.appendChild(el("div", { cls: "lane" + (r.child ? " child" : ""), "data-open": r.child ? null : r.task_id || null, "data-agent": r.child || !r.task_id ? r.key : null, title: r.child ? "Abrir o subagente" : r.task_id ? "Abrir " + r.task_id : "Abrir o agente" }, [who, tr]));
+  /* ====================================== em paralelo (linha do tempo) ====================================== */
+  // Uma raia por fatia da feature em foco (e uma pelo fechamento); as outras features viram uma raia so cada. Cada barra
+  // e um agente, colorida pela fase (executar, revisar, validar, apoio); agentes ao mesmo tempo empilham na raia, e e
+  // isso que mostra o paralelo. Os periodos sem nenhum agente (mais de 20 min) sao comprimidos num corte com a duracao,
+  // para dois dias de trabalho nao virarem pontinhos.
+  var TL_GAP = 20 * 60000, TL_PAD = 60000, TL_BREAK = 34, TL_LABEL = innerWidth <= 760 ? 150 : 248, TL_MINSEG = 64;
+  function packTracks(items) {
+    var ends = [];
+    return items.map(function (x) {
+      for (var i = 0; i < ends.length; i++) if (ends[i] <= x.s) break;
+      ends[i] = x.e + 45000;
+      return i;
     });
-    grid.appendChild(el("div", { cls: "nowline", style: "position:absolute;top:0;bottom:0;left:var(--lane-w,200px);right:0;pointer-events:none" }, [el("span", { cls: "now", style: "left:" + pct(now) + "%" })]));
-    box.appendChild(grid);
-    function sw(kind, t) { return el("span", {}, [el("i", { cls: "lsw bar " + kind }), t]); }
-    function mk(st, ic, t) { return el("span", {}, [el("span", { cls: "mk lmk " + ST[st].txt }, [icon(ic)]), t]); }
-    var leg = el("div", { cls: "legend" }, [sw("run", "rodando"), sw("done", "executou"), sw("val", "validando"), sw("fail", "tentativa reprovada"), sw("you", "esperando você"),
-      mk("done", "i-check", "concluída"), mk("fail", "i-x", "reprovada"), mk("fail", "i-ban", "gateway negou"), mk("todo", "i-ban", "negação antiga"), mk("you", "i-hand", "pediu decisão")]);
-    return panel("p-lanes", "Em paralelo", "uma raia por fatia e por agente, desde " + stamp(new Date(start).toISOString()), el("div", {}, [el("div", { cls: "lanes" }, [box]), leg]));
+  }
+  // Projeto sem os hooks de subagente (ou fatia anterior a eles): a raia usa os periodos da propria fatia
+  // (executando, validando, esperando voce), sem agente para abrir.
+  var BAR_PH = { run: "exec", done: "exec", fail: "exec", val: "val", you: "aux" };
+  function taskItems(r, laneBy, now) {
+    if (r.agents.length) return r.agents;
+    var l = laneBy[r.t.task_id];
+    return (l ? l.bars : []).map(function (b) {
+      var s = ptime(b.start); if (!s) return null;
+      return { a: { agent_id: null, role: r.t.role || "executor", description: { run: "executando", done: "executou", fail: "tentativa reprovada", val: "validando", you: "esperando você" }[b.kind] || "",
+        started_at: b.start, ended_at: b.end, running: !b.end, actions: [] }, ph: BAR_PH[b.kind] || "exec", s: s, e: ptime(b.end) || now, tid: r.t.task_id, synth: true };
+    }).filter(Boolean);
+  }
+  function lanesPanel() {
+    var m = workModel(), focus = focusSet(m), now = nowMs(), rows = [];
+    var laneBy = {}; B().lanes.forEach(function (l) { if (l.task_id && !l.child) laneBy[l.task_id] = l; });
+    m.order.forEach(function (fid) {
+      var f = m.feats[fid];
+      if (focus.length && focus.indexOf(fid) < 0) return;
+      if (focus.indexOf(fid) >= 0) {
+        rows.push({ kind: "head", f: f });
+        f.tasks.forEach(function (r) { rows.push({ kind: "task", t: r.t, items: taskItems(r, laneBy, now) }); });
+        if (f.agents.length) rows.push({ kind: "close", f: f, items: f.agents });
+      } else {
+        var all = f.all.length ? f.all : [].concat.apply([], f.tasks.map(function (r) { return taskItems(r, laneBy, now); }));
+        if (all.length) rows.push({ kind: "feat", f: f, items: all });
+      }
+    });
+    if (!focus.length && m.loose.length) rows.push({ kind: "loose", items: m.loose });
+    // trechos pela atividade de fato (inicio, fim e cada acao registrada), nao pela barra inteira: um agente parado por
+    // horas esperando nao impede o corte; a barra dele atravessa o corte hachurado.
+    var iv = [];
+    rows.forEach(function (r) { (r.items || []).forEach(function (x) {
+      var pts = [x.s, x.e].concat((x.a.actions || []).map(function (y) { return ptime(y.at); }).filter(Boolean));
+      if (ptime(x.a.last_action_at)) pts.push(ptime(x.a.last_action_at));
+      pts.forEach(function (q) { iv.push([q, q]); });
+    }); });
+    var title = "Em paralelo", sub = "linha do tempo dos agentes" + (focus.length === 1 ? " · " + focus[0] : focus.length ? " · features em andamento" : " · todas as features");
+    if (!iv.length) return panel("p-lanes", title, sub, empty("Nenhum agente registrado ainda."));
+    iv.sort(function (p, q) { return p[0] - q[0]; });
+    var segs = [];
+    iv.forEach(function (p) {
+      var last = segs[segs.length - 1];
+      if (last && p[0] - last.e <= TL_GAP) last.e = Math.max(last.e, p[1]);
+      else segs.push({ s: p[0], e: p[1] });
+    });
+    segs.forEach(function (sg) { sg.s -= TL_PAD; sg.e += TL_PAD; });
+    var mins = segs.reduce(function (n, sg) { return n + (sg.e - sg.s) / 60000; }, 0);
+    var avail = Math.max(560, ((view && view.clientWidth) || 1200) - TL_LABEL - 40) - (segs.length - 1) * TL_BREAK - 12;
+    var ppm = Math.max(2.4, Math.min(14, avail / mins)), x = 12;
+    segs.forEach(function (sg, i) { if (i) x += TL_BREAK; sg.x = x; sg.w = Math.max(TL_MINSEG, (sg.e - sg.s) / 60000 * ppm); x += sg.w; });
+    var W = Math.ceil(x) + 8;
+    function px(t) {
+      for (var i = 0; i < segs.length; i++) {
+        var sg = segs[i];
+        if (t <= sg.e || i === segs.length - 1) { var k = Math.max(0, Math.min(1, (t - sg.s) / (sg.e - sg.s))); return sg.x + k * sg.w; }
+        if (t < segs[i + 1].s) return sg.x + sg.w + TL_BREAK / 2;  // caiu num corte
+      }
+      return 0;
+    }
+    // eixo: o inicio de cada trecho com o dia quando ele muda, marcas redondas dentro dos trechos longos
+    var axis = el("div", { cls: "tl-axis", style: "width:" + W + "px" }), lastDay = null;
+    var STEPS = [5, 10, 15, 30, 60, 120, 240, 480], step = STEPS.filter(function (s) { return s * ppm >= 84; })[0] || 480;
+    segs.forEach(function (sg, i) {
+      var d = new Date(sg.s), day = dayKey(sg.s);
+      var lbl = (day !== lastDay ? d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " : "") + hhmm(d.toISOString());
+      lastDay = day;
+      axis.appendChild(el("span", { cls: "tk major", style: "left:" + sg.x + "px", text: lbl }));
+      var t0 = Math.ceil((sg.s + 1) / (step * 60000)) * step * 60000;
+      for (var t = t0; t < sg.e; t += step * 60000) {
+        var xx = px(t); if (xx - sg.x < 70 || sg.x + sg.w - xx < 24) continue;
+        if (dayKey(t) !== lastDay) { lastDay = dayKey(t); axis.appendChild(el("span", { cls: "tk major", style: "left:" + xx + "px", text: new Date(t).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + hhmm(new Date(t).toISOString()) })); }
+        else axis.appendChild(el("span", { cls: "tk", style: "left:" + xx + "px", text: hhmm(new Date(t).toISOString()) }));
+      }
+      if (i) {
+        var gap = sg.s + TL_PAD - (segs[i - 1].e - TL_PAD);
+        axis.appendChild(el("span", { cls: "tk cut", style: "left:" + (sg.x - TL_BREAK) + "px;width:" + TL_BREAK + "px", title: "sem agentes por " + dur(gap), text: dur(gap).replace(" min", "m").replace(/ h (\d+)m?$/, "h") }));
+      }
+    });
+    var MK = { fail: ["fail", "i-x", "tentativa reprovada"], deny: ["fail", "i-ban", "gateway negou"], you: ["you", "i-hand", "pediu sua decisão"] };
+    var body = el("div", { cls: "tl-body", style: "width:" + (W + TL_LABEL) + "px" });
+    body.appendChild(el("div", { cls: "tl-row tl-axisrow" }, [el("div", { cls: "tl-lbl" }, [el("span", { cls: "fh-s", text: "horário (trechos parados comprimidos)" })]), axis]));
+    rows.forEach(function (r) {
+      if (r.kind === "head") {
+        body.appendChild(el("div", { cls: "tl-row tl-head" }, [el("div", { cls: "tl-lbl" }, [chip(r.f.fid), el("b", { cls: "clip1", text: r.f.title, title: r.f.title })]), el("div", { style: "width:" + W + "px" })]));
+        return;
+      }
+      // fatia: agentes simultaneos empilham (e o paralelo); feature agregada: uma subfaixa por fase, sempre na mesma ordem
+      var items = r.items || [], tr, n;
+      if (r.kind === "feat" || r.kind === "loose") {
+        var phs = PH_ORDER.filter(function (ph) { return items.some(function (x) { return x.ph === ph; }); });
+        tr = items.map(function (x) { return phs.indexOf(x.ph); }); n = Math.max(1, phs.length);
+      } else { tr = packTracks(items); n = items.length ? Math.max.apply(null, tr) + 1 : 1; }
+      var track = el("div", { cls: "tl-track", style: "width:" + W + "px;height:" + (12 + n * 13) + "px" });
+      items.forEach(function (it, i) {
+        var a = it.a, l = px(it.s), w = Math.max(5, px(it.e) - l);
+        track.appendChild(el("button", { cls: "tl-bar ph-" + it.ph + (a.running ? " live" : ""), type: "button", "data-agent": a.agent_id, "data-open": it.synth ? it.tid : null,
+          style: "left:" + l + "px;width:" + w + "px;top:" + (6 + tr[i] * 13) + "px",
+          title: (a.role || "agente") + " · " + PH[it.ph].verb + (it.tid && r.kind !== "task" ? " " + it.tid : "") + (a.description ? "\n" + a.description : "") + "\n" + stamp(a.started_at) + " → " + (a.running ? "agora" : a.ended_at ? stamp(a.ended_at) : "fim não registrado") + " (" + dur(it.e - it.s) + ")",
+          "aria-label": (a.role || "agente") + ", " + PH[it.ph].verb + ", " + stamp(a.started_at) + ", " + dur(it.e - it.s) }));
+      });
+      var lane = r.kind === "task" && laneBy[r.t.task_id];
+      (lane ? lane.marks : []).forEach(function (mk) {
+        var k = MK[mk.kind], at = ptime(mk.at); if (!k || !at) return;
+        track.appendChild(el("span", { cls: "tl-mk " + ST[k[0]].txt, style: "left:" + px(at) + "px", title: k[2] + " · " + stamp(mk.at) }, [icon(k[1])]));
+      });
+      if (!items.length) track.appendChild(el("span", { cls: "tl-none", text: r.t && r.t.st === "dep" ? "aguarda " + r.t.waiting_on.join(" e ") : r.t && (r.t.st === "done" || r.t.st === "fail") ? "sem agentes registrados" : "nenhum agente ainda" }));
+      var lbl;
+      if (r.kind === "task") lbl = el("button", { cls: "tl-lbl", type: "button", "data-open": r.t.task_id, title: r.t.task_id + " · " + r.t.title + " · " + ST[r.t.st].lab },
+        [glyph(r.t.st), el("span", { cls: "fc-id", text: r.t.task_id }), el("span", { cls: "clip1", text: r.t.title })]);
+      else if (r.kind === "feat") {
+        lbl = el("button", { cls: "tl-lbl", type: "button", title: "Focar em " + r.f.fid + " · " + r.f.title }, [glyph(featState(r.f)), el("span", { cls: "fc-id", text: r.f.fid }), el("span", { cls: "clip1", text: r.f.title })]);
+        (function (fid) { lbl.addEventListener("click", function () { focusFeat(fid); }); })(r.f.fid);
+      } else lbl = el("div", { cls: "tl-lbl" }, [el("i", { cls: "glyph g-todo", "aria-hidden": "true" }, [icon(r.kind === "close" ? "i-check" : "i-orch")]),
+        el("span", { cls: "clip1", text: r.kind === "close" ? "Fechamento da feature" : "Fora de feature (sessão principal)" })]);
+      body.appendChild(el("div", { cls: "tl-row" + (r.kind === "feat" ? " agg" : "") }, [lbl, track]));
+    });
+    var over = el("div", { cls: "tl-over", style: "left:" + TL_LABEL + "px;width:" + W + "px" });
+    segs.forEach(function (sg, i) { if (i) over.appendChild(el("span", { cls: "tl-cut", style: "left:" + (sg.x - TL_BREAK) + "px;width:" + TL_BREAK + "px" })); });
+    if (iv.some(function (p) { return p[1] >= now - 1000; }) && IS_LIVE) over.appendChild(el("span", { cls: "tl-now", style: "left:" + px(now) + "px" }));
+    body.appendChild(over);
+    var leg = el("div", { cls: "legend" }, phLegend().concat([
+      el("span", {}, [el("i", { cls: "phd ph-exec live", "aria-hidden": "true" }), "rodando agora"]),
+      el("span", {}, [el("span", { cls: "tl-mk lmk st-fail" }, [icon("i-x")]), "reprovada"]),
+      el("span", {}, [el("span", { cls: "tl-mk lmk st-fail" }, [icon("i-ban")]), "gateway negou"]),
+      el("span", {}, [el("span", { cls: "tl-mk lmk st-you" }, [icon("i-hand")]), "pediu decisão"]),
+      el("span", {}, [el("i", { cls: "tl-cutsw", "aria-hidden": "true" }), "tempo parado (comprimido)"])]));
+    return panel("p-lanes", title, sub, el("div", {}, [el("div", { cls: "lanes", "data-end": "1", "data-k": "tl:" + feat + (mapAll ? "*" : "") }, [body]), leg]));
   }
 
   /* ====================================== fatias ====================================== */
@@ -1134,7 +1560,7 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     drawerId = id;
     var s = ST[t.st];
     var g = document.getElementById("d-glyph"); g.className = "glyph " + s.cls; g.textContent = ""; g.appendChild(icon(s.ic));
-    document.getElementById("d-title").textContent = t.task_id + " · " + clip(t.title, 60);
+    document.getElementById("d-title").textContent = t.task_id + " · " + t.title;
     document.getElementById("d-sub").textContent = s.lab + " · " + t.feature_id + " · onda " + t.wave;
     var b = document.getElementById("d-body"); b.textContent = "";
     var kv = el("dl", { cls: "kv" });
@@ -1150,13 +1576,11 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     else if (t.denials) b.appendChild(el("div", {}, [el("h4", { text: "Negações do gateway (histórico)" }),
       el("p", { cls: "dec-opt", style: "margin:0", text: plural(t.denials.count, "negação", "negações") + "; nenhuma bloqueou a fatia (o agente seguiu adiante). Última, " + stamp(t.denials.last_at) + ":" }),
       clipped("p", "mono dec-opt", t.denials.last_text, 120), t.denials.last_reason ? el("p", { cls: "dec-opt", style: "margin:0", text: t.denials.last_reason }) : null]));
-    var mine = B().agents.filter(function (a) { return a.task_id === t.task_id || (a.validating || []).indexOf(t.task_id) >= 0; });
-    var execs = mine.filter(function (a) { return !a.parent_id; }), subs = mine.filter(function (a) { return a.parent_id; });
-    if (execs.length) b.appendChild(el("div", {}, [el("h4", { text: "Agentes nesta fatia" }), el("div", { cls: "stackv" }, execs.map(agentButton))]));
-    if (subs.length) b.appendChild(el("div", {}, [el("h4", { text: "Subagentes disparados" }), el("div", { cls: "stackv" }, subs.map(agentButton))]));
+    var rec = workModel().taskRec[t.task_id];
+    if (rec && rec.agents.length) b.appendChild(el("div", {}, [el("h4", { text: "Agentes nesta fatia (" + rec.agents.length + ")" }), drawerAgents(rec.agents)]));
     var steps = el("ol", { cls: "steps" });
-    if (t.last_action) steps.appendChild(el("li", {}, [el("time", { text: t.last_action_at ? stamp(t.last_action_at) : "agora" }), clipped("span", "mono", act(t.last_action), 120)]));
-    (B().events[t.task_id] || []).slice().reverse().forEach(function (e) { steps.appendChild(el("li", {}, [el("time", { text: stamp(e.at) }), clipped("span", "", e.text, 120)])); });
+    if (t.last_action) steps.appendChild(el("li", {}, [el("time", { text: t.last_action_at ? stamp(t.last_action_at) : "agora" }), el("span", { cls: "mono", text: act(t.last_action) })]));
+    (B().events[t.task_id] || []).slice().reverse().forEach(function (e) { steps.appendChild(el("li", {}, [el("time", { text: stamp(e.at) }), el("span", { text: e.text })])); });
     if (steps.children.length) b.appendChild(el("div", {}, [el("h4", { text: "Últimas ações" }), steps]));
     drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false");
     Array.prototype.forEach.call(document.querySelectorAll(".node[data-open]"), function (n) { n.setAttribute("aria-pressed", String(n.getAttribute("data-open") === id)); });
@@ -1202,15 +1626,31 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     var kids = B().agents.filter(function (c) { return c.parent_id === a.agent_id; });
     if (kids.length) b.appendChild(el("div", {}, [el("h4", { text: "Subagentes que ele disparou" }), el("div", { cls: "stackv" }, kids.map(agentButton))]));
     var steps = el("ol", { cls: "steps" });
-    (a.actions || []).slice().reverse().forEach(function (x) { steps.appendChild(el("li", {}, [el("time", { text: stamp(x.at) }), clipped("span", "mono", x.text, 140)])); });
+    (a.actions || []).slice().reverse().forEach(function (x) { steps.appendChild(el("li", {}, [el("time", { text: stamp(x.at) }), el("span", { cls: "mono", text: act(x.text) })])); });
     b.appendChild(el("div", {}, [el("h4", { text: "Últimas ações deste agente" }), steps.children.length ? steps : el("p", { cls: "dec-opt", text: "Nenhuma ação registrada ainda." })]));
     drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false");
     markPressed();
     if (focus) document.getElementById("d-close").focus();
   }
+  // agentes de uma fatia na gaveta: separados por fase, cada um com o que pediram, quando e quanto levou
+  function drawerAgents(list) {
+    var box = el("div", { cls: "dagents" });
+    PH_ORDER.forEach(function (ph) {
+      var xs = list.filter(function (x) { return x.ph === ph; }); if (!xs.length) return;
+      box.appendChild(el("div", { cls: "dag-ph" }, [phDot(ph), PH[ph].lab, el("span", { text: String(xs.length) })]));
+      xs.forEach(function (x) {
+        var a = x.a, st = a.running ? (ph === "val" ? "val" : "run") : "done";
+        box.appendChild(el("button", { cls: "dag-row", type: "button", "data-agent": a.agent_id || null, "data-open": a.agent_id ? null : x.tid }, [glyph(st),
+          el("span", { cls: "dag-main" }, [el("b", { text: a.role || a.agent_type || "agente" }), a.description ? el("span", { cls: "dag-desc", text: a.description }) : null]),
+          el("span", { cls: "dag-when" }, [el("span", { cls: "num", text: stamp(a.started_at) }),
+            el("span", { cls: "num", text: a.running ? "há " + since(a.started_at) : a.ended_at ? dur(x.e - x.s) : "fim não registrado" })])]));
+      });
+    });
+    return box;
+  }
   function dur2(a, c) { var x = ptime(a), y = ptime(c); return x && y ? dur(y - x) : "—"; }
   function markPressed() {
-    Array.prototype.forEach.call(document.querySelectorAll(".node[data-open], .dnode[data-open]"), function (n) { n.setAttribute("aria-pressed", String(drawerId === n.getAttribute("data-open"))); });
+    Array.prototype.forEach.call(document.querySelectorAll(".node[data-open], .dnode[data-open], .fc-main[data-open]"), function (n) { n.setAttribute("aria-pressed", String(drawerId === n.getAttribute("data-open"))); });
     Array.prototype.forEach.call(document.querySelectorAll(".sub-node[data-agent]"), function (n) { n.setAttribute("aria-pressed", String(drawerId === "agent:" + n.getAttribute("data-agent"))); });
   }
   function closeDrawer() {
@@ -1333,8 +1773,9 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
         el("div", { cls: "grid2 nowgrid" }, [mapPanel(), rightCol()]), lanesPanel(), slicesPanel()];
     },
     mapa: function () {
-      return [titleRow("Mapa dos agentes", "Quem está fazendo o quê, quem depende de quem e quem disparou quem."), mapPanel(), lanesPanel(),
-        panel("p-tree", "Quem disparou quem", "orquestrador, agentes e subagentes", treeBox())];
+      var seg = featSeg();
+      return [titleRow("Mapa dos agentes", "Escolha a feature: o mapa, a linha do tempo e a árvore abaixo mostram a mesma.", seg ? [seg] : null), mapPanel(true), lanesPanel(),
+        panel("p-tree", "Quem disparou quem", "feature, fatia e cada agente em ordem de início", treeBox())];
     },
     fatias: function () {
       var fs = D.features || [], g = (D.graphs || {}).dependencies || {};
@@ -1641,30 +2082,52 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     if ((bp.migrations || []).length) out.push(panel(null, "Migrações", "", table(["Migração", "O que faz", "Rollback"], bp.migrations.map(function (m) { return [m.id + (m.destructive ? " · destrutiva" : ""), m.description, m.reversible ? (m.rollback || "reversível") : "irreversível"]; }))));
     return out;
   }
+  /* Quem disparou quem: orquestrador > feature > fatia > agentes em ordem de inicio; subagente fica embaixo de quem o
+     disparou. Cada linha diz quando, quem, o que fez e quanto tempo levou; o comando bruto fica na gaveta do agente. */
   function treeBox() {
-    var b = B(), box = el("div", { cls: "tree" });
-    function item(g, title, sub, kids, id, agentId) {
-      var attrs = id || agentId ? { cls: "row", type: "button", "data-open": id || null, "data-agent": agentId || null, style: "border:0;background:none;padding:0;cursor:pointer;color:inherit;font:inherit;text-align:left" } : { cls: "row" };
-      var row = el(id || agentId ? "button" : "span", attrs,
-        [g, el("b", { text: title }), clipped("span", "s", sub, 80)]);
-      var li = el("li", {}, [row]);
-      if (kids && kids.length) li.appendChild(el("ul", {}, kids));
-      return li;
+    var m = workModel(), focus = focusSet(m), box = el("div", { cls: "wtree" });
+    var total = m.order.reduce(function (n, fid) { return n + m.feats[fid].all.length; }, 0) + m.loose.length;
+    if (!total) return el("div", { cls: "wtree" }, [el("div", { cls: "wt-root" }, [el("i", { cls: "glyph g-todo", "aria-hidden": "true" }, [icon("i-orch")]), el("b", { text: "Orquestrador" }),
+      el("span", { cls: "fh-s", text: "sessão principal · nenhum agente disparado ainda" })])]);
+    function rows(list) {
+      var ids = {}; list.forEach(function (x) { ids[x.a.agent_id] = x; });
+      var out = el("ol", { cls: "wt-list" });
+      function add(x, depth) {
+        var a = x.a, st = a.running ? (x.ph === "val" ? "val" : "run") : "done";
+        out.appendChild(el("li", {}, [el("button", { cls: "wt-row", type: "button", "data-agent": a.agent_id, style: depth ? "--d:" + depth : null,
+          title: (a.description || a.role || "") + (a.parent_inferred && a.parent_id ? " · ligação inferida" : "") + " · clique para ver as ações" }, [
+          el("time", { cls: "num", text: stamp(a.started_at) }),
+          el("span", { cls: "wt-who" }, [depth ? el("span", { cls: "wt-sub", text: "↳", "aria-label": "disparado por outro agente" }) : null, glyph(st), phDot(x.ph), el("b", { text: a.role || a.agent_type || "agente" })]),
+          el("span", { cls: "wt-what clip1", text: a.description || PH[x.ph].verb }),
+          el("span", { cls: "wt-dur num", text: a.running ? "rodando há " + since(a.started_at) : a.ended_at ? dur(x.e - x.s) : "fim não registrado" })])]));
+        list.filter(function (c) { return c.a.parent_id === a.agent_id; }).forEach(function (c) { add(c, depth + 1); });
+      }
+      list.filter(function (x) { return !x.a.parent_id || !ids[x.a.parent_id]; }).forEach(function (x) { add(x, 0); });
+      return out;
     }
-    function agentItem(a) {
-      var kids = b.agents.filter(function (c) { return c.parent_id === a.agent_id; }).map(agentItem);
-      return item(glyph(a.running ? (a.role === "validator" ? "val" : "run") : "done"), a.role || a.agent_type || "subagente",
-        (a.description ? a.description + " · " : "") + (a.running ? "rodando há " + since(a.started_at) : "terminou") + (a.parent_inferred && a.parent_id ? " · ligação inferida" : "") + (a.last_action ? " · " + act(a.last_action) : ""), kids, null, a.agent_id);
+    function group(key, open, summary, kids) {
+      var d = el("details", { cls: "grp", "data-dk": key }, [el("summary", {}, summary)].concat(kids));
+      d.open = open;
+      return d;
     }
-    var started = b.tasks.filter(function (t) { return t.started_at; });
-    var kids = started.map(function (t) {
-      var ag = b.agents.filter(function (a) { return a.task_id === t.task_id; }), top = ag.filter(function (a) { return !a.parent_id; });
-      var sub = top.length ? [].concat.apply([], top.map(function (a) { return b.agents.filter(function (c) { return c.parent_id === a.agent_id; }).map(agentItem); })) : ag.filter(function (a) { return a.parent_id; }).map(agentItem);
-      return item(glyph(t.st), t.task_id + " " + clip(t.title, 50), t.role + " · " + ST[t.st].lab, sub, t.task_id);
+    box.appendChild(el("div", { cls: "wt-root" }, [el("i", { cls: "glyph g-run", "aria-hidden": "true" }, [icon("i-orch")]), el("b", { text: "Orquestrador" }),
+      el("span", { cls: "fh-s", text: "sessão principal · disparou " + plural(total, "agente", "agentes") + " em " + plural(m.order.filter(function (fid) { return m.feats[fid].all.length; }).length, "feature", "features") })]));
+    m.order.forEach(function (fid) {
+      var f = m.feats[fid]; if (!f.all.length || (focus.length && focus.indexOf(fid) < 0)) return;
+      var kids = [];
+      f.tasks.forEach(function (r) {
+        if (!r.agents.length) return;
+        kids.push(el("div", { cls: "wt-task" }, [el("button", { cls: "wt-th", type: "button", "data-open": r.t.task_id, title: "Abrir " + r.t.task_id }, [glyph(r.t.st),
+          el("span", { cls: "fc-id", text: r.t.task_id }), el("span", { cls: "clip1", text: r.t.title }), el("span", { cls: "fh-s", text: ST[r.t.st].lab + " · " + plural(r.agents.length, "agente", "agentes") })]),
+          rows(r.agents)]));
+      });
+      if (f.agents.length) kids.push(el("div", { cls: "wt-task" }, [el("div", { cls: "wt-th" }, [el("i", { cls: "glyph g-todo", "aria-hidden": "true" }, [icon("i-check")]),
+        el("b", { text: "Fechamento da feature" }), el("span", { cls: "fh-s", text: "revisão final e validação" })]), rows(f.agents)]));
+      box.appendChild(group("wt-" + fid + (focus.indexOf(fid) >= 0 ? ":f" : ""), focus.indexOf(fid) >= 0, [glyph(featState(f)), chip(fid), el("b", { cls: "fh-t", text: f.title }), featChip(f),
+        el("span", { cls: "fh-s", text: plural(f.all.length, "agente", "agentes") + " · " + span2(f.first, f.last) })], kids));
     });
-    b.agents.filter(function (a) { return !a.parent_id && !a.task_id; }).forEach(function (a) { kids.push(agentItem(a)); });
-    if (!kids.length) return empty("Nenhum agente disparado ainda.");
-    box.appendChild(el("ul", {}, [item(el("i", { cls: "glyph g-run", "aria-hidden": "true" }, [icon("i-orch")]), "Orquestrador", "sessão principal", kids)]));
+    if (m.loose.length && !focus.length) box.appendChild(group("wt-loose", false, [el("i", { cls: "glyph g-todo", "aria-hidden": "true" }, [icon("i-orch")]), el("b", { text: "Fora de feature" }),
+      el("span", { cls: "fh-s", text: plural(m.loose.length, "agente", "agentes") + " disparados direto pela sessão principal" })], [rows(m.loose)]));
     return box;
   }
   function workText(a) {
@@ -1783,14 +2246,18 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     var y = window.scrollY, open = {};
     Array.prototype.forEach.call(view.querySelectorAll("details[data-dk]"), function (d) { open[d.getAttribute("data-dk")] = d.open; });
     var SCR = ".mapwrap,.lanes,.rcol > .share", scrolls = {};
-    Array.prototype.forEach.call(view.querySelectorAll(SCR), function (w, i) { scrolls[i] = [w.scrollLeft, w.scrollTop]; });
+    var scrollKeys = {};
+    Array.prototype.forEach.call(view.querySelectorAll(SCR), function (w, i) { scrolls[i] = [w.scrollLeft, w.scrollTop]; scrollKeys[i] = w.getAttribute("data-k"); });
     renderRail(); renderTop();
     var sec = el("section", { cls: "screen", "data-screen": cur });
     SCREENS[cur]().forEach(function (n) { if (n) sec.appendChild(n); });
     sec.appendChild(el("div", { cls: "foot", id: "foot-mirror" }));
     view.textContent = ""; view.appendChild(sec);
     Array.prototype.forEach.call(view.querySelectorAll("details[data-dk]"), function (d) { var k = d.getAttribute("data-dk"); if (Object.prototype.hasOwnProperty.call(open, k)) d.open = open[k]; });
-    Array.prototype.forEach.call(view.querySelectorAll(SCR), function (w, i) { if (scrolls[i]) { w.scrollLeft = scrolls[i][0]; w.scrollTop = scrolls[i][1]; } });
+    Array.prototype.forEach.call(view.querySelectorAll(SCR), function (w, i) {
+      if (scrolls[i] && w.getAttribute("data-k") === scrollKeys[i]) { w.scrollLeft = scrolls[i][0]; w.scrollTop = scrolls[i][1]; }
+      else if (w.hasAttribute("data-end")) w.scrollLeft = w.scrollWidth;  // linha do tempo abre no mais recente
+    });
     markPan();
     lastPaint = Date.now();
     document.getElementById("foot-mirror").textContent = document.getElementById("foot").textContent;
@@ -1901,6 +2368,7 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     // arrastar com o mouse rola o mapa/raias; o clique que fecha o arrasto nao abre a gaveta; o clique simples abre
     closeDrawer(); stFilter = ""; feat = ""; render(false);
     var w = Array.prototype.filter.call(view.querySelectorAll(PAN), scrollable)[0];
+    if (!w && (w = view.querySelector(".mapwrap"))) { w.style.maxWidth = "240px"; w.style.maxHeight = "160px"; markPan(); }  // o mapa coube: aperta para testar o gesto
     if (w) {
       w.scrollLeft = 0;
       var tg = w.querySelector("[data-open]") || w, r = tg.getBoundingClientRect(), cx = r.left + 10, cy = r.top + r.height / 2;

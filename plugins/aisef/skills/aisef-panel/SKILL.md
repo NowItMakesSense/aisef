@@ -16,9 +16,9 @@ python -I CORE/build_panel.py --project .aisef --out .aisef/panel --serve --open
 - Regenera os dados quando `.aisef/` muda, e a página se atualiza sozinha a cada 3 segundos.
 - A tela **Agora** (a primeira de 8, no trilho de ícones à esquerda) mostra:
   - uma frase com o que roda e o que espera, e a faixa de estados (rodando, validando, esperando outra fatia, esperando você, concluídas), que filtra o mapa e a tabela;
-  - o **mapa de execução**: orquestrador, uma coluna por onda, cada fatia com estado, tempo e última ação, e os subagentes presos a quem os disparou (hooks `SubagentStart`/`SubagentStop` e `PreToolUse` Agent|Task);
+  - o **mapa de execução**: as ondas da feature em andamento em colunas, cada fatia com estado, tempo e os agentes que trabalharam nela (executor, revisores, validador; hooks `SubagentStart`/`SubagentStop` e `PreToolUse` Agent|Task), e o fechamento da feature;
   - as decisões que esperam você, com o comando para copiar, e o próximo passo (do `next`);
-  - as raias **Em paralelo** no tempo, com reprovações, negações do gateway e pedidos de decisão no momento exato;
+  - **Em paralelo**: a linha do tempo dos agentes, uma raia por fatia com uma barra por agente colorida pela fase, os períodos parados comprimidos e as reprovações, negações do gateway e pedidos de decisão no momento exato;
   - a tabela de fatias com agente, modelo, ciclos de TDD e tempo.
 - Para parar, encerre o processo em segundo plano.
 
