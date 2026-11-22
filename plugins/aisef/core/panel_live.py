@@ -59,6 +59,15 @@ def read_runtime(aisef_dir):
     return out
 
 
+STALE_S = 2 * 3600  # sem SubagentStop e sem nenhuma acao ha 2 h: o fim do agente nao foi registrado
+
+
+def _stale(started_at, last_at, now):
+    """Agente sem registro de fim, parado ha mais de STALE_S: nao conta como rodando."""
+    t = _parse(last_at) or _parse(started_at)
+    return bool(t and now and (now - t).total_seconds() > STALE_S)
+
+
 def agents_in_flight(aisef_dir, log, tasks, now):
     events = read_runtime(aisef_dir)
     started, stopped, last_tool = {}, set(), {}
@@ -74,7 +83,7 @@ def agents_in_flight(aisef_dir, log, tasks, now):
     delegated = [e for e in log if e["event_type"] == "delegation" and e.get("task_id") in in_progress]
     used, rows = set(), []
     for aid, e in sorted(started.items(), key=lambda kv: kv[1].get("at") or ""):
-        if aid in stopped:
+        if aid in stopped or _stale(e.get("at"), (last_tool.get(aid) or {}).get("at"), now):
             continue
         role = (e.get("agent_type") or "").split(":")[-1]
         task = next((d["task_id"] for d in delegated
@@ -90,9 +99,53 @@ def agents_in_flight(aisef_dir, log, tasks, now):
     return rows
 
 
-def feature_stage(feature, tasks):
+# Aceite da feature: o pedido feature_acceptance mais recente (pendente ou decidido) de cada feature.
+# Expirado, retirado ou substituido nao conta.
+_ACCEPT_LIVE = ("pending", "approved", "rejected", "changes_requested")
+
+
+def feature_acceptance(approvals):
+    """{feature_id: {status, request_id, at}} a partir dos pedidos feature_acceptance em approvals/."""
+    out = {}
+    for a in approvals or []:
+        if a.get("request_type") != "feature_acceptance" or not a.get("feature_id") or a.get("status") not in _ACCEPT_LIVE:
+            continue
+        at = (a.get("decision") or {}).get("decided_at") or a.get("created_at") or ""
+        cur = out.get(a["feature_id"])
+        if cur is None or (a.get("created_at") or "") >= cur["created_at"]:
+            out[a["feature_id"]] = {"status": a["status"], "request_id": a.get("request_id"), "at": at,
+                                    "created_at": a.get("created_at") or ""}
+    return out
+
+
+def feature_status(feature, task_states, acceptance=None):
+    """Estado efetivo da feature para o painel: o contrato pode ficar em approved_for_execution depois do aceite.
+    accepted = aceite aprovado e todas as fatias encerradas; acceptance_rejected / acceptance_changes_requested =
+    aceite recusado ou com alteracoes pedidas; awaiting_acceptance = fatias encerradas, aceite ainda nao decidido."""
     st = (feature.get("state") or {}).get("status")
     if st == "closed":
+        return "closed"
+    finished = bool(task_states) and all(s in ("completed", "cancelled") for s in task_states)
+    acc = (acceptance or {}).get("status")
+    if finished and acc == "approved":
+        return "accepted"
+    if finished and acc == "rejected":
+        return "acceptance_rejected"
+    if finished and acc == "changes_requested":
+        return "acceptance_changes_requested"
+    if finished and st in ("approved_for_execution", "in_execution", "awaiting_acceptance"):
+        return "awaiting_acceptance"
+    if st == "approved_for_execution" and any(s not in ("draft", "ready", "cancelled") for s in task_states):
+        return "in_execution"  # o contrato nao muda de estado quando a primeira fatia sai
+    return st or "draft"
+
+
+def feature_stage(feature, tasks, acceptance=None):
+    st = (feature.get("state") or {}).get("status")
+    if st == "closed":
+        return "closed"
+    mine_st = [t["state"]["status"] for t in tasks if t["feature_id"] == feature["feature_id"]]
+    if feature_status(feature, mine_st, acceptance) == "accepted":
         return "closed"
     plan = ((feature.get("approval") or {}).get("plan") or {}).get("status")
     mine = [t["state"]["status"] for t in tasks if t["feature_id"] == feature["feature_id"]]
@@ -182,7 +235,7 @@ _role = aisef_runtime.role
 _match_parents = aisef_runtime.match_parents
 
 
-def _lane(evs, st, denied):
+def _lane(evs, st, denied, history=()):
     """Barras e marcadores de uma fatia no tempo, a partir dos eventos de ciclo de vida do log."""
     bars, marks, cur, kind = [], [], None, None
     for e in evs:
@@ -213,9 +266,81 @@ def _lane(evs, st, denied):
             cur, kind = ts, "run"
     if cur is not None and st in ("run", "val", "you"):
         bars.append({"kind": st, "start": cur, "end": None})
-    if denied:
-        marks.append({"at": denied["at"], "kind": "deny"})
+    for d in history:  # negacoes antigas ficam no tempo, em tom neutro; so a que ainda pesa fica vermelha
+        marks.append({"at": d["at"], "kind": "deny" if denied and d["at"] == denied["at"] else "deny_old"})
     return bars, marks
+
+
+def tdd_counts(reports):
+    """Ciclos de TDD por tarefa, [vermelhos, verdes], somados entre as tentativas do executor. Relatorios sem ciclos
+    (revisores, validador, tentativa so de refatoracao) nao zeram a contagem: antes, o ultimo relatorio lido da tarefa
+    sobrescrevia tudo com [0, 0] e a coluna TDD do painel mostrava 0/0 em toda fatia revisada."""
+    tdd = {}
+    for r in reports:
+        cyc = (r.get("tdd_evidence") or {}).get("cycles") or []
+        if not cyc:
+            continue
+        acc = tdd.setdefault(r.get("task_id"), [0, 0])
+        acc[0] += sum(1 for c in cyc if (c.get("red") or {}).get("exit_code") not in (0, None))
+        acc[1] += sum(1 for c in cyc if (c.get("green") or {}).get("exit_code") == 0)
+    return tdd
+
+
+def deny_state(history, evs, st, last_action_at):
+    """Negacoes do gateway de uma fatia -> (denied, denials).
+
+    denied: a ultima negacao, so quando ainda pesa: a fatia esta ativa (rodando, validando, esperando voce ou reprovada)
+    e nada aconteceu depois dela (nenhum evento de ciclo de vida, nenhuma acao do agente). Em fatia concluida, ou quando
+    o agente seguiu adiante, a negacao e historico: vai so em denials {count, last_at, last_text, last_reason}."""
+    if not history:
+        return None, None
+    last = history[-1]
+    denials = {"count": len(history), "last_at": last["at"], "last_text": last["text"], "last_reason": last.get("reason") or ""}
+    at = _parse(last["at"])
+    later = [_parse(e["timestamp"]) for e in evs] + [_parse(last_action_at)]
+    moved_on = any(t and at and t > at for t in later)
+    relevant = st in ("run", "val", "you", "fail") and not moved_on
+    return (dict(last) if relevant else None), denials
+
+
+_MIN = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+_MAX = datetime.datetime.max.replace(tzinfo=datetime.timezone.utc)
+
+
+def feature_waves(loaded, rows, status):
+    """Ondas agrupadas por feature, para o mapa na visao "Todas": cada feature com as suas ondas (numeradas dentro da
+    feature), a hora do despacho de cada onda e o estado efetivo da feature. Ativas primeiro; aceitas e encerradas no fim."""
+    acc = feature_acceptance(loaded.get("approvals"))
+    feats = {f["feature_id"]: f for f in loaded.get("features", [])}
+    order, groups = [], {}
+    for r in rows:
+        if r["feature_id"] not in groups:
+            order.append(r["feature_id"])
+            groups[r["feature_id"]] = []
+        groups[r["feature_id"]].append(r)
+    out = []
+    for fid in order:
+        mine = groups[fid]
+        f = feats.get(fid) or {"feature_id": fid}
+        fst = feature_status(f, [status.get(r["task_id"]) for r in mine], acc.get(fid))
+        local = {w: i + 1 for i, w in enumerate(sorted({r["wave"] for r in mine}))}
+        waves = []
+        for w in sorted(local):
+            ts = [r for r in mine if r["wave"] == w]
+            starts = [r["started_at"] for r in ts if r["started_at"]]
+            waves.append({"wave": local[w], "global_wave": w, "tasks": [r["task_id"] for r in ts],
+                          "dispatched_at": min(starts, key=lambda x: _parse(x) or _MAX) if starts else None})
+        for r in mine:
+            r["feature_wave"] = local[r["wave"]]
+        ends = [r["ended_at"] or r["started_at"] for r in mine if r["ended_at"] or r["started_at"]]
+        out.append({"feature_id": fid, "title": f.get("title"), "status": fst,
+                    "active": fst not in ("accepted", "closed"),
+                    "accepted_at": (acc.get(fid) or {}).get("at") if fst == "accepted" else None,
+                    "tasks_total": len(mine), "tasks_done": sum(1 for r in mine if r["st"] == "done"),
+                    "last_at": max(ends, key=lambda x: _parse(x) or _MIN) if ends else None,
+                    "waves": waves})
+    out.sort(key=lambda g: not g["active"])  # sort estavel: ativas primeiro, cada grupo na ordem das fatias
+    return out
 
 
 def board(aisef_dir, loaded, log, now):
@@ -255,12 +380,15 @@ def board(aisef_dir, loaded, log, now):
         aid = e.get("agent_id")
         if not aid:
             continue
-        if e.get("event") == "start":
+        if e.get("event") == "start" and aid in agents:  # start repetido do mesmo agente: um agente so, de novo rodando
+            agents[aid].update(running=True, ended_at=None)
+        elif e.get("event") == "start":
             pid, desc, inf, model, spawn_task = parents.get(aid, (None, None, True, None, None))
             agents[aid] = {"agent_id": aid, "agent_type": e.get("agent_type"), "role": _role(e.get("agent_type")),
                            "started_at": e.get("at"), "ended_at": None, "running": True, "last_action": None,
                            "last_action_at": None, "task_id": spawn_task if spawn_task in by_id else None, "parent_id": pid, "parent_inferred": inf,
-                           "description": desc, "model": model, "validating": [], "actions": [], "tool_count": 0}
+                           "description": desc, "model": model, "validating": [], "actions": [], "tool_count": 0,
+                           "end_missing": False}
             order.append(aid)
         elif aid in agents and e.get("event") == "stop":
             agents[aid].update(ended_at=e.get("at"), running=False)
@@ -270,6 +398,9 @@ def board(aisef_dir, loaded, log, now):
     for aid in order:
         if agents[aid]["parent_id"] not in agents:
             agents[aid]["parent_id"] = None
+        a = agents[aid]
+        if a["running"] and _stale(a["started_at"], a["last_action_at"], now):  # o SubagentStop se perdeu
+            a.update(running=False, end_missing=True)
 
     # executor: a fatia em andamento do seu papel; subagente: a fatia do pai. Ligacoes exatas (pelo disparo) primeiro.
     taken = {a["task_id"] for a in agents.values() if a["task_id"]}
@@ -298,6 +429,8 @@ def board(aisef_dir, loaded, log, now):
         p = agents.get(a["parent_id"]) if a["parent_id"] else None
         if p and p["task_id"]:
             a["task_id"] = p["task_id"]
+        if a["running"] and a["task_id"] and status.get(a["task_id"]) in ("completed", "cancelled"):
+            a.update(running=False, end_missing=True)  # a fatia ja terminou: o agente nao esta mais rodando
         if a["role"] == "validator" and a["running"] and not a["parent_id"]:
             a["validating"] = [tid for tid in sorted(by_id) if status[tid] == "executed"]
 
@@ -312,13 +445,10 @@ def board(aisef_dir, loaded, log, now):
             tid = tid or next((t for t in sorted(by_id) if status[t] == "in_progress"
                                and role in (by_id[t]["assigned_agent"]["agent_id"], by_id[t]["assigned_agent"].get("role"))), None)
             if tid:
-                denies[tid] = {"at": e["timestamp"], "text": (d.get("target") or d.get("tool") or "")[:80]}
+                denies.setdefault(tid, []).append({"at": e["timestamp"], "text": (d.get("target") or d.get("tool") or "")[:80],
+                                                   "reason": (d.get("reason") or "")[:160]})
 
-    tdd = {}
-    for r in loaded.get("reports", []):
-        cyc = (r.get("tdd_evidence") or {}).get("cycles") or []
-        tdd[r.get("task_id")] = [sum(1 for c in cyc if (c.get("red") or {}).get("exit_code") not in (0, None)),
-                                 sum(1 for c in cyc if (c.get("green") or {}).get("exit_code") == 0)]
+    tdd = tdd_counts(loaded.get("reports", []))
 
     rows, events, lanes = [], {}, []
     for t in sorted(tasks, key=lambda t: (wave[t["task_id"]], t["task_id"])):
@@ -334,19 +464,20 @@ def board(aisef_dir, loaded, log, now):
               else "done" if st in ("completed", "validated") else "fail" if st == "rejected" else "dep" if waiting else "todo")
         mine = [agents[a] for a in order if agents[a]["task_id"] == tid and not agents[a]["parent_id"]]
         last = next((a for a in reversed(mine) if a["last_action"]), None)
+        denied, denials = deny_state(denies.get(tid) or [], evs, vs, last["last_action_at"] if last else None)
         row = {"task_id": tid, "feature_id": t["feature_id"], "title": t.get("title"), "wave": wave[tid], "st": vs,
                "status": st, "role": t["assigned_agent"]["agent_id"], "model": meta.get("model"), "effort": meta.get("effort"),
                "attempt": meta.get("attempt") or (t["state"].get("rejection_count", 0) or 0) + 1,
                "started_at": started, "ended_at": ended, "depends_on": deps[tid], "waiting_on": waiting,
                "unlocks": [x for x in sorted(by_id) if tid in deps[x]],
                "approval": hold["request_id"] if hold else None, "approval_title": hold.get("title") if hold else None,
-               "approval_at": hold.get("created_at") if hold else None, "denied": denies.get(tid),
+               "approval_at": hold.get("created_at") if hold else None, "denied": denied, "denials": denials,
                "tdd": tdd.get(tid, [0, 0]), "rejections": t["state"].get("rejection_count", 0) or 0,
                "last_action": last["last_action"] if last else None, "last_action_at": last["last_action_at"] if last else None}
         rows.append(row)
         events[tid] = [{"at": e["timestamp"], "type": e["event_type"], "text": e.get("summary")} for e in evs][-8:]
         if started:
-            bars, marks = _lane(evs, vs, row["denied"])
+            bars, marks = _lane(evs, vs, row["denied"], denies.get(tid) or [])
             lanes.append({"key": tid, "label": "%s · %s" % (row["role"], tid), "task_id": tid, "st": vs, "child": False,
                           "bars": bars, "marks": marks})
             for aid in order:
@@ -360,6 +491,8 @@ def board(aisef_dir, loaded, log, now):
         if a["role"] == "validator" and not a["parent_id"]:
             lanes.append({"key": aid, "label": "validator", "task_id": None, "st": "val" if a["running"] else "done", "child": False,
                           "marks": [], "bars": [{"kind": "val" if a["running"] else "done", "start": a["started_at"], "end": a["ended_at"]}]})
+
+    fwaves = feature_waves(loaded, rows, status)
 
     waves = {}
     for r in rows:
@@ -381,6 +514,7 @@ def board(aisef_dir, loaded, log, now):
                                                              "espera" if len(wait) == 1 else "esperam"))
     starts = [r["started_at"] for r in rows if r["started_at"]] + [a["started_at"] for a in agents.values() if a["started_at"]]
     return {"tasks": rows, "events": events, "lanes": lanes, "waves": sorted(waves.values(), key=lambda w: w["wave"]),
+            "feature_waves": fwaves,
             "agents": [agents[a] for a in order], "headline": head[0].upper() + head[1:],
             "detail": ("; ".join(detail) + ".").replace("; ", ". ", 1) if detail else "",
             "since": min(starts, key=lambda s: _parse(s) or now) if starts else None}
@@ -403,10 +537,14 @@ def derive_live(aisef_dir, loaded, log, now=None):
         nxt = {"phase": None, "steps": [], "stop_reason": None, "stop_detail": "next indisponivel: %s" % exc,
                "warnings": [], "actions": []}
     flow = []
+    acc = feature_acceptance(loaded.get("approvals"))
     for f in loaded["features"]:
-        stage = feature_stage(f, tasks)
+        stage = feature_stage(f, tasks, acc.get(f["feature_id"]))
+        mine = [t["state"]["status"] for t in tasks if t["feature_id"] == f["feature_id"]]
         flow.append({"feature_id": f["feature_id"], "title": f.get("title"), "stage": stage,
-                     "stage_label": dict(STAGES)[stage], "mermaid": flow_mermaid(stage)})
+                     "stage_label": dict(STAGES)[stage], "mermaid": flow_mermaid(stage),
+                     "status": feature_status(f, mine, acc.get(f["feature_id"])),
+                     "acceptance": (acc.get(f["feature_id"]) or {}).get("status")})
     try:
         import aisef_learn
         learning = [{"id": e["id"], "trigger": e["lesson"]["trigger"], "action": e["lesson"]["action"],

@@ -36,6 +36,7 @@ import aisef_project  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python -I nao poe a pasta do script no path
 from panel_mermaid import *  # noqa: E402,F401,F403  (H-01)
 from panel_mermaid import _UNSAFE_LABEL  # noqa: E402,F401
+import panel_live  # noqa: E402
 
 BUILDER_VERSION = "0.2.0"
 SEVERITY = {"low": 0, "medium": 1, "high": 2, "critical": 3}
@@ -203,6 +204,40 @@ def attention_summary(project, loaded, log):
             "tokens_per_completed_task_median": done_tokens[len(done_tokens) // 2] if done_tokens else None}
 
 
+def report_kind(rp):
+    """Papel de um relatorio: validation (validador independente), review (revisor) ou execution (executor da fatia)."""
+    rid = rp.get("report_id") or ""
+    role = (rp.get("agent") or {}).get("role") or (rp.get("agent") or {}).get("agent_id")
+    if role == "validator" or rid.endswith("-VAL"):
+        return "validation"
+    if "-REV-" in rid or (rp.get("review") and role != "validator"):
+        return "review"
+    return "execution"
+
+
+def agent_work(reports):
+    """{agent_id: {executed, reviews, validations}}: fatias distintas em que cada agente trabalhou, pelo papel real
+    (o contrato da tarefa so registra o executor; revisores e validador aparecem nos relatorios)."""
+    seen = {}
+    for rp in reports:
+        aid = (rp.get("agent") or {}).get("agent_id")
+        if not aid or not rp.get("task_id"):
+            continue
+        key = {"execution": "executed", "review": "reviews", "validation": "validations"}[report_kind(rp)]
+        seen.setdefault(aid, {"executed": set(), "reviews": set(), "validations": set()})[key].add(rp["task_id"])
+    return {aid: {k: len(v) for k, v in d.items()} for aid, d in seen.items()}
+
+
+def timeline_detail(e):
+    """Detalhe curto de um evento para a linha do tempo: o motivo e o comando de uma negacao/pergunta do gateway."""
+    d = e.get("data") or {}
+    if e.get("event_type") != "tool_used" or not isinstance(d, dict):
+        return None
+    parts = [str(d.get("reason") or "").strip(), " ".join(str(d.get("target") or "").split())]
+    text = " — ".join(p for p in parts if p)
+    return text[:240] or None
+
+
 def derive(loaded, log, integrity):
     features = loaded["features"]
     tasks = loaded["tasks"]
@@ -254,16 +289,21 @@ def derive(loaded, log, integrity):
             })
 
     feature_rows = []
+    accepted = panel_live.feature_acceptance(approvals)
     for f in features:
         fid = f["feature_id"]
         ft = [r for r in task_rows if r["feature_id"] == fid]
         done = sum(1 for r in ft if r["status"] == "completed")
         fr = [r for r in rtm_rows if r["feature_id"] == fid]
+        acc = accepted.get(fid)
         feature_rows.append({
             "feature_id": fid, "title": f["title"], "cycle": f["cycle"]["number"],
             "business_priority": f["business_priority"]["level"], "status": f["state"]["status"],
+            # estado efetivo: o contrato fica em approved_for_execution depois do aceite; o pedido feature_acceptance decide
+            "effective_status": panel_live.feature_status(f, [r["status"] for r in ft], acc),
+            "accepted_at": acc["at"] if acc and acc["status"] == "approved" else None,
             "plan_approval": f["approval"]["plan"]["status"],
-            "acceptance": f["approval"].get("acceptance", {}).get("status", "pending"),
+            "acceptance": (acc or {}).get("status") or f["approval"].get("acceptance", {}).get("status", "pending"),
             "tasks_total": len(ft), "tasks_completed": done,
             "tasks_blocked": sum(1 for r in ft if r["status"] == "blocked"),
             "progress_pct": int(round(100 * done / len(ft))) if ft else 0,
@@ -319,6 +359,7 @@ def derive(loaded, log, integrity):
         })
 
     agent_rows = []
+    work = agent_work(reports)
     for ag in agents:
         mine = [r for r in task_rows if r["agent_id"] == ag["agent_id"]]
         agent_rows.append({
@@ -326,6 +367,7 @@ def derive(loaded, log, integrity):
             "contract_version": ag["contract_version"],
             "tasks_in_progress": [r["task_id"] for r in mine if r["status"] == "in_progress"],
             "tasks_assigned_total": len(mine),
+            "work": work.get(ag["agent_id"], {"executed": 0, "reviews": 0, "validations": 0}),
         })
 
     risk_rows = []
@@ -349,6 +391,7 @@ def derive(loaded, log, integrity):
         "event_type": e["event_type"], "actor_type": e["actor"]["type"], "actor_id": e["actor"]["id"],
         "summary": e["summary"], "feature_id": e.get("feature_id"), "task_id": e.get("task_id"),
         "hash": e.get("hash"), "prev_hash": e.get("prev_hash"), "signed": bool(e.get("signature")),
+        "detail": timeline_detail(e),
     } for e in reversed(visible)][:200]
 
     nodes = [{"id": r["task_id"], "feature_id": r["feature_id"], "title": r["title"], "status": r["status"]} for r in task_rows]
@@ -393,6 +436,7 @@ def derive(loaded, log, integrity):
         cr = rp["criteria_results"]
         exec_rows.append({
             "report_id": rp["report_id"], "task_id": rp["task_id"], "status": rp["status"],
+            "kind": report_kind(rp), "agent_id": (rp.get("agent") or {}).get("agent_id"),
             "finished_at": rp["timing"]["finished_at"],
             "tests": {k: rp["tests"][k] for k in ("executed", "passed", "failed", "skipped")},
             "criteria": {"met": sum(1 for c in cr if c["result"] == "met"),
@@ -418,7 +462,7 @@ def derive(loaded, log, integrity):
 
     return {
         "overview": overview, "features": feature_rows, "tasks": task_rows, "rtm": rtm_rows,
-        "approvals": {"pending": pending, "recent": decided_items[:10]},
+        "approvals": {"pending": pending, "recent": decided_items[:10], "decided": decided_items},
         "decisions": decisions, "agents": agent_rows, "risks": risk_rows, "timeline": timeline,
         "graphs": {"dependencies": {"nodes": nodes, "edges": edges, "missing_nodes": missing_nodes,
                                     "waves": waves, "mermaid": "\n".join(lines)}},

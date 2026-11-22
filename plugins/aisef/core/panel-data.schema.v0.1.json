@@ -81,7 +81,9 @@
           "progress_pct": { "type": "integer", "minimum": 0, "maximum": 100 },
           "requirements_total": { "type": "integer", "minimum": 0 },
           "requirements_covered": { "type": "integer", "minimum": 0 },
-          "risks_open": { "type": "integer", "minimum": 0 }
+          "risks_open": { "type": "integer", "minimum": 0 },
+          "effective_status": { "type": "string", "description": "Opcional (0.16): estado efetivo no painel. accepted (aceite aprovado e fatias encerradas), acceptance_rejected, acceptance_changes_requested, awaiting_acceptance, closed ou o estado do contrato." },
+          "accepted_at": { "type": ["string", "null"], "description": "Opcional (0.16): quando o aceite da feature foi aprovado." }
         }
       }
     },
@@ -138,7 +140,8 @@
       "required": ["pending", "recent"],
       "properties": {
         "pending": { "type": "array", "items": { "$ref": "#/$defs/approval_item" }, "description": "Ordenado por: mais tarefas bloqueadas, maior risco, expira antes." },
-        "recent": { "type": "array", "items": { "$ref": "#/$defs/approval_item" } }
+        "recent": { "type": "array", "items": { "$ref": "#/$defs/approval_item" } },
+        "decided": { "type": "array", "items": { "$ref": "#/$defs/approval_item" }, "description": "Opcional (0.16): todos os pedidos decididos, do mais recente ao mais antigo." }
       }
     },
 
@@ -181,7 +184,16 @@
           "status": { "type": "string" },
           "contract_version": { "type": "integer", "minimum": 1 },
           "tasks_in_progress": { "type": "array", "items": { "type": "string" } },
-          "tasks_assigned_total": { "type": "integer", "minimum": 0 }
+          "tasks_assigned_total": { "type": "integer", "minimum": 0 },
+          "work": {
+            "type": "object", "additionalProperties": false, "required": ["executed", "reviews", "validations"],
+            "description": "Opcional (0.16): fatias distintas em que o agente trabalhou, pelo papel real nos relatorios (executou, revisou, validou).",
+            "properties": {
+              "executed": { "type": "integer", "minimum": 0 },
+              "reviews": { "type": "integer", "minimum": 0 },
+              "validations": { "type": "integer", "minimum": 0 }
+            }
+          }
         }
       }
     },
@@ -223,7 +235,8 @@
           "task_id": { "type": ["string", "null"] },
           "hash": { "type": ["string", "null"], "description": "Opcional (0.2.0): hash do evento, para o bloco da cadeia." },
           "prev_hash": { "type": ["string", "null"] },
-          "signed": { "type": "boolean" }
+          "signed": { "type": "boolean" },
+          "detail": { "type": ["string", "null"], "description": "Opcional (0.16): motivo e comando resumidos de um evento do gateway." }
         }
       }
     },
@@ -349,7 +362,9 @@
             }
           },
           "evidence_count": { "type": "integer", "minimum": 0 },
-          "intervention_needed": { "type": "boolean" }
+          "intervention_needed": { "type": "boolean" },
+          "kind": { "enum": ["execution", "review", "validation"], "description": "Opcional (0.16): papel do relatorio (executor, revisor ou validador)." },
+          "agent_id": { "type": ["string", "null"] }
         }
       }
     },
