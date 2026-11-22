@@ -40,6 +40,7 @@ SUITES = [
     ("despacho e validacao em lote (dispatch, precheck)", [os.path.join(CORE, "test_dispatch.py")]),
     ("metricas (metrics)", [os.path.join(CORE, "test_metrics.py")]),
     ("hook de subagentes (tarefa, tokens, duracao)", [os.path.join(HOOKS, "test_agent_events.py")]),
+    ("outras sessoes: deteccao e coordenacao", [os.path.join(HOOKS, "test_sessions.py")]),
     ("Approval Center: request e decide reforcado", [os.path.join(CORE, "test_request_decide.py")]),
     ("context engineering (pack, memoria, check_knowledge)", [os.path.join(CORE, "test_context.py")]),
     ("autoridade de design (tokens, design_check)", [os.path.join(CORE, "test_design.py")]),

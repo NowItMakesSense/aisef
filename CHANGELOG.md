@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+### Outra sessão no mesmo projeto: detecção e coordenação
+Duas sessões do Claude Code no mesmo projeto (mesma pasta ou worktrees) refaziam o trabalho uma da outra sem saber, e um `git add -A` podia levar o trabalho da outra para o commit. Agora cada sessão deixa um registro em `.aisef/runtime/sessions/` (fora do Git; worktrees gravam no projeto principal), com batimento pelo gateway e os arquivos editados pela auditoria (`core/aisef_sessions.py`).
+- **Áreas separadas.** Cada sessão reserva a sua área (`aisef_sessions.py claim`); ao disparar uma fatia, a reserva é automática (`scope.paths_allowed` + `exclusive_files`) e é solta quando o executor entrega. Quando aparece outra sessão, ou a área dela muda, o gateway avisa as demais (uma vez por mudança) para ficarem fora dela e reservarem a sua; `claim` sobre uma área já reservada sai 3 para combinar com o usuário.
+- **Barreira.** Editar na área reservada por outra sessão, ou num arquivo que ela tem alterado sem commit, faz o gateway perguntar, dizendo quem, onde e como ver o diff.
+- **Antes de commit, push, PR ou merge**, o gateway mostra as mudanças sem commit das outras sessões (arquivos, branch, diffstat e `git -C <pasta> diff HEAD`), inclusive na mesma pasta. As worktrees das fatias da própria sessão não contam; o que já foi commitado lá, ou está esquecido há dias sem sessão, não incomoda.
+- O doctor avisa no início da sessão; `aisef_sessions.py status --diff` mostra tudo; a skill `aisef` explica o procedimento.
+
 ### Painel com informação certa e mais fácil de ler
 Veio do uso real (HireMe, 8 features e mais de 2.000 eventos no log): o painel mostrava features aceitas como "Aprovada p/ execução", misturava fatias de features diferentes nas mesmas ondas, acendia alarme vermelho em fatias já concluídas e contava zero trabalho para revisores e validador.
 - **Feature aceita aparece como aceita.** O estado vem do pedido `feature_acceptance` mais recente da feature: aceite aprovado com todas as fatias encerradas vira "Aceita" (com a data) e a etapa "Encerrada" fica concluída, mesmo com o contrato ainda em `approved_for_execution`. Aceite recusado e alterações pedidas aparecem como tal; fatias encerradas sem aceite decidido viram "Aguardando aceite", e feature com fatia já despachada vira "Em execução". Campos novos `effective_status` e `accepted_at` em `features` (opcionais no schema). Em Features e fatias, as aceitas ficam recolhidas num bloco.
