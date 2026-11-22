@@ -135,6 +135,75 @@ check("etapas: sem plano aprovado = Plano; tudo concluido = Revisao; fechada = E
                                    [{"feature_id": "F", "state": {"status": "completed"}}]) == "review"
       and panel_live.feature_stage({"feature_id": "F", "state": {"status": "closed"}}, []) == "closed")
 
+# ---------------------------------------------------------------- 0.16: regras derivadas novas do painel
+F1 = {"feature_id": "F1", "state": {"status": "approved_for_execution"}, "approval": {"plan": {"status": "approved"}}}
+
+
+def acc_req(rid, fid, status, created):
+    return {"request_id": rid, "request_type": "feature_acceptance", "feature_id": fid, "status": status, "created_at": created,
+            "decision": {"decided_at": created} if status != "pending" else None}
+
+
+acc = panel_live.feature_acceptance([acc_req("APR-1", "F1", "changes_requested", "2026-11-20T10:00:00-03:00"),
+                                     acc_req("APR-2", "F1", "approved", "2026-11-21T10:00:00-03:00"),
+                                     acc_req("APR-3", "F2", "expired", "2026-11-21T10:00:00-03:00"),
+                                     {"request_id": "APR-4", "request_type": "plan_approval", "feature_id": "F3", "status": "approved", "created_at": "x"}])
+check("aceite: vale o pedido feature_acceptance mais recente; expirado e outros tipos nao contam",
+      acc["F1"]["status"] == "approved" and acc["F1"]["request_id"] == "APR-2" and "F2" not in acc and "F3" not in acc, acc)
+fs = panel_live.feature_status
+check("feature aceita: contrato em approved_for_execution + aceite aprovado + fatias concluidas = accepted",
+      fs(F1, ["completed", "cancelled"], {"status": "approved"}) == "accepted")
+check("aceite recusado / alteracoes pedidas / sem decisao com as fatias concluidas",
+      fs(F1, ["completed"], {"status": "rejected"}) == "acceptance_rejected"
+      and fs(F1, ["completed"], {"status": "changes_requested"}) == "acceptance_changes_requested"
+      and fs(F1, ["completed"], {"status": "pending"}) == "awaiting_acceptance" and fs(F1, ["completed"], None) == "awaiting_acceptance")
+check("aceite antigo nao fecha feature com fatia aberta (novo ciclo); fatia saiu = em execucao",
+      fs(F1, ["completed", "in_progress"], {"status": "approved"}) == "in_execution" and fs(F1, ["ready"], None) == "approved_for_execution")
+check("etapa: feature aceita fica em Encerrada (nao para em Revisao e aceite)",
+      panel_live.feature_stage(F1, [{"feature_id": "F1", "state": {"status": "completed"}}], {"status": "approved"}) == "closed"
+      and panel_live.feature_stage(F1, [{"feature_id": "F1", "state": {"status": "completed"}}], {"status": "rejected"}) == "review")
+
+H = [{"at": "2026-11-21T10:00:00-03:00", "text": "cd x", "reason": "r1"}, {"at": "2026-11-21T10:05:00-03:00", "text": "cd y", "reason": "r2"}]
+EV = [{"timestamp": "2026-11-21T09:00:00-03:00"}]
+den, hist = panel_live.deny_state(H, EV + [{"timestamp": "2026-11-21T11:00:00-03:00"}], "done", None)
+check("negacao em fatia concluida: sem alarme, so o historico (contagem e a ultima)",
+      den is None and hist["count"] == 2 and hist["last_text"] == "cd y" and hist["last_reason"] == "r2", (den, hist))
+den, _ = panel_live.deny_state(H, EV, "run", None)
+check("negacao em fatia rodando e ultima coisa que aconteceu: alarme", den and den["text"] == "cd y", den)
+den, _ = panel_live.deny_state(H, EV, "run", "2026-11-21T13:06:00+00:00")
+check("negacao em fatia rodando, mas o agente seguiu adiante depois: sem alarme", den is None, den)
+
+rows = [{"task_id": "T-1", "feature_id": "FA", "wave": 1, "st": "done", "started_at": "2026-11-20T20:01:00-03:00", "ended_at": "2026-11-20T20:30:00-03:00"},
+        {"task_id": "T-5", "feature_id": "FB", "wave": 1, "st": "run", "started_at": "2026-11-21T18:00:00-03:00", "ended_at": None},
+        {"task_id": "T-6", "feature_id": "FB", "wave": 3, "st": "dep", "started_at": None, "ended_at": None}]
+fw = panel_live.feature_waves({"features": [dict(F1, feature_id="FA", title="A"), dict(F1, feature_id="FB", title="B")],
+                               "approvals": [acc_req("APR-9", "FA", "approved", "2026-11-20T21:00:00-03:00")]},
+                              rows, {"T-1": "completed", "T-5": "in_progress", "T-6": "ready"})
+check("ondas agrupadas por feature: ativa primeiro, aceita depois; ondas numeradas dentro da feature, com o despacho",
+      [g["feature_id"] for g in fw] == ["FB", "FA"] and [w["wave"] for w in fw[0]["waves"]] == [1, 2]
+      and fw[0]["waves"][1]["tasks"] == ["T-6"] and fw[0]["waves"][0]["dispatched_at"].startswith("2026-11-21T18")
+      and fw[1]["status"] == "accepted" and fw[1]["active"] is False and rows[2]["feature_wave"] == 2, fw)
+check("mapa: o board traz as ondas por feature", BD["feature_waves"] and BD["feature_waves"][0]["feature_id"] == "FEAT-002"
+      and BD["feature_waves"][0]["waves"][0]["wave"] == 1, BD.get("feature_waves"))
+
+rtp = panel_live.runtime_path(os.path.join(proj, ".aisef"))
+with open(rtp, "a", encoding="utf-8") as fh:
+    for ev in ({"event": "start", "at": "2026-01-01T10:00:00+00:00", "agent_id": "ag-old", "agent_type": "aisef:code-reviewer"},
+               {"event": "start", "at": "2026-01-01T10:00:00+00:00", "agent_id": "ag-old", "agent_type": "aisef:code-reviewer"}):
+        fh.write(json.dumps(ev) + "\n")
+b2 = build_panel.build(os.path.join(proj, ".aisef"), os.path.join(work, "panel2"), HERE)
+old = [a for a in b2["live"]["board"]["agents"] if a["agent_id"] == "ag-old"]
+check("agente sem SubagentStop e parado ha horas nao conta como rodando; start repetido vira um agente so",
+      len(old) == 1 and old[0]["running"] is False and old[0]["end_missing"] is True
+      and not any(a["agent_id"] == "ag-old" for a in b2["live"]["agents_in_flight"]), old)
+
+ciclo = {"red": {"exit_code": 1}, "green": {"exit_code": 0}}
+check("TDD: relatorio de revisor ou validador (sem ciclos) nao zera a contagem do executor; tentativas somam",
+      panel_live.tdd_counts([{"task_id": "T-9", "tdd_evidence": {"cycles": [ciclo, ciclo]}},
+                             {"task_id": "T-9", "verdict": "APPROVE"},
+                             {"task_id": "T-9", "tdd_evidence": {"cycles": [ciclo]}},
+                             {"task_id": "T-9", "status": "validated"}]) == {"T-9": [3, 3]})
+
 # servidor local
 build_panel.install_page(out)
 httpd, url = panel_live.serve(os.path.join(proj, ".aisef"), out,

@@ -116,6 +116,25 @@ check("data.js nao contem '<' cru (seguro para inclusao em pagina)", "<" not in 
 check("chave privada nao esta no projeto (so a publica)", not any("PRIVATE" in open(os.path.join(dp, fn), "rb").read().decode("latin1")
       for dp, _, fns in os.walk(os.path.join(base, "project")) for fn in fns))
 
+# 0.16: estado efetivo da feature, trabalho por papel, detalhe do gateway, decididas completas
+check("feature com fatias abertas: estado efetivo em execucao, sem aceite", f["effective_status"] == "in_execution" and f["accepted_at"] is None, )
+check("aprovacoes decididas: lista completa alem das 10 recentes",
+      [a["request_id"] for a in b["approvals"]["decided"]][:len(b["approvals"]["recent"])] == [a["request_id"] for a in b["approvals"]["recent"]])
+W = build_panel.agent_work([
+    {"report_id": "RPT-T-1-1", "task_id": "T-1", "agent": {"agent_id": "implementer", "role": "implementer"}},
+    {"report_id": "RPT-T-1-2", "task_id": "T-1", "agent": {"agent_id": "implementer", "role": "implementer"}},
+    {"report_id": "RPT-T-1-REV-code-reviewer", "task_id": "T-1", "agent": {"agent_id": "code-reviewer", "role": "code-reviewer"}, "review": {}},
+    {"report_id": "RPT-T-2-REV-code-reviewer", "task_id": "T-2", "agent": {"agent_id": "code-reviewer", "role": "code-reviewer"}},
+    {"report_id": "RPT-T-1-VAL", "task_id": "T-1", "agent": {"agent_id": "validator", "role": "validator"}, "review": {}}])
+check("trabalho por papel real: executor conta fatias executadas, revisor revisoes, validador validacoes (fatias distintas)",
+      W == {"implementer": {"executed": 1, "reviews": 0, "validations": 0}, "code-reviewer": {"executed": 0, "reviews": 2, "validations": 0},
+            "validator": {"executed": 0, "reviews": 0, "validations": 1}}, )
+check("agentes do painel trazem o trabalho por papel", all(set(a["work"]) == {"executed", "reviews", "validations"} for a in b["agents"]))
+check("execucoes marcam o papel do relatorio", all(e["kind"] in ("execution", "review", "validation") for e in b["executions"]))
+dt = build_panel.timeline_detail({"event_type": "tool_used", "data": {"gateway": "deny", "reason": "sem permissao", "target": "cat   .env"}})
+check("linha do tempo: negacao do gateway traz motivo e comando resumidos", dt == "sem permissao — cat .env"
+      and build_panel.timeline_detail({"event_type": "task_completed", "data": {}}) is None)
+
 mutated = copy.deepcopy(b); mutated["manifest"]["derived"] = False
 check("schema rejeita manifesto que nao e derivado", bool(list(validator.iter_errors(mutated))))
 mutated = copy.deepcopy(b); mutated["manifest"]["contains_model_reasoning"] = True
@@ -219,6 +238,7 @@ else:
 print("--- pagina HTML")
 html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
 check("uma unica atribuicao a .innerHTML na pagina (saida do Mermaid em modo strict)", len(re.findall(r"\.innerHTML\s*=", html)) == 1 and 'securityLevel: "strict"' in html)
+check("favicon embutido (sem 404 de /favicon.ico)", '<link rel="icon" href="data:image/svg+xml' in html)
 check("sem eval, document.write nem outerHTML", not re.search(r"\beval\s*\(|document\.write|outerHTML|insertAdjacentHTML", html))
 script = re.findall(r"<script>(.*?)</script>", html, re.S)[0]
 js_path = os.path.join(work, "panel_script.js")
@@ -254,21 +274,21 @@ if chrome:
         "overview": ["Integridade do histórico verificada", "Mapa de execução", "Em paralelo", "Fatias"],
         "features": ["FEAT-001", "Autenticacao JWT", "1/3 fatias", "Grafo de dependências"],
         "tasks": ["T-001", "Gerar access token", "Execuções entregues", "RPT-001"],
-        "rtm": ["REQ-001 v1", "Coberto", "Não iniciado"],
+        "rtm": ["REQ-001", "Coberto", "Não iniciado", "FEAT-001"],
         "approvals": ["Escopo de trabalho em dev para a T-003", "o trabalho independente continua", "APR-000", "Decida no chat", "aisef_project.py decide --project . --request APR-001 --choice approve"],
         "decisions": ["Algoritmo de assinatura do JWT", "seguiu a recomendação", "HS256"],
         "agents": ["Agente Backend", "Agente Validador"],
         "risks": ["Algoritmo de assinatura mal escolhido", "Regressao nas rotas protegidas"],
-        "timeline": ["T-001 concluida", "Escopo para T-003 aguardando aprovacao"],
+        "timeline": ["concluida", "Escopo para T-003 aguardando aprovacao"],
         "engineering": ["Desenho tecnico da autenticacao JWT", "POST /auth/token", "Token forjado", "dado pessoal", "MIG-1"],
         # telas novas (hash canonico), com os mesmos conteudos
         "agora": ["Integridade do histórico verificada", "1 decisão sua", "Esperando você", "Mapa de execução", "Em paralelo", "esperando outra fatia"],
         "trabalho": ["FEAT-001", "Gerar access token", "Execuções entregues", "1/3 fatias"],
         "mapa": ["Mapa dos agentes", "Quem disparou quem", "Orquestrador"],
-        "rastreabilidade": ["REQ-001 v1", "Coberto", "Cobertura"],
+        "rastreabilidade": ["REQ-001", "Coberto", "Cobertura", "cobertos"],
         "governanca": ["Escopo de trabalho em dev para a T-003", "HS256", "Regressao nas rotas protegidas"],
         "governanca/decisoes": ["seguiu a recomendação"],
-        "historico": ["T-001 concluida", "Origem dos dados", "hash "],
+        "historico": ["concluida", "Origem dos dados", "hash ", 'class="day"', "eventos"],
         "agentes": ["Agente Backend", "Despachos por modelo"] if False else ["Agente Backend", "Agente Validador"],
         "dependencias": [],
         "deps": [],  # tratado a parte: SVG do Mermaid (com internet) ou codigo de fallback (sem internet)

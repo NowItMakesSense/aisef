@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Painel AISEF</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23121417'/%3E%3Ctext x='16' y='22' font-family='Segoe UI,Arial,sans-serif' font-size='17' font-weight='700' fill='%23ffffff' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
 <style>
 /* Layout: trilho de icones 56px + area de trabalho; barra do topo e gaveta de detalhe em vidro (pedido do usuario);
    dados em superficies opacas. Grade da area: 1fr 360px, gap 20px. Estados codificados por forma + icone + cor. */
@@ -252,7 +253,7 @@ td .glyph { width: 22px; height: 22px; } td .glyph::before { inset: -2px; border
 .kv dt { color: var(--faint); } .kv dd { margin: 0; }
 .drawer h4 { margin: 0 0 6px; font-size: 12.5px; color: var(--faint); font-weight: 500; }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; }
-.steps li { display: grid; grid-template-columns: 52px 1fr; gap: 8px; }
+.steps li { display: grid; grid-template-columns: 84px 1fr; gap: 8px; }
 .steps time { color: var(--faint); font: 12px var(--mono); }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .top, .drawer { background: var(--surface); } }
 @media (prefers-reduced-transparency: reduce) { .top, .drawer { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; } }
@@ -382,7 +383,7 @@ dialog#zoom svg { max-width: none; }
 .meter { height: 6px; border-radius: 4px; background: var(--wait-soft); overflow: hidden; }
 .meter i { display: block; height: 100%; background: var(--done); }
 .kv.wide { grid-template-columns: 160px 1fr; padding: 14px 18px; }
-#p-attn .kv { margin: 0; }
+#p-attn .kv { margin: 0; grid-template-columns: 118px 1fr; }
 /* busca global (Ctrl K) */
 .palette { position: fixed; inset: 0; z-index: 40; display: none; align-items: flex-start; justify-content: center; padding-top: 12vh; background: rgba(10,12,16,.35); }
 .palette.open { display: flex; }
@@ -509,6 +510,57 @@ a.btn.primary { color: var(--ground); }
 .now::before { top: auto; bottom: -18px; }
 .lanes { padding-bottom: 24px; }
 @media (max-width: 760px) { .nowline { left: 120px !important; } }
+
+/* ---- 0.16: mapa por feature, nos com titulo em 2 linhas, historico por dia, filtros ---- */
+.node { grid-template-rows: auto auto auto; align-content: center; }
+.node .glyph { grid-row: 1 / span 3; }
+.node .t1 { align-items: start; }
+.node .title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; line-height: 1.3; overflow-wrap: anywhere; }
+.node .t3 { grid-column: 2; font-size: 12px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.node .nden { position: absolute; top: 6px; right: 8px; color: var(--faint); display: inline-flex; }
+.node .nden svg.i { width: 12px; height: 12px; }
+.mband { position: absolute; right: 0; border-radius: 12px; background: color-mix(in srgb, var(--raised) 60%, transparent); border: 1px dashed var(--rule); }
+.mband.active { border-style: solid; border-color: var(--border); background: transparent; }
+.mbandhead { position: absolute; display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.mbandhead .ft { font-weight: 600; color: var(--text); max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+.mbandhead .tg { border: 1px solid var(--border); background: var(--surface); border-radius: 6px; height: 24px; padding: 0 8px; font-size: 12px; color: var(--muted); }
+.mbandhead .tg:hover { color: var(--text); border-color: var(--edge); }
+.chip.ok { color: var(--done); background: var(--done-soft); border-color: transparent; }
+.chip.run { color: var(--run); background: var(--run-soft); border-color: transparent; }
+.chip.you { color: var(--you); background: var(--you-soft); border-color: transparent; }
+.chip.bad { color: var(--fail); background: var(--fail-soft); border-color: transparent; }
+.mk.st-todo { color: var(--faint); border-style: dashed; }
+.hist li.day { display: block; padding: 14px 0 6px; border-bottom: 0; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.hist li.day:first-child { padding-top: 4px; }
+.hist .det { display: block; margin-top: 2px; font: 12px var(--mono); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist .seq { font: 11.5px var(--mono); color: var(--faint); white-space: nowrap; }
+.kv dd small { display: block; color: var(--faint); font: 12px var(--font); margin-top: 2px; }
+.attn-bar { display: flex; height: 6px; border-radius: 4px; overflow: hidden; margin-top: 6px; background: var(--wait-soft); }
+.attn-bar i { display: block; height: 100%; }
+.note { margin: 0; padding: 0 18px 14px; color: var(--faint); font-size: 12px; }
+.calmbar { display: flex; gap: 10px; align-items: center; padding: 12px 18px; border-radius: var(--r-card); border: 1px solid var(--border); background: var(--surface); font-size: 13.5px; color: var(--muted); }
+.calmbar b { color: var(--text); }
+.filters select { height: 30px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); padding: 0 8px; font: inherit; font-size: 12.5px; max-width: 100%; }
+.morebar { display: flex; justify-content: center; padding: 10px 18px 14px; border-top: 1px solid var(--rule); }
+details.grp { border-top: 1px solid var(--rule); }
+details.grp:first-child { border-top: 0; }
+details.grp > summary { list-style: none; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 18px; font-size: 13px; color: var(--muted); }
+details.grp > summary::-webkit-details-marker { display: none; }
+details.grp > summary::before { content: "▸"; color: var(--faint); width: 10px; }
+details.grp[open] > summary::before { content: "▾"; }
+details.grp > summary b { color: var(--text); font-weight: 600; }
+details.grp > summary:hover { background: var(--raised); }
+details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; padding: 14px 18px; }
+.ccard { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; font-size: 13px; background: var(--surface); }
+.ccard .h { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.ccard p { margin: 0; color: var(--muted); }
+.ccard .s { color: var(--faint); font-size: 12px; }
+.state .who .more { color: var(--muted); font-weight: 600; }
+.phead .tools { max-width: 100%; min-width: 0; }
+.phead .tools > .seg { max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
+.phead .tools .seg button { white-space: nowrap; flex: none; }
+@media (max-width: 760px) { .hist li { grid-template-columns: 44px 24px 1fr; } .hist .seq { display: none; } }
 </style>
 </head>
 <body>
@@ -612,6 +664,21 @@ a.btn.primary { color: var(--ground); }
     return Math.floor(h / 24) + " d";
   }
   function since(s) { var t = ptime(s); return t ? dur(nowMs() - t) : "—"; }
+  function dayKey(t) { var d = new Date(t); return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); }
+  /* hora quando e hoje; dia e hora quando nao e (o log cobre varios dias) */
+  function stamp(s) { var t = ptime(s); return !t ? "—" : dayKey(t) === dayKey(nowMs()) ? hhmm(s) : when(s).replace(",", ""); }
+  function dayLabel(t) {
+    var d = new Date(t), today = dayKey(nowMs()), yest = dayKey(nowMs() - 86400000), k = dayKey(t);
+    var base = d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" });
+    var out = k === today ? "hoje, " + base : k === yest ? "ontem, " + base : base;
+    return out.charAt(0).toUpperCase() + out.slice(1);
+  }
+  function fmtInt(n) { return Number(n || 0).toLocaleString("pt-BR"); }
+  function fstatus(f) { return f.effective_status || f.status; }
+  // Ultima acao de um agente sem o "cd <pasta do projeto> &&" do inicio: o caminho local nao informa nada e empurra
+  // o comando util para fora da linha.
+  function act(s) { return String(s || "").replace(/^(Bash:\s*)?cd\s+("[^"]*"|'[^']*'|\S+)\s*(&&|;)\s*/i, "$1"); }
+  function isClosedF(s) { return s === "accepted" || s === "closed"; }
   function store(k, v) { try { if (v === undefined) return localStorage.getItem("aisef." + k); localStorage.setItem("aisef." + k, v); } catch (e) { return null; } return null; }
   function L() { return D.live || {}; }
   function B() { var b = L().board || {}; return { tasks: b.tasks || [], events: b.events || {}, lanes: b.lanes || [], waves: b.waves || [], agents: b.agents || [], headline: b.headline || "", detail: b.detail || "", since: b.since }; }
@@ -638,8 +705,12 @@ a.btn.primary { color: var(--ground); }
     changes_requested: "Alterações solicitadas", expired: "Expirado", withdrawn: "Retirado", superseded: "Substituído", rejected_req: "Recusado",
     not_started: "Não iniciado", covered: "Coberto", broken_link: "Vínculo quebrado", low: "Baixo", medium: "Médio", high: "Alto", critical: "Crítico",
     plan_approval: "Plano", scope_authorization: "Escopo", operation_approval: "Operação", reinforced_approval: "Aprovação reforçada",
-    git_operation: "Git", architecture_decision: "Decisão arquitetural", scope_change_decision: "Mudança de escopo", feature_acceptance: "Aceite da feature"
+    git_operation: "Git", architecture_decision: "Decisão arquitetural", scope_change_decision: "Mudança de escopo", feature_acceptance: "Aceite da feature",
+    accepted: "Aceita", acceptance_rejected: "Aceite recusado", acceptance_changes_requested: "Alterações pedidas no aceite",
+    active: "ativo", deprecated: "descontinuado", confidential: "confidencial", internal: "interno", public: "público", restricted: "restrito"
   };
+  var FSTATE_CHIP = { accepted: "ok", closed: "ok", in_execution: "run", approved_for_execution: "run", awaiting_acceptance: "you",
+    awaiting_plan_approval: "you", acceptance_rejected: "bad", acceptance_changes_requested: "bad" };
   function lab(v) { return LABEL[v] || String(v === null || v === undefined ? "—" : v); }
   var SEV = { critical: "fail", high: "fail", medium: "you", low: "done" };
   var PHASE = { discovery: "Descoberta", specify: "Especificar (Grill → Spec → Fatias)", approve_plan: "Aprovar o plano",
@@ -740,10 +811,11 @@ a.btn.primary { color: var(--ground); }
   /* ====================================== filtros (sobrevivem a recarregar) ====================================== */
   var feat = store("feat") || "", stFilter = store("st") || "", gapsOnly = store("gaps") === "1", histFilter = store("hist") || "all";
   var impactQ = store("impact") || "";
+  var govType = store("govtype") || "", govFeat = store("govfeat") || "", govAll = store("govall") === "1", bpSel = store("bp") || "", showHash = store("hashes") === "1";
   function visible(t) { return !feat || t.feature_id === feat; }
 
   /* ====================================== mapa de execucao ====================================== */
-  var NODE_W = 228, NODE_H = 58, COL_W = 250, LEFT = 16, TOP = 48, ORCH_W = 150, X0 = 196, GAP = 26, SUB_H = 40, FLAG_H = 22;
+  var NODE_W = 240, NODE_H = 90, COL_W = 264, LEFT = 16, TOP = 12, ORCH_W = 150, X0 = 196, GAP = 18, SUB_H = 40, FLAG_H = 22, BHEAD = 62, BCOLL = 42, BGAP = 14;
   function subsOf(tid) {
     var b = B();
     var mine = b.agents.filter(function (a) { return a.parent_id && a.task_id === tid && a.running; });
@@ -752,43 +824,89 @@ a.btn.primary { color: var(--ground); }
   }
   function loose() { return B().agents.filter(function (a) { return a.running && !a.task_id && a.role !== "validator" && !(a.validating || []).length; }); }
   function nodeMeta(t) {
-    if (t.st === "run") return since(t.started_at) + (t.last_action ? " · " + clip(t.last_action, 60) : "");
+    if (t.st === "run") return "há " + since(t.started_at) + (t.last_action ? " · " + clip(act(t.last_action), 60) : "");
     if (t.st === "val") return "validador · tentativa " + (t.attempt || 1);
     if (t.st === "you") return "parada · " + t.approval;
     if (t.st === "dep") return "aguarda " + t.waiting_on.join(" e ");
-    if (t.st === "done") return t.started_at && t.ended_at ? "em " + dur(ptime(t.ended_at) - ptime(t.started_at)) : "";
+    if (t.st === "done") return t.started_at && t.ended_at ? "levou " + dur(ptime(t.ended_at) - ptime(t.started_at)) : "";
     if (t.st === "fail") return "reprovada " + t.rejections + "× · volta ao executor";
     return t.role;
   }
   function subPill(a) {
     var isVal = a.role === "validator";
     var txt = isVal ? "validator · valida " + (a.validating || []).join(", ") : (a.role || "subagente") + (a.description ? " · " + a.description : "");
-    var full = txt + (a.last_action ? " — " + a.last_action : "");
+    var full = txt + (a.last_action ? " — " + act(a.last_action) : "");
     return el("button", { cls: "sub-node", type: "button", "data-agent": a.agent_id, "aria-pressed": String(drawerId === "agent:" + a.agent_id), title: full + (a.parent_inferred ? " (ligação inferida)" : "") + " · clique para ver o agente" }, [
       el("i", { cls: "glyph " + (isVal ? "g-val" : "g-run") + " mini", "aria-hidden": "true" }, [icon(isVal ? "i-eye" : "i-term")]),
       el("span", { cls: "lbl", text: clip(txt, 46) }), a.parent_inferred && !isVal ? el("span", { cls: "inf", text: "inferido" }) : null]);
   }
-  function renderMap() {
-    var b = B(), map = el("div", { cls: "map" }), pos = {}, waves = {}, maxW = 1;
-    if (!b.tasks.length) return empty("Nenhuma fatia ainda. O mapa aparece quando houver Task Contracts.");
-    b.tasks.forEach(function (t) { (waves[t.wave] = waves[t.wave] || []).push(t); maxW = Math.max(maxW, t.wave); });
-    var colInfo = {}; b.waves.forEach(function (w) { colInfo[w.wave] = w; });
-    var height = TOP;
-    for (var w = 1; w <= maxW; w++) {
-      var x = X0 + (w - 1) * COL_W, y = TOP, info = colInfo[w] || {};
-      map.appendChild(el("div", { cls: "colband", style: "left:" + (x - 11) + "px" }));
-      map.appendChild(el("div", { cls: "colhead", style: "left:" + x + "px" }, [el("b", { text: "Onda " + w }), info.dispatched_at ? "despachada " + hhmm(info.dispatched_at) : "aguardando"]));
-      (waves[w] || []).forEach(function (t) {
-        if (t.approval || t.denied) y += FLAG_H;  // espaco para o selo acima do no
-        pos[t.task_id] = { x: x, y: y }; y += NODE_H + subsOf(t.task_id).length * SUB_H + GAP;
-      });
-      height = Math.max(height, y);
+  /* Na visao "Todas" o mapa tem uma faixa por feature, cada uma com as suas ondas (numeradas dentro da feature) e a data
+     do despacho. Features ativas primeiro; aceitas e encerradas ficam recolhidas numa linha (o clique abre). */
+  var mapOpen = {};
+  (store("mapopen") || "").split(",").forEach(function (k) { if (k) mapOpen[k.slice(1)] = k.charAt(0) === "+"; });
+  function saveMapOpen() { store("mapopen", Object.keys(mapOpen).map(function (k) { return (mapOpen[k] ? "+" : "-") + k; }).join(",")); }
+  function mapGroups() {
+    var b = B(), fw = (L().board || {}).feature_waves;
+    if (!fw || !fw.length) {  // dados antigos, sem feature_waves: uma faixa so, com as ondas globais
+      fw = [{ feature_id: "", title: "", status: "", active: true, tasks_total: b.tasks.length, tasks_done: 0,
+              waves: b.waves.map(function (w) { return { wave: w.wave, tasks: w.tasks, dispatched_at: w.dispatched_at }; }) }];
     }
+    return fw.filter(function (g) { return !feat || !g.feature_id || g.feature_id === feat; });
+  }
+  function bandOpen(g) { if (feat || !g.feature_id) return true; return Object.prototype.hasOwnProperty.call(mapOpen, g.feature_id) ? mapOpen[g.feature_id] : g.active; }
+  function renderMap() {
+    var b = B(), map = el("div", { cls: "map" }), pos = {}, maxCols = 1;
+    if (!b.tasks.length) return empty("Nenhuma fatia ainda. O mapa aparece quando houver Task Contracts.");
+    var groups = mapGroups(), y = TOP, bands = [];
+    groups.forEach(function (g) {
+      var open = bandOpen(g), top = y, bottom = y + BCOLL;
+      if (open) {
+        bottom = y + BHEAD;
+        g.waves.forEach(function (w, i) {
+          var x = X0 + i * COL_W, yy = y + BHEAD;
+          w.tasks.forEach(function (tid) {
+            var t = byId(tid); if (!t) return;
+            if (t.approval || t.denied) yy += FLAG_H;  // espaco para o selo acima do no
+            pos[tid] = { x: x, y: yy }; yy += NODE_H + subsOf(tid).length * SUB_H + GAP;
+          });
+          bottom = Math.max(bottom, yy - GAP + 12);
+        });
+        maxCols = Math.max(maxCols, g.waves.length);
+      }
+      bands.push({ g: g, y: top, h: bottom - top, open: open });
+      y = bottom + BGAP;
+    });
+    var height = Math.max(y - BGAP + 4, TOP + NODE_H);
+    var exp = bands.filter(function (x) { return x.open; });
+    var mid = exp.length ? (exp[0].y + exp[exp.length - 1].y + exp[exp.length - 1].h) / 2 : (TOP + height) / 2;
     var free = loose();
-    var oy = Math.max(TOP, TOP + (height - TOP - GAP) / 2 - NODE_H / 2 - free.length * SUB_H / 2);
+    var oy = Math.max(TOP, mid - NODE_H / 2 - free.length * SUB_H / 2);
     height = Math.max(height, oy + NODE_H + free.length * SUB_H + GAP) + 4;
-    var width = X0 + (maxW - 1) * COL_W + NODE_W + 24;
+    var width = Math.max(X0 + (maxCols - 1) * COL_W + NODE_W + 24, X0 + 640);
     map.style.width = width + "px"; map.style.minHeight = height + "px";  // min: na tela Agora o mapa estica ate a coluna da direita
+    bands.forEach(function (bd) {
+      var g = bd.g, kids = [];
+      if (g.feature_id && !feat) {
+        var tg = el("button", { type: "button", cls: "tg", "aria-expanded": String(bd.open), "aria-label": (bd.open ? "Recolher " : "Mostrar as fatias de ") + g.feature_id,
+          title: bd.open ? "Recolher" : "Mostrar as fatias", text: bd.open ? "▾" : "▸" });
+        tg.addEventListener("click", function () { mapOpen[g.feature_id] = !bd.open; saveMapOpen(); render(false); });
+        kids.push(tg);
+      }
+      map.appendChild(el("div", { cls: "mband" + (g.active ? " active" : ""), style: "left:" + (X0 - 14) + "px;top:" + bd.y + "px;height:" + bd.h + "px" }));
+      if (g.feature_id) kids.push(chip(g.feature_id));
+      if (g.title) kids.push(el("span", { cls: "ft", text: g.title, title: g.title }));
+      if (g.status) kids.push(el("span", { cls: "chip " + (FSTATE_CHIP[g.status] || ""), text: lab(g.status) + (g.accepted_at ? " em " + stamp(g.accepted_at) : "") }));
+      if (!bd.open) kids.push(el("span", { text: g.tasks_done + "/" + g.tasks_total + " fatias concluídas" + (g.last_at ? " · última " + stamp(g.last_at) : "") }));
+      map.appendChild(el("div", { cls: "mbandhead", style: "left:" + X0 + "px;top:" + (bd.y + 9) + "px;max-width:" + (width - X0 - 12) + "px;overflow:hidden" }, kids));
+      if (bd.open) g.waves.forEach(function (w, i) {
+        var x = X0 + i * COL_W;
+        if (i) map.appendChild(el("div", { cls: "colband", style: "left:" + (x - 12) + "px;top:" + (bd.y + 36) + "px;bottom:auto;height:" + (bd.h - 44) + "px" }));
+        map.appendChild(el("div", { cls: "colhead", style: "left:" + x + "px;top:" + (bd.y + 36) + "px" },
+          [el("b", { text: "Onda " + w.wave }), w.dispatched_at ? "despachada " + stamp(w.dispatched_at) : "aguardando"]));
+      });
+    });
+    var activeT = {};
+    groups.forEach(function (g) { if (g.active) g.waves.forEach(function (w) { w.tasks.forEach(function (id) { activeT[id] = 1; }); }); });
     var NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg");
     svg.setAttribute("class", "edges"); svg.setAttribute("width", width); svg.setAttribute("height", height); svg.setAttribute("aria-hidden", "true");
     function path(a, c, cls) {
@@ -797,9 +915,10 @@ a.btn.primary { color: var(--ground); }
       p.setAttribute("class", "edge " + cls); svg.appendChild(p);
     }
     b.tasks.forEach(function (t) {
-      var p = pos[t.task_id], ds = t.depends_on.filter(function (d) { return pos[d]; });
+      var p = pos[t.task_id]; if (!p) return;
+      var ds = t.depends_on.filter(function (d) { return pos[d]; });
       var hot = t.st === "run" || t.st === "val" ? "active" : t.st === "you" ? "blocked" : "";
-      if (!ds.length) path({ x: LEFT + ORCH_W, y: oy + NODE_H / 2 }, { x: p.x, y: p.y + NODE_H / 2 }, t.started_at ? hot : "");
+      if (!t.depends_on.length && activeT[t.task_id]) path({ x: LEFT + ORCH_W, y: oy + NODE_H / 2 }, { x: p.x, y: p.y + NODE_H / 2 }, t.started_at ? hot : "");
       ds.forEach(function (d) { path({ x: pos[d].x + NODE_W, y: pos[d].y + NODE_H / 2 }, { x: p.x, y: p.y + NODE_H / 2 }, hot); });
       subsOf(t.task_id).forEach(function (a, i) {
         var sp = document.createElementNS(NS, "path"), sy = p.y + NODE_H + 8 + i * SUB_H + 15;
@@ -812,21 +931,24 @@ a.btn.primary { color: var(--ground); }
     });
     map.appendChild(svg);
     var n = L().next || {};
-    map.appendChild(el("div", { cls: "node orch", style: "left:" + LEFT + "px;top:" + oy + "px", role: "img", "aria-label": "Orquestrador, sessão principal" }, [
+    map.appendChild(el("div", { cls: "node orch", style: "left:" + LEFT + "px;top:" + oy + "px;height:" + NODE_H + "px", role: "img", "aria-label": "Orquestrador, sessão principal" }, [
       el("i", { cls: "glyph g-run", "aria-hidden": "true" }, [icon("i-orch")]),
       el("span", { cls: "t1" }, [el("span", { cls: "title", text: "Orquestrador" })]),
       el("span", { cls: "t2" }, [el("span", { cls: "meta", text: PHASE[n.phase] ? clip(PHASE[n.phase], 22) : "sessão principal" })])]));
-    free.forEach(function (a, i) { var s = subPill(a); s.style.left = (LEFT + 26) + "px"; s.style.top = (oy + NODE_H + 8 + i * SUB_H) + "px"; map.appendChild(s); });
+    free.forEach(function (a, i) { var s = subPill(a); s.style.left = (LEFT + 26) + "px"; s.style.maxWidth = (X0 - LEFT - 26 - 24) + "px"; s.style.top = (oy + NODE_H + 8 + i * SUB_H) + "px"; map.appendChild(s); });
     b.tasks.forEach(function (t) {
-      var p = pos[t.task_id], s = ST[t.st] || ST.todo, dim = !visible(t) || (stFilter && t.st !== stFilter);
-      var meta = nodeMeta(t);
-      map.appendChild(el("button", { cls: "node s-" + t.st + (dim ? " dim" : ""), type: "button", style: "left:" + p.x + "px;top:" + p.y + "px",
-        "aria-pressed": String(drawerId === t.task_id), "aria-label": t.task_id + " " + t.title + ", " + s.lab, "data-open": t.task_id, title: t.title }, [
+      var p = pos[t.task_id]; if (!p) return;
+      var s = ST[t.st] || ST.todo, dim = !visible(t) || (stFilter && t.st !== stFilter);
+      var meta = nodeMeta(t), dn = !t.denied && t.denials ? t.denials : null;
+      map.appendChild(el("button", { cls: "node s-" + t.st + (dim ? " dim" : ""), type: "button", style: "left:" + p.x + "px;top:" + p.y + "px;width:" + NODE_W + "px;height:" + NODE_H + "px",
+        "aria-pressed": String(drawerId === t.task_id), "aria-label": t.task_id + " " + t.title + ", " + s.lab + (meta ? ", " + meta : ""), "data-open": t.task_id, title: t.task_id + " · " + t.title + (meta ? "\n" + meta : "") }, [
         glyph(t.st),
         el("span", { cls: "t1" }, [el("span", { cls: "title", text: t.title })]),
-        el("span", { cls: "t2" }, [el("span", { cls: "id", text: t.task_id }), el("span", { cls: "st " + s.txt, text: s.lab }), el("span", { cls: "meta", text: meta ? "· " + meta : "" })])]));
+        el("span", { cls: "t2" }, [el("span", { cls: "id", text: t.task_id }), el("span", { cls: "st " + s.txt, text: s.lab })]),
+        el("span", { cls: "t3", text: meta }),
+        dn ? el("span", { cls: "nden", title: plural(dn.count, "negação", "negações") + " do gateway nesta fatia (histórico, não bloqueou). Detalhe na gaveta." }, [icon("i-ban")]) : null]));
       if (t.approval) map.appendChild(el("span", { cls: "flag you", style: "left:" + (p.x + 8) + "px;top:" + (p.y - FLAG_H - 2) + "px" }, [icon("i-hand"), "aprovação " + t.approval]));
-      else if (t.denied) map.appendChild(el("span", { cls: "flag fail", style: "left:" + (p.x + 8) + "px;top:" + (p.y - FLAG_H - 2) + "px", title: "Gateway negou: " + t.denied.text }, [icon("i-ban"), "gateway negou " + clip(t.denied.text, 18)]));
+      else if (t.denied) map.appendChild(el("span", { cls: "flag fail", style: "left:" + (p.x + 8) + "px;top:" + (p.y - FLAG_H - 2) + "px", title: "Gateway negou: " + t.denied.text + (t.denied.reason ? "\n" + t.denied.reason : "") }, [icon("i-ban"), "gateway negou " + clip(t.denied.text, 18)]));
       subsOf(t.task_id).forEach(function (a, i) { var sp = subPill(a); sp.style.left = (p.x + 26) + "px"; sp.style.top = (p.y + NODE_H + 8 + i * SUB_H) + "px"; map.appendChild(sp); });
     });
     return el("div", { cls: "mapwrap" }, [map]);
@@ -961,16 +1083,16 @@ a.btn.primary { color: var(--ground); }
     for (var i = 0; i <= 3; i++) axis.appendChild(el("span", { text: new Date(start + span * i / 4).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) }));
     box.appendChild(axis);
     var grid = el("div", { style: "position:relative" });
-    var MK = { done: ["done", "i-check"], fail: ["fail", "i-x"], deny: ["fail", "i-ban"], you: ["you", "i-hand"] };
-    var MKLAB = { done: "concluída", fail: "reprovada", deny: "gateway negou", you: "pediu sua decisão" };
+    var MK = { done: ["done", "i-check"], fail: ["fail", "i-x"], deny: ["fail", "i-ban"], deny_old: ["todo", "i-ban"], you: ["you", "i-hand"] };
+    var MKLAB = { done: "concluída", fail: "reprovada", deny: "gateway negou", deny_old: "gateway negou (histórico, não bloqueou)", you: "pediu sua decisão" };
     var BARLAB = { run: "rodando", done: "executando", val: "validando", fail: "tentativa reprovada", you: "esperando você" };
     b.lanes.forEach(function (r) {
       var tr = el("div", { cls: "track" });
       r.bars.forEach(function (x) {
         var s = ptime(x.start) || start, e = ptime(x.end) || now, l = pct(s), wv = Math.max(0.6, pct(e) - l);
-        tr.appendChild(el("span", { cls: "bar " + x.kind, style: "left:" + l + "%;width:calc(" + wv + "% - 2px)", title: (r.task_id || r.label) + " · " + BARLAB[x.kind] + " · " + hhmm(x.start) + "–" + (x.end ? hhmm(x.end) : "agora") }));
+        tr.appendChild(el("span", { cls: "bar " + x.kind, style: "left:" + l + "%;width:calc(" + wv + "% - 2px)", title: (r.task_id || r.label) + " · " + BARLAB[x.kind] + " · " + stamp(x.start) + "–" + (x.end ? stamp(x.end) : "agora") }));
       });
-      r.marks.forEach(function (m) { var k = MK[m.kind] || MK.done; tr.appendChild(el("span", { cls: "mk " + ST[k[0]].txt, style: "left:clamp(11px, " + pct(ptime(m.at) || now) + "%, calc(100% - 11px))", title: MKLAB[m.kind] + " · " + hhmm(m.at) }, [icon(k[1])])); });
+      r.marks.forEach(function (m) { var k = MK[m.kind] || MK.done; tr.appendChild(el("span", { cls: "mk " + ST[k[0]].txt, style: "left:clamp(11px, " + pct(ptime(m.at) || now) + "%, calc(100% - 11px))", title: MKLAB[m.kind] + " · " + stamp(m.at) }, [icon(k[1])])); });
       var who = el("div", { cls: "who" }, [glyph(r.st), clipped("span", "", r.label, 28)]);
       grid.appendChild(el("div", { cls: "lane" + (r.child ? " child" : ""), "data-open": r.child ? null : r.task_id || null, "data-agent": r.child || !r.task_id ? r.key : null, title: r.child ? "Abrir o subagente" : r.task_id ? "Abrir " + r.task_id : "Abrir o agente" }, [who, tr]));
     });
@@ -979,8 +1101,8 @@ a.btn.primary { color: var(--ground); }
     function sw(kind, t) { return el("span", {}, [el("i", { cls: "lsw bar " + kind }), t]); }
     function mk(st, ic, t) { return el("span", {}, [el("span", { cls: "mk lmk " + ST[st].txt }, [icon(ic)]), t]); }
     var leg = el("div", { cls: "legend" }, [sw("run", "rodando"), sw("done", "executou"), sw("val", "validando"), sw("fail", "tentativa reprovada"), sw("you", "esperando você"),
-      mk("done", "i-check", "concluída"), mk("fail", "i-x", "reprovada"), mk("fail", "i-ban", "gateway negou"), mk("you", "i-hand", "pediu decisão")]);
-    return panel("p-lanes", "Em paralelo", "uma raia por fatia e por agente, desde " + hhmm(new Date(start).toISOString()), el("div", {}, [el("div", { cls: "lanes" }, [box]), leg]));
+      mk("done", "i-check", "concluída"), mk("fail", "i-x", "reprovada"), mk("fail", "i-ban", "gateway negou"), mk("todo", "i-ban", "negação antiga"), mk("you", "i-hand", "pediu decisão")]);
+    return panel("p-lanes", "Em paralelo", "uma raia por fatia e por agente, desde " + stamp(new Date(start).toISOString()), el("div", {}, [el("div", { cls: "lanes" }, [box]), leg]));
   }
 
   /* ====================================== fatias ====================================== */
@@ -989,7 +1111,7 @@ a.btn.primary { color: var(--ground); }
     var tb = el("tbody");
     list.forEach(function (t) {
       var tdd = el("span", { cls: "tdd" }, [el("i", { style: "background:var(--fail)" }), String(t.tdd[0]), el("i", { style: "background:var(--done);margin-left:6px" }), String(t.tdd[1])]);
-      var time = t.st === "run" || t.st === "you" || t.st === "val" ? since(t.started_at) : t.ended_at && t.started_at ? dur(ptime(t.ended_at) - ptime(t.started_at)) : "—";
+      var time = t.st === "run" || t.st === "you" || t.st === "val" ? "há " + since(t.started_at) : t.ended_at && t.started_at ? "levou " + dur(ptime(t.ended_at) - ptime(t.started_at)) : "—";
       tb.appendChild(el("tr", { "data-open": t.task_id, tabindex: "0" }, [
         el("td", {}, [el("span", { cls: "cell" }, [chip(t.task_id), clipped("span", "", t.title, 60)])]),
         el("td", {}, [el("span", { cls: "cell " + ST[t.st].txt }, [glyph(t.st), ST[t.st].lab])]),
@@ -997,7 +1119,7 @@ a.btn.primary { color: var(--ground); }
         el("td", { title: "ciclos de TDD: vermelho antes / verde depois" }, [tdd]),
         el("td", { cls: "num", text: time })]));
     });
-    var table = el("div", { style: "overflow-x:auto" }, [el("table", {}, [el("thead", {}, [el("tr", {}, ["Fatia", "Estado", "Agente", "TDD", "Tempo"].map(function (h) { return el("th", { text: h }); }))]), tb])]);
+    var table = el("div", { style: "overflow-x:auto" }, [el("table", {}, [el("thead", {}, [el("tr", {}, ["Fatia", "Estado", "Agente", "TDD", "Duração"].map(function (h) { return el("th", { text: h }); }))]), tb])]);
     return panel("p-slices", "Fatias", list.length + " de " + all.length + (stFilter ? " · filtro: " + ST[stFilter].lab : ""), list.length ? table : empty("Nenhuma fatia com esse filtro."));
   }
 
@@ -1014,20 +1136,24 @@ a.btn.primary { color: var(--ground); }
     var b = document.getElementById("d-body"); b.textContent = "";
     var kv = el("dl", { cls: "kv" });
     [["Agente", t.role + (t.model ? " (" + t.model + (t.effort ? "/" + t.effort : "") + ")" : "")], ["Tentativa", String(t.attempt || 1)],
-     ["Tempo", t.st === "run" || t.st === "you" || t.st === "val" ? since(t.started_at) + " desde o despacho" : t.ended_at ? dur(ptime(t.ended_at) - ptime(t.started_at)) : "não começou"],
+     ["Tempo", t.st === "run" || t.st === "you" || t.st === "val" ? "há " + since(t.started_at) + " desde o despacho (" + stamp(t.started_at) + ")" : t.ended_at ? "levou " + dur(ptime(t.ended_at) - ptime(t.started_at)) + " (" + stamp(t.started_at) + " → " + stamp(t.ended_at) + ")" : "não começou"],
      ["Depende de", t.depends_on.length ? t.depends_on.join(", ") : "nada"], ["Libera", t.unlocks.length ? t.unlocks.join(", ") : "nada"],
      ["TDD", t.tdd[0] + " vermelho(s) → " + t.tdd[1] + " verde(s)"]].forEach(function (r) { kv.appendChild(el("dt", { text: r[0] })); kv.appendChild(el("dd", { text: r[1] })); });
     b.appendChild(kv);
     var pend = (D.approvals.pending || []).filter(function (a) { return a.request_id === t.approval; })[0];
     if (pend) b.appendChild(decisionBlock(pend));
-    if (t.denied) b.appendChild(el("div", {}, [el("h4", { text: "Gateway negou" }), el("div", { cls: "cell st-fail" }, [glyph("fail"), clipped("span", "mono", t.denied.text + " · " + hhmm(t.denied.at), 90)])]));
+    if (t.denied) b.appendChild(el("div", {}, [el("h4", { text: "Gateway negou (última ação)" }), el("div", { cls: "cell st-fail" }, [glyph("fail"), clipped("span", "mono", t.denied.text + " · " + stamp(t.denied.at), 90)]),
+      t.denied.reason ? el("p", { cls: "dec-opt", style: "margin:6px 0 0", text: t.denied.reason }) : null]));
+    else if (t.denials) b.appendChild(el("div", {}, [el("h4", { text: "Negações do gateway (histórico)" }),
+      el("p", { cls: "dec-opt", style: "margin:0", text: plural(t.denials.count, "negação", "negações") + "; nenhuma bloqueou a fatia (o agente seguiu adiante). Última, " + stamp(t.denials.last_at) + ":" }),
+      clipped("p", "mono dec-opt", t.denials.last_text, 120), t.denials.last_reason ? el("p", { cls: "dec-opt", style: "margin:0", text: t.denials.last_reason }) : null]));
     var mine = B().agents.filter(function (a) { return a.task_id === t.task_id || (a.validating || []).indexOf(t.task_id) >= 0; });
     var execs = mine.filter(function (a) { return !a.parent_id; }), subs = mine.filter(function (a) { return a.parent_id; });
     if (execs.length) b.appendChild(el("div", {}, [el("h4", { text: "Agentes nesta fatia" }), el("div", { cls: "stackv" }, execs.map(agentButton))]));
     if (subs.length) b.appendChild(el("div", {}, [el("h4", { text: "Subagentes disparados" }), el("div", { cls: "stackv" }, subs.map(agentButton))]));
     var steps = el("ol", { cls: "steps" });
-    if (t.last_action) steps.appendChild(el("li", {}, [el("time", { text: t.last_action_at ? hhmm(t.last_action_at) : "agora" }), clipped("span", "mono", t.last_action, 120)]));
-    (B().events[t.task_id] || []).slice().reverse().forEach(function (e) { steps.appendChild(el("li", {}, [el("time", { text: hhmm(e.at) }), clipped("span", "", e.text, 120)])); });
+    if (t.last_action) steps.appendChild(el("li", {}, [el("time", { text: t.last_action_at ? stamp(t.last_action_at) : "agora" }), clipped("span", "mono", act(t.last_action), 120)]));
+    (B().events[t.task_id] || []).slice().reverse().forEach(function (e) { steps.appendChild(el("li", {}, [el("time", { text: stamp(e.at) }), clipped("span", "", e.text, 120)])); });
     if (steps.children.length) b.appendChild(el("div", {}, [el("h4", { text: "Últimas ações" }), steps]));
     drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false");
     Array.prototype.forEach.call(document.querySelectorAll(".node[data-open]"), function (n) { n.setAttribute("aria-pressed", String(n.getAttribute("data-open") === id)); });
@@ -1062,7 +1188,7 @@ a.btn.primary { color: var(--ground); }
     [["Tipo", a.agent_type || "—"], ["Papel", agentKind(a)],
      ["Disparado por", parent ? (parent.role || parent.agent_type) + (parent.task_id ? " (" + parent.task_id + ")" : "") + (a.parent_inferred ? " · ligação inferida" : "") : a.parent_inferred ? "sessão principal (inferido: o disparo não foi registrado)" : "sessão principal"],
      ["Modelo", a.model || (a.parent_id ? "o padrão do tipo de agente" : "não informado")],
-     ["Início", a.started_at ? hhmm(a.started_at) : "—"], [a.running ? "Rodando há" : "Duração", dur],
+     ["Início", a.started_at ? stamp(a.started_at) : "—"], [a.running ? "Rodando há" : "Duração", a.end_missing ? "fim não registrado" : dur],
      ["Ações registradas", String(a.tool_count || 0)],
      a.role === "validator" && (a.validating || []).length ? ["Validando", a.validating.join(", ")] : null,
      ["Id", a.agent_id]].forEach(function (r) { if (!r) return; kv.appendChild(el("dt", { text: r[0] })); kv.appendChild(el("dd", { text: r[1] })); });
@@ -1073,7 +1199,7 @@ a.btn.primary { color: var(--ground); }
     var kids = B().agents.filter(function (c) { return c.parent_id === a.agent_id; });
     if (kids.length) b.appendChild(el("div", {}, [el("h4", { text: "Subagentes que ele disparou" }), el("div", { cls: "stackv" }, kids.map(agentButton))]));
     var steps = el("ol", { cls: "steps" });
-    (a.actions || []).slice().reverse().forEach(function (x) { steps.appendChild(el("li", {}, [el("time", { text: hhmm(x.at) }), clipped("span", "mono", x.text, 140)])); });
+    (a.actions || []).slice().reverse().forEach(function (x) { steps.appendChild(el("li", {}, [el("time", { text: stamp(x.at) }), clipped("span", "mono", x.text, 140)])); });
     b.appendChild(el("div", {}, [el("h4", { text: "Últimas ações deste agente" }), steps.children.length ? steps : el("p", { cls: "dec-opt", text: "Nenhuma ação registrada ainda." })]));
     drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false");
     markPressed();
@@ -1105,10 +1231,18 @@ a.btn.primary { color: var(--ground); }
     var strip = el("section", { cls: "states", "aria-label": "Fatias por estado" });
     ["run", "val", "dep", "you", "done"].forEach(function (st) {
       var list = B().tasks.filter(function (t) { return t.st === st && visible(t); });
-      var bt = el("button", { cls: "state " + ST[st].txt, type: "button", "aria-pressed": String(stFilter === st) }, [
-        glyph(st), el("span", { cls: "val num", text: String(list.length) }), el("span", { cls: "lbl", text: ST[st].lab }),
-        el("span", { cls: "who", text: list.length ? list.map(function (t) { return t.task_id; }).join(" · ") : "nenhuma" })]);
-      bt.addEventListener("click", function () { stFilter = stFilter === st ? "" : st; store("st", stFilter); render(); });
+      var ids = list.map(function (t) { return t.task_id; }), SHOW = 3;
+      var who = el("span", { cls: "who", title: ids.length > SHOW ? ids.join(", ") : null },
+        !ids.length ? ["nenhuma"] : ids.length <= SHOW ? [ids.join(" · ")]
+          : [ids.slice(0, SHOW).join(" · ") + " ", el("span", { cls: "more", text: "+" + (ids.length - SHOW) + " · ver todas" })]);
+      var bt = el("button", { cls: "state " + ST[st].txt, type: "button", "aria-pressed": String(stFilter === st),
+        "aria-label": plural(list.length, "fatia", "fatias") + " " + ST[st].lab + (list.length ? ": " + ids.join(", ") : "") + ". Clique para filtrar." }, [
+        glyph(st), el("span", { cls: "val num", text: String(list.length) }), el("span", { cls: "lbl", text: ST[st].lab }), who]);
+      bt.addEventListener("click", function () {
+        stFilter = stFilter === st ? "" : st; store("st", stFilter); render();
+        var tbl = stFilter && list.length > SHOW && document.getElementById("p-slices");
+        if (tbl) tbl.scrollIntoView({ block: "start", behavior: "smooth" });
+      });
       strip.appendChild(bt);
     });
     return strip;
@@ -1131,20 +1265,22 @@ a.btn.primary { color: var(--ground); }
   }
   function attentionPanel() {
     var a = D.attention || {}, kv = el("dl", { cls: "kv wide" });
-    function dec(x) { return String(x).replace(".", ","); }
-    function pctTxt(x) { return x === null || x === undefined ? "—" : Math.round(x * 100) + "%"; }
-    [["Interrupções", String(a.interruptions || 0)],
-     ["Por tarefa concluída", a.interruptions_per_completed_task !== null && a.interruptions_per_completed_task !== undefined
-        ? dec(a.interruptions_per_completed_task) : "—"],
-     ["Pedidos de aprovação", String(a.approval_requests || 0)],
-     ["Perguntas do gateway", String(a.gateway_asks || 0)],
-     ["Aprovadas de primeira", pctTxt(a.first_pass_validation_rate)],
-     ["Tokens por tarefa", a.tokens_per_completed_task_median !== null && a.tokens_per_completed_task_median !== undefined
-        ? Number(a.tokens_per_completed_task_median).toLocaleString("pt-BR") + " (mediana)" : "—"]].forEach(function (r) {
+    function has(x) { return x !== null && x !== undefined; }
+    var req = a.approval_requests || 0, ask = a.gateway_asks || 0, tot = a.interruptions || req + ask, done = a.tasks_completed || 0;
+    var bar = tot ? el("div", { cls: "attn-bar", "aria-hidden": "true" }, [el("i", { style: "width:" + (100 * req / tot) + "%;background:var(--you)" }),
+      el("i", { style: "width:" + (100 * ask / tot) + "%;background:var(--run)" })]) : null;
+    [["Interrupções", [fmtInt(tot) + " no total", el("small", { text: plural(req, "pedido de aprovação", "pedidos de aprovação") + " + " + plural(ask, "pergunta do gateway", "perguntas do gateway") }), bar]],
+     ["Por tarefa concluída", has(a.interruptions_per_completed_task)
+        ? [String(a.interruptions_per_completed_task).replace(".", ",") + " interrupções", el("small", { text: "por tarefa (" + fmtInt(tot) + " ÷ " + plural(done, "tarefa concluída", "tarefas concluídas") + ")" })] : ["—"]],
+     ["Aprovadas de primeira", has(a.first_pass_validation_rate)
+        ? [Math.round(a.first_pass_validation_rate * 100) + "%", el("small", { text: "das tarefas validadas passaram na 1ª validação" })] : ["—"]],
+     ["Tokens por tarefa", has(a.tokens_per_completed_task_median)
+        ? [fmtInt(a.tokens_per_completed_task_median), el("small", { text: "tokens, mediana por tarefa concluída" })] : ["—"]]].forEach(function (r) {
       kv.appendChild(el("dt", { text: r[0] }));
-      kv.appendChild(el("dd", { cls: "num", text: r[1] }));
+      kv.appendChild(el("dd", { cls: "num" }, r[1]));
     });
-    return panel("p-attn", "Custo de atenção", "quantas vezes você precisou parar", kv);
+    return panel("p-attn", "Custo de atenção", "quantas vezes você precisou parar",
+      el("div", {}, [kv, el("p", { cls: "note", text: "Interrupção é um pedido no Approval Center ou uma pergunta do gateway (modo Ask) que esperou a sua resposta." })]));
   }
   var SCREENS = {
     agora: function () {
@@ -1161,9 +1297,15 @@ a.btn.primary { color: var(--ground); }
     },
     fatias: function () {
       var fs = D.features || [], g = (D.graphs || {}).dependencies || {};
-      var inExec = fs.filter(function (f) { return f.status === "in_execution"; }).length;
-      return [titleRow("Features e fatias", { strong: plural(fs.length, "feature", "features") + (inExec ? ", " + inExec + " em execução." : "."), rest: (D.approvals.pending || []).length ? "Há decisão sua pendente em Governança." : "" }),
-        el("div", { cls: "features" }, fs.map(featureCard)), slicesPanel(),
+      var open = fs.filter(function (f) { return !isClosedF(fstatus(f)); }), shut = fs.filter(function (f) { return isClosedF(fstatus(f)); });
+      var cards = el("div", { cls: "features" }, open.map(featureCard));
+      if (shut.length) {
+        var det = el("details", { cls: "panel grp", "data-dk": "feats-accepted" }, [el("summary", {}, [glyph("done"), el("b", { text: plural(shut.length, "feature aceita ou encerrada", "features aceitas ou encerradas") }),
+          el("span", { text: shut.map(function (f) { return f.feature_id; }).join(", ") })]), el("div", { cls: "features", style: "padding:0 12px 12px" }, shut.map(featureCard))]);
+        cards.appendChild(det);
+      }
+      return [titleRow("Features e fatias", { strong: plural(fs.length, "feature", "features") + (open.length ? ", " + open.length + " em andamento" : "") + (shut.length ? ", " + shut.length + " aceita" + (shut.length > 1 ? "s" : "") + "." : "."), rest: (D.approvals.pending || []).length ? "Há decisão sua pendente em Governança." : "" }),
+        cards, slicesPanel(),
         panel("p-graph", "Grafo de dependências", "a seta parte da fatia de que a outra depende", (g.nodes || []).length ? depGraph() : empty("Sem fatias."), featSeg()),
         panel("p-exec", "Execuções entregues", "relatórios dos executores", execTable())];
     },
@@ -1188,34 +1330,49 @@ a.btn.primary { color: var(--ground); }
     },
     gov: function () {
       var pend = D.approvals.pending || [];
-      return [titleRow("Governança", { strong: pend.length ? plural(pend.length, "decisão sua", "decisões suas") + "." : "Nada depende de você.", rest: "Tudo o que só você decide, e o que já foi decidido." }),
-        el("div", { cls: "grid2" }, [el("div", { style: "display:grid;gap:20px;min-width:0" }, [
-          panel("p-decided", "Decididas", "pedidos já respondidos, registrados no log", decidedTable()),
+      var main = [panel("p-decided", "Decididas", "pedidos já respondidos, registrados no log", decidedTable(), govFilters()),
           panel("p-decisions", "Decisões arquiteturais", "a escolha, a recomendação e o que ficou de fora", decisionsBox()),
-          panel("p-risks", "Riscos", "abertos, do mais grave ao menos grave", risksTable())]),
-          el("div", { cls: "rcol" }, pend.length ? pend.map(decisionBlock) : [el("div", { cls: "nextbox" }, [el("div", { cls: "k" }, [icon("i-check"), "Nada pendente"]), el("h3", { text: "Nenhuma decisão esperando você." })])])])];
+          panel("p-risks", "Riscos", "abertos, do mais grave ao menos grave" + (govFeat ? " · " + govFeat : ""), risksTable())];
+      var head = titleRow("Governança", { strong: pend.length ? plural(pend.length, "decisão sua", "decisões suas") + "." : "Nada depende de você.", rest: "Tudo o que só você decide, e o que já foi decidido." });
+      if (!pend.length) return [head, el("div", { cls: "calmbar", role: "status" }, [glyph("done"), el("span", {}, [el("b", { text: "Nenhuma decisão esperando você. " }), "Quando um pedido chegar, ele aparece aqui e no botão do topo."])])].concat(main);
+      return [head, el("div", { cls: "grid2" }, [el("div", { style: "display:grid;gap:20px;min-width:0" }, main), el("div", { cls: "rcol" }, pend.map(decisionBlock))])];
     },
     hist: function () {
       var m = D.manifest, s = m.source, ig = m.integrity;
       var src = el("dl", { cls: "kv wide" });
-      [["Eventos no log", String(s.event_count)], ["Última sequência", s.head_sequence === null ? "—" : String(s.head_sequence) + " · " + (s.head_hash ? s.head_hash.slice(0, 16) + "…" : "")],
+      [["Eventos no log", plural(s.event_count, "evento", "eventos").replace(/^\d+/, fmtInt(s.event_count))],
+       ["Último evento", s.head_sequence === null ? "—" : "sequência #" + s.head_sequence + (s.head_hash ? " · hash " + s.head_hash.slice(0, 12) + "…" : "")],
        ["Assinaturas", ig.signatures_verified ? "verificadas (Ed25519)" : "não verificadas"], ["Head externo", ig.head_verified ? "confere" : "não verificado"],
        ["Trechos mascarados", String(m.redactions)]].forEach(function (r) { src.appendChild(el("dt", { text: r[0] })); src.appendChild(el("dd", { text: r[1] })); });
-      return [titleRow("Histórico", ig.status === "ok" ? "Log de auditoria encadeado por hash e assinado com Ed25519. Cadeia íntegra até a sequência " + s.head_sequence + "." : "Log de auditoria: veja o aviso de integridade no topo."),
+      return [titleRow("Histórico", ig.status === "ok" ? "Log de auditoria encadeado por hash e assinado com Ed25519. Cadeia íntegra até o evento #" + s.head_sequence + "." : "Log de auditoria: veja o aviso de integridade no topo."),
         panel("p-src", "Origem dos dados", "de onde vêm os números deste painel", src),
-        panel("p-hist", "Linha do tempo", "cada evento encadeado ao anterior", histBox(), histSeg())];
+        panel("p-hist", "Linha do tempo", "os " + (D.timeline || []).length + " eventos mais recentes, por dia", histBox(), histSeg())];
     },
     eng: function () {
       var bps = D.engineering || [];
       if (!bps.length) return [titleRow("Engenharia", "O desenho técnico aprovado para as features."), panel(null, "Blueprints", "", empty("Nenhum Engineering Blueprint ainda."))];
-      var out = [titleRow("Engenharia", "O desenho técnico das features: arquitetura, endpoints, dados, ameaças e migrações.")];
-      bps.forEach(function (bp) { out = out.concat(blueprint(bp)); });
-      return out;
+      var ids = bps.map(function (x) { return x.blueprint_id; }), pick = ids.indexOf(bpSel) >= 0 ? bpSel : ids.slice().sort().pop();
+      var bp = bps.filter(function (x) { return x.blueprint_id === pick; })[0];
+      var choose = el("div", { cls: "filters" }, [el("span", { cls: "dec-opt", text: "Blueprint" }), bps.length > 6 ? (function () {
+        var sel = el("select", { "aria-label": "Escolher blueprint" }, bps.map(function (x) { return el("option", { value: x.blueprint_id, selected: x.blueprint_id === pick ? "selected" : null, text: x.blueprint_id + " · " + x.feature_id + " · " + x.title }); }));
+        sel.addEventListener("change", function () { bpSel = sel.value; store("bp", bpSel); render(false); });
+        return sel;
+      })() : (function () {
+        var seg = el("div", { cls: "seg", role: "group", "aria-label": "Blueprint" });
+        bps.forEach(function (x) {
+          var bt = el("button", { type: "button", "aria-pressed": String(x.blueprint_id === pick), title: x.title, text: x.blueprint_id + " · " + x.feature_id });
+          bt.addEventListener("click", function () { bpSel = x.blueprint_id; store("bp", bpSel); render(false); });
+          seg.appendChild(bt);
+        });
+        return seg;
+      })()]);
+      return [titleRow("Engenharia", plural(bps.length, "blueprint", "blueprints") + ": o desenho técnico de cada feature (arquitetura, endpoints, dados, ameaças e migrações). Mostrando " + pick + ", o mais recente por padrão."),
+        choose].concat(blueprint(bp));
     },
     agentes: function () {
       var runs = (L().model_runs) || {}, keys = Object.keys(runs);
       return [titleRow("Equipe de agentes", "Quem está trabalhando, em quê, com qual modelo, e o que o projeto já aprendeu."),
-        panel("p-team", "Equipe", "agentes com contrato e subagentes em execução", teamBox()),
+        panel("p-team", "Equipe", "agentes com contrato e subagentes em execução; o trabalho conta as fatias pelos relatórios de cada papel", teamBox()),
         panel("p-lessons", "Lições aprendidas", "só valem depois da sua aprovação", lessonsBox()),
         panel("p-models", "Despachos por modelo", "", keys.length ? el("div", { cls: "kv wide" }, [].concat.apply([], keys.map(function (k) { return [el("dt", { cls: "mono", text: k }), el("dd", { text: String(runs[k]) })]; }))) : empty("Nenhum agente despachado ainda."))];
     }
@@ -1231,15 +1388,17 @@ a.btn.primary { color: var(--ground); }
   function featureCard(f) {
     var flow = (L().flow || []).filter(function (x) { return x.feature_id === f.feature_id; })[0], STG = ["spec", "plan", "execute", "validate", "review", "closed"];
     var NAMES_STG = ["Spec", "Plano", "Execução", "Validação", "Revisão e aceite", "Encerrada"], cur = flow ? STG.indexOf(flow.stage) : -1;
+    var fs = fstatus(f), accFail = fs === "acceptance_rejected" || fs === "acceptance_changes_requested";
+    if (isClosedF(fs)) cur = 5;  // aceite aprovado: a feature esta encerrada, mesmo que o contrato nao diga
     var steps = el("ol", { cls: "stepper" });
     NAMES_STG.forEach(function (name, i) {
-      var g = i < cur || (cur === 5 && i === 5) ? glyph("done") : i === cur ? glyph((D.approvals.pending || []).some(function (a) { return a.feature_id === f.feature_id; }) ? "you" : "run") : el("i", { cls: "glyph g-todo", "aria-hidden": "true" }, [icon("i-clock")]);
-      steps.appendChild(el("li", { cls: i < cur ? "done" : i === cur ? "cur" : "" }, [g, name]));
+      var g = i < cur || (cur === 5 && i === 5) ? glyph("done") : i === cur ? glyph(accFail ? "fail" : (D.approvals.pending || []).some(function (a) { return a.feature_id === f.feature_id; }) ? "you" : "run") : el("i", { cls: "glyph g-todo", "aria-hidden": "true" }, [icon("i-clock")]);
+      steps.appendChild(el("li", { cls: i < cur || cur === 5 ? "done" : i === cur ? "cur" : "" }, [g, i === 4 && accFail && cur === 4 ? lab(fs) : name]));
     });
     var list = B().tasks.filter(function (t) { return t.feature_id === f.feature_id; });
     var chips = el("div", { cls: "chain" }, list.map(function (t) { return el("button", { cls: "lk " + (t.st === "done" ? "ok" : t.st === "run" || t.st === "val" ? "run" : "miss"), type: "button", "data-open": t.task_id, text: t.task_id + " · " + ST[t.st].lab }); }));
     return el("article", { cls: "feat" }, [
-      el("div", { cls: "top1" }, [chip(f.feature_id), el("h3", { text: f.title }), el("span", { cls: "chip", text: lab(f.status) }),
+      el("div", { cls: "top1" }, [chip(f.feature_id), el("h3", { text: f.title }), el("span", { cls: "chip " + (FSTATE_CHIP[fs] || ""), text: lab(fs) + (f.accepted_at ? " em " + stamp(f.accepted_at) : ""), title: fs !== f.status ? "Estado no contrato: " + lab(f.status) : null }),
         el("span", { cls: "meta num", text: f.tasks_completed + "/" + f.tasks_total + " fatias · " + f.requirements_covered + "/" + f.requirements_total + " requisitos cobertos · ciclo " + f.cycle })]),
       steps, chips]);
   }
@@ -1268,42 +1427,90 @@ a.btn.primary { color: var(--ground); }
       return g === s || s.indexOf(g.replace(/\*+$/, "")) === 0 && /\*$/.test(g) || globRe(g).test(s) || g.indexOf(s) === 0;
     });
   }
+  function reportKind(r) { return r.kind || (/-VAL$/.test(r.report_id) ? "validation" : /-REV-/.test(r.report_id) ? "review" : "execution"); }
+  /* evidencia de um requisito: o ultimo relatorio do executor de cada fatia (revisoes e validacoes nao sao evidencia de teste) */
+  function evidenceChip(rep, val, ok) {
+    var t = rep.tests || {}, c = rep.criteria || {};
+    var txt = t.executed ? rep.report_id + " · " + plural(t.passed, "teste ok", "testes ok") + (t.failed ? ", " + t.failed + " falha(s)" : "")
+      : rep.report_id + " · sem testes automatizados · " + plural(c.met || 0, "critério atendido", "critérios atendidos");
+    var why = t.executed ? "Relatório do executor: " + t.executed + " teste(s) rodados, " + t.passed + " passaram."
+      : "O relatório do executor não registrou testes automatizados (fatia de configuração, documentação ou processo). A evidência são os critérios de aceite verificados" + (val ? " e a validação independente " + val.report_id : "") + ".";
+    return el("span", { cls: "lk " + (ok ? "ok" : "miss"), text: txt + (val ? " · validada" : ""), title: why });
+  }
   function rtmBox() {
     var rows = (D.rtm || []).filter(function (r) { return (!gapsOnly || r.status !== "covered") && impacts(r, impactQ); }), box = el("div");
     if (!rows.length) return empty(impactQ ? "Nenhum requisito ligado a " + impactQ + "." : gapsOnly ? "Nenhuma lacuna: todo requisito tem evidência." : "Nenhum requisito ainda.", impactQ ? "todo" : gapsOnly ? "done" : "todo");
-    var ex = {}; (D.executions || []).forEach(function (r) { ex[r.task_id] = r; });
-    rows.forEach(function (r) {
-      var st = r.status === "covered" ? "done" : r.status === "broken_link" ? "fail" : r.status === "in_progress" ? "run" : "dep";
-      var chain = el("div", { cls: "chain" }, [el("span", { cls: "lk ok", text: r.requirement_id + " v" + r.version })]);
-      r.task_ids.forEach(function (tid) {
-        var t = byId(tid);
+    var ex = {}, vals = {};
+    (D.executions || []).forEach(function (r) { var k = reportKind(r); if (k === "execution") ex[r.task_id] = r; else if (k === "validation") vals[r.task_id] = r; });
+    var feats = {}, order = [];
+    (D.features || []).forEach(function (f) { feats[f.feature_id] = f; });
+    rows.forEach(function (r) { if (order.indexOf(r.feature_id) < 0) order.push(r.feature_id); });
+    order.forEach(function (fid) {
+      var mine = rows.filter(function (r) { return r.feature_id === fid; }), f = feats[fid] || {}, fs = f.feature_id ? fstatus(f) : "";
+      var ok = mine.filter(function (r) { return r.status === "covered"; }).length;
+      var det = el("details", { cls: "grp", "data-dk": "rtm-" + fid, open: !isClosedF(fs) || impactQ || gapsOnly ? "open" : null }, [
+        el("summary", {}, [glyph(ok === mine.length ? "done" : "run"), chip(fid), f.title ? clipped("b", "", f.title, 80) : null,
+          el("span", { text: ok + " de " + mine.length + " cobertos" }), fs ? el("span", { cls: "chip " + (FSTATE_CHIP[fs] || ""), text: lab(fs) }) : null])]);
+      mine.forEach(function (r) {
+        var st = r.status === "covered" ? "done" : r.status === "broken_link" ? "fail" : r.status === "in_progress" ? "run" : "dep";
+        var chain = el("div", { cls: "chain" });
+        r.task_ids.forEach(function (tid, i) {
+          var t = byId(tid);
+          if (i) chain.appendChild(el("span", { cls: "ar", text: "+" }));
+          chain.appendChild(r.missing_task_ids.indexOf(tid) >= 0 ? el("span", { cls: "lk miss", text: tid + " · ausente" })
+            : el("button", { cls: "lk " + (t && t.st === "done" ? "ok" : t && (t.st === "run" || t.st === "val") ? "run" : "miss"), type: "button", "data-open": tid, text: tid + " · " + (t ? ST[t.st].lab : "?") }));
+        });
         chain.appendChild(el("span", { cls: "ar", text: "→" }));
-        chain.appendChild(r.missing_task_ids.indexOf(tid) >= 0 ? el("span", { cls: "lk miss", text: tid + " · ausente" })
-          : el("button", { cls: "lk " + (t && t.st === "done" ? "ok" : t && (t.st === "run" || t.st === "val") ? "run" : "miss"), type: "button", "data-open": tid, text: tid + " · " + (t ? ST[t.st].lab : "?") }));
+        chain.appendChild(el("span", { cls: "lk " + (st === "done" ? "ok" : "miss"), text: r.criterion_ids.join(", ") || "sem critério" }));
+        chain.appendChild(el("span", { cls: "ar", text: "→" }));
+        var evid = r.task_ids.filter(function (tid) { return ex[tid]; });
+        if (!evid.length) chain.appendChild(el("span", { cls: "lk miss", text: "sem evidência ainda" }));
+        evid.forEach(function (tid) { chain.appendChild(evidenceChip(ex[tid], vals[tid], st === "done")); });
+        det.appendChild(el("div", { cls: "rq" }, [el("div", { cls: "h" }, [glyph(st), el("span", { cls: "chip", text: r.requirement_id + (r.version > 1 ? " v" + r.version : ""), title: "versão " + r.version }),
+          clipped("span", "", r.statement, 140), el("span", { cls: "chip", text: lab(r.status) })]), chain]));
       });
-      chain.appendChild(el("span", { cls: "ar", text: "→" }));
-      chain.appendChild(el("span", { cls: "lk " + (st === "done" ? "ok" : "miss"), text: r.criterion_ids.join(", ") || "sem critério" }));
-      chain.appendChild(el("span", { cls: "ar", text: "→" }));
-      var evid = r.task_ids.map(function (tid) { return ex[tid]; }).filter(Boolean);
-      chain.appendChild(el("span", { cls: "lk " + (evid.length && st === "done" ? "ok" : "miss"), text: evid.length ? evid.map(function (e) { return e.report_id + " · " + e.tests.passed + " ok"; }).join(", ") : "sem evidência ainda" }));
-      box.appendChild(el("div", { cls: "rq" }, [el("div", { cls: "h" }, [glyph(st), chip(r.requirement_id), clipped("span", "", r.statement, 140), el("span", { cls: "chip", text: lab(r.status) })]), chain]));
+      box.appendChild(det);
     });
     return box;
   }
+  function decidedAll() { return D.approvals.decided || D.approvals.recent || []; }
+  function govFilters() {
+    var all = decidedAll(), types = [], feats = [];
+    all.forEach(function (a) { if (types.indexOf(a.request_type) < 0) types.push(a.request_type); if (feats.indexOf(a.feature_id) < 0) feats.push(a.feature_id); });
+    (D.features || []).forEach(function (f) { if (feats.indexOf(f.feature_id) < 0) feats.push(f.feature_id); });
+    feats.sort();
+    function sel(label, val, opts, on) {
+      var s = el("select", { "aria-label": label }, [el("option", { value: "", text: label })].concat(opts.map(function (o) { return el("option", { value: o[0], selected: o[0] === val ? "selected" : null, text: o[1] }); })));
+      s.addEventListener("change", function () { on(s.value); render(false); });
+      return s;
+    }
+    return el("div", { cls: "filters" }, [
+      sel("Todos os tipos", govType, types.map(function (t) { return [t, lab(t)]; }), function (v) { govType = v; store("govtype", v); }),
+      sel("Todas as features", govFeat, feats.map(function (f) { return [f, f]; }), function (v) { govFeat = v; store("govfeat", v); })]);
+  }
   function decidedTable() {
-    var rows = D.approvals.recent || [];
-    if (!rows.length) return empty("Nada decidido ainda.");
+    var all = decidedAll(), rows = all.filter(function (a) { return (!govType || a.request_type === govType) && (!govFeat || a.feature_id === govFeat); });
+    if (!all.length) return empty("Nada decidido ainda.");
+    if (!rows.length) return empty("Nenhum pedido decidido com esse filtro.");
+    var LIMIT = 10, shown = govAll ? rows : rows.slice(0, LIMIT);
     var tb = el("tbody");
-    rows.forEach(function (a) {
+    shown.forEach(function (a) {
       var st = a.status === "approved" ? "done" : a.status === "rejected" ? "fail" : "todo";
       tb.appendChild(el("tr", {}, [el("td", {}, [el("span", { cls: "cell" }, [chip(a.request_id), clipped("span", "", a.title, 60)])]), el("td", { text: lab(a.request_type) }),
-        el("td", {}, [el("span", { cls: "cell " + ST[st].txt }, [glyph(st), lab(a.status)])]), el("td", { cls: "num", text: a.decided ? (a.decided.decided_by || "") + " · " + when(a.decided.decided_at) : "—" })]));
+        el("td", {}, [el("span", { cls: "cell " + ST[st].txt }, [glyph(st), lab(a.status)])]), el("td", { cls: "num", text: a.decided ? (a.decided.decided_by === "user" ? "você" : a.decided.decided_by || "") + " · " + stamp(a.decided.decided_at) : "—" })]));
     });
-    return el("div", { style: "overflow-x:auto" }, [el("table", {}, [el("thead", {}, [el("tr", {}, ["Pedido", "Tipo", "Resultado", "Por quem e quando"].map(function (h) { return el("th", { text: h }); }))]), tb])]);
+    var more = null;
+    if (rows.length > LIMIT) {
+      var bt = el("button", { type: "button", cls: "btn sm", text: govAll ? "Mostrar só as " + LIMIT + " mais recentes" : "Ver todas (" + rows.length + ")" });
+      bt.addEventListener("click", function () { govAll = !govAll; store("govall", govAll ? "1" : "0"); render(false); });
+      more = el("div", { cls: "morebar" }, [bt]);
+    }
+    return el("div", {}, [el("div", { style: "overflow-x:auto" }, [el("table", {}, [el("thead", {}, [el("tr", {}, ["Pedido", "Tipo", "Resultado", "Por quem e quando"].map(function (h) { return el("th", { text: h }); }))]), tb])]),
+      el("p", { cls: "note", style: "padding-top:10px", text: "Mostrando " + shown.length + " de " + rows.length + (govType || govFeat ? " (filtrado)" : "") + "." }), more]);
   }
   function decisionsBox() {
-    var rows = D.decisions || [], box = el("div");
-    if (!rows.length) return empty("Nenhuma decisão arquitetural registrada.");
+    var rows = (D.decisions || []).filter(function (d) { return !govFeat || d.feature_id === govFeat; }), box = el("div");
+    if (!rows.length) return empty(govFeat ? "Nenhuma decisão arquitetural em " + govFeat + "." : "Nenhuma decisão arquitetural registrada.");
     rows.forEach(function (d) {
       var r = el("div", { cls: "rq" }, [el("div", { cls: "h" }, [glyph(d.status === "approved" ? "done" : "you"), chip(d.request_id), el("b", { text: d.title })])]);
       if (d.selected_option) r.appendChild(el("div", { cls: "dec-opt" }, [el("b", { text: "Escolhida: " + d.selected_option.label }), " — " + d.selected_option.description + (d.followed_recommendation ? " · seguiu a recomendação" : " · não seguiu a recomendação")]));
@@ -1313,8 +1520,8 @@ a.btn.primary { color: var(--ground); }
     return box;
   }
   function risksTable() {
-    var rows = D.risks || [];
-    if (!rows.length) return empty("Nenhum risco aberto.", "done");
+    var rows = (D.risks || []).filter(function (r) { return !govFeat || r.feature_id === govFeat; });
+    if (!rows.length) return empty(govFeat ? "Nenhum risco aberto em " + govFeat + "." : "Nenhum risco aberto.", "done");
     var tb = el("tbody");
     rows.forEach(function (r) {
       var st = SEV[r.severity] || "todo";
@@ -1337,17 +1544,31 @@ a.btn.primary { color: var(--ground); }
       bt.addEventListener("click", function () { histFilter = k; store("hist", k); render(); });
       seg.appendChild(bt);
     });
-    return seg;
+    var hb = el("button", { type: "button", cls: "btn sm", "aria-pressed": String(showHash), text: showHash ? "Ocultar hashes" : "Mostrar hashes" });
+    hb.addEventListener("click", function () { showHash = !showHash; store("hashes", showHash ? "1" : "0"); render(false); });
+    return el("div", { cls: "filters" }, [seg, hb]);
+  }
+  function stripId(summary, id) {  // "T-017 concluida" com o id ja em negrito vira "concluida"
+    var s = String(summary || "");
+    if (id && s.indexOf(id) === 0) s = s.slice(id.length).replace(/^[\s:·—-]+/, "");
+    s = s.replace(/^Gateway: deny (\S+)/, "gateway negou $1").replace(/^Gateway: ask (\S+)/, "gateway perguntou antes de $1");
+    return s || String(summary || "");
   }
   function histBox() {
     var rows = (D.timeline || []).filter(function (e) { return histFilter === "all" || histKind(e) === histFilter; });
     if (!rows.length) return empty("Nenhum evento com esse filtro.");
-    var ol = el("ol", { cls: "hist" });
+    var ol = el("ol", { cls: "hist" }), lastDay = null;
     rows.forEach(function (e) {
+      var t = ptime(e.timestamp), day = t ? dayKey(t) : "";
+      if (day !== lastDay) { lastDay = day; ol.appendChild(el("li", { cls: "day", text: t ? dayLabel(t) : "sem data" })); }
       var k = histKind(e), st = k === "fail" ? "fail" : k === "done" ? "done" : k === "decisions" ? "you" : "todo";
-      ol.appendChild(el("li", {}, [el("time", { text: hhmm(e.timestamp) }), glyph(st),
-        el("span", { style: "min-width:0" }, [el("b", { text: (e.task_id || e.feature_id || e.actor_id) + " " }), clipped("span", "m", e.summary, 140)]),
-        el("span", { cls: "hash", title: "hash " + (e.hash || "") + " · anterior " + (e.prev_hash || ""), text: "#" + e.sequence + " · hash " + (e.hash || "").slice(0, 8) + "… · prev " + (e.prev_hash || "").slice(0, 8) + "…" + (e.signed ? " · assinado" : "") })]));
+      var id = e.task_id || e.feature_id || e.actor_id;
+      var chainTip = "evento #" + e.sequence + " · hash " + (e.hash || "—") + " · anterior " + (e.prev_hash || "—") + (e.signed ? " · assinado (Ed25519)" : "");
+      ol.appendChild(el("li", {}, [el("time", { text: hhmm(e.timestamp), title: when(e.timestamp) }), glyph(st),
+        el("span", { style: "min-width:0" }, [el("b", { text: id + " " }), clipped("span", "m", stripId(e.summary, id), 140),
+          e.detail ? el("span", { cls: "det", text: e.detail, title: e.detail }) : null]),
+        showHash ? el("span", { cls: "hash", title: chainTip, text: "#" + e.sequence + " · hash " + (e.hash || "").slice(0, 8) + "… · prev " + (e.prev_hash || "").slice(0, 8) + "…" + (e.signed ? " · assinado" : "") })
+          : el("span", { cls: "seq", title: chainTip, text: "#" + e.sequence + (e.signed ? " ✓" : "") })]));
     });
     return ol;
   }
@@ -1359,11 +1580,20 @@ a.btn.primary { color: var(--ground); }
     var head = panel(null, bp.title, bp.blueprint_id + " · " + bp.feature_id + " · v" + bp.version + " · " + lab(bp.state), el("div", { style: "padding:14px 18px;display:grid;gap:8px;font-size:13.5px" }, [
       el("p", { style: "margin:0", text: bp.summary }), bp.secrets_handling ? el("p", { style: "margin:0;color:var(--muted)", text: "Segredos: " + bp.secrets_handling }) : null,
       bp.devops && bp.devops.rollback ? el("p", { style: "margin:0;color:var(--muted)", text: "Rollback: " + bp.devops.rollback }) : null]));
-    var out = [head];
-    if (bp.graphs && bp.graphs.architecture) out.push(panel(null, "Arquitetura", bp.blueprint_id, diagram("Arquitetura " + bp.blueprint_id, bp.graphs.architecture)));
-    out.push(el("div", { cls: "grid2" }, [
-      panel(null, "Componentes", "do Engineering Blueprint", (bp.components || []).length ? table(["Componente", "Responsabilidade", "Requisitos"], bp.components.map(function (c) { return [c.id + " · " + c.name, c.responsibility || "—", (c.requirement_ids || []).join(", ") || "—"]; })) : empty("Sem componentes.")),
-      panel(null, "Endpoints", "", (bp.endpoints || []).length ? table(["Rota", "Auth"], bp.endpoints.map(function (e) { return [el("span", { cls: "mono", text: e.method + " " + e.path }), e.auth + ((e.roles || []).length ? " · " + e.roles.join(", ") : "")]; })) : empty("Sem endpoints."))]));
+    var out = [head], comps = bp.components || [];
+    /* diagrama so quando ha ligacoes; sem relacoes, as caixas soltas nao dizem nada: os componentes viram cartoes */
+    var linked = !!(bp.graphs && bp.graphs.architecture && /-->|---|-\.->|==>/.test(bp.graphs.architecture));
+    if (linked) out.push(panel(null, "Arquitetura", bp.blueprint_id, diagram("Arquitetura " + bp.blueprint_id, bp.graphs.architecture)));
+    var compBody = !comps.length ? empty("Sem componentes.") : linked
+      ? table(["Componente", "Responsabilidade", "Requisitos"], comps.map(function (c) { return [c.id + " · " + c.name, c.responsibility || "—", (c.requirement_ids || []).join(", ") || "—"]; }))
+      : el("div", { cls: "cards" }, comps.map(function (c) {
+          return el("div", { cls: "ccard" }, [el("div", { cls: "h" }, [chip(c.id), el("b", { text: c.name })]), el("p", { text: c.responsibility || "—" }),
+            el("span", { cls: "s", text: (c.kind ? c.kind + " · " : "") + "requisitos: " + ((c.requirement_ids || []).join(", ") || "—") })]);
+        }));
+    var compPanel = panel(null, "Componentes", linked ? "do Engineering Blueprint" : "sem ligações declaradas entre eles, por isso em cartões e não em diagrama", compBody);
+    if ((bp.endpoints || []).length) out.push(el("div", { cls: "grid2" }, [compPanel,
+      panel(null, "Endpoints", "", table(["Rota", "Auth"], bp.endpoints.map(function (e) { return [el("span", { cls: "mono", text: e.method + " " + e.path }), e.auth + ((e.roles || []).length ? " · " + e.roles.join(", ") : "")]; })))]));
+    else out.push(compPanel);
     if (bp.graphs && bp.graphs.er) out.push(panel(null, "Dados", "entidades (dado pessoal marcado como pii)", diagram("Entidades " + bp.blueprint_id, bp.graphs.er)));
     if ((bp.entities || []).length) out.push(panel(null, "Entidades", "", table(["Entidade", "Classe do dado"], bp.entities.map(function (e) { return [e.id + " · " + e.name, e.data_class === "personal" ? "dado pessoal" : lab(e.data_class)]; }))));
     if ((bp.threats || []).length) out.push(panel(null, "Ameaças", "", table(["Severidade", "Ameaça", "Mitigação"], bp.threats.map(function (t) { return [lab(t.severity), t.description, t.mitigation || "—"]; }))));
@@ -1383,7 +1613,7 @@ a.btn.primary { color: var(--ground); }
     function agentItem(a) {
       var kids = b.agents.filter(function (c) { return c.parent_id === a.agent_id; }).map(agentItem);
       return item(glyph(a.running ? (a.role === "validator" ? "val" : "run") : "done"), a.role || a.agent_type || "subagente",
-        (a.description ? a.description + " · " : "") + (a.running ? "rodando há " + since(a.started_at) : "terminou") + (a.parent_inferred && a.parent_id ? " · ligação inferida" : "") + (a.last_action ? " · " + a.last_action : ""), kids, null, a.agent_id);
+        (a.description ? a.description + " · " : "") + (a.running ? "rodando há " + since(a.started_at) : "terminou") + (a.parent_inferred && a.parent_id ? " · ligação inferida" : "") + (a.last_action ? " · " + act(a.last_action) : ""), kids, null, a.agent_id);
     }
     var started = b.tasks.filter(function (t) { return t.started_at; });
     var kids = started.map(function (t) {
@@ -1396,22 +1626,40 @@ a.btn.primary { color: var(--ground); }
     box.appendChild(el("ul", {}, [item(el("i", { cls: "glyph g-run", "aria-hidden": "true" }, [icon("i-orch")]), "Orquestrador", "sessão principal", kids)]));
     return box;
   }
+  function workText(a) {
+    var w = a.work || {}, parts = [];
+    if (w.executed) parts.push(plural(w.executed, "fatia executada", "fatias executadas"));
+    if (w.reviews) parts.push(plural(w.reviews, "fatia revisada", "fatias revisadas"));
+    if (w.validations) parts.push(plural(w.validations, "fatia validada", "fatias validadas"));
+    if (!parts.length && a.tasks_assigned_total) parts.push(plural(a.tasks_assigned_total, "fatia atribuída", "fatias atribuídas"));
+    return parts.length ? parts.join(" · ") : "nenhum trabalho registrado";
+  }
   function teamBox() {
-    var b = B(), box = el("div"), rows = [];
-    (D.agents || []).forEach(function (a) {
+    var b = B(), box = el("div"), rows = [], idle = [];
+    var ags = (D.agents || []).map(function (a) {
       var running = b.agents.filter(function (x) { return x.running && (x.role === a.agent_id || x.role === a.role); });
-      var busy = a.tasks_in_progress.length || running.length;
-      rows.push(el("div", { cls: "team-row" }, [busy ? glyph("run") : el("i", { cls: "glyph g-todo", "aria-hidden": "true" }, [icon("i-users")]),
-        el("div", { style: "min-width:0" }, [el("div", { cls: "n", text: a.name }), clipped("div", "s", a.agent_id + " · " + a.role + " · contrato v" + a.contract_version + " · " + a.tasks_assigned_total + " fatia(s) atribuída(s)" + (running[0] && running[0].last_action ? " · " + running[0].last_action : ""), 110)]),
-        el("div", { cls: "tasks" }, a.tasks_in_progress.length ? a.tasks_in_progress.map(function (id) { return el("button", { cls: "chip", type: "button", "data-open": id, text: id }); }) : [el("span", { cls: "s", text: lab(a.status) + (busy ? "" : " · livre") })])]));
+      var w = a.work || {}, total = (w.executed || 0) + (w.reviews || 0) + (w.validations || 0) + (a.tasks_assigned_total || 0);
+      return { a: a, running: running, busy: a.tasks_in_progress.length || running.length, total: total };
+    });
+    ags.sort(function (x, y) { return (y.busy ? 1 : 0) - (x.busy ? 1 : 0) || y.total - x.total; });
+    ags.forEach(function (it) {
+      var a = it.a, running = it.running, busy = it.busy;
+      var who = a.agent_id === a.role ? a.role : a.agent_id + " · " + a.role;
+      var row = el("div", { cls: "team-row" }, [busy ? glyph(a.role === "validator" || a.agent_id === "validator" ? "val" : "run") : el("i", { cls: "glyph g-todo", "aria-hidden": "true" }, [icon("i-users")]),
+        el("div", { style: "min-width:0" }, [el("div", { cls: "n", text: a.name }), clipped("div", "s", who + " · contrato v" + a.contract_version + " · " + workText(a) + (running[0] && running[0].last_action ? " · " + act(running[0].last_action) : ""), 130)]),
+        el("div", { cls: "tasks" }, a.tasks_in_progress.length ? a.tasks_in_progress.map(function (id) { return el("button", { cls: "chip", type: "button", "data-open": id, text: id }); })
+          : [el("span", { cls: "s", text: busy ? "rodando" : a.status === "active" ? "ativo · livre" : lab(a.status) })])]);
+      (busy || it.total ? rows : idle).push(row);
     });
     b.agents.filter(function (x) { return x.running && x.parent_id; }).forEach(function (x) {
       rows.push(el("div", { cls: "team-row", "data-agent": x.agent_id, title: "Abrir o subagente" }, [glyph("run"), el("div", { style: "min-width:0" }, [el("div", { cls: "n", text: (x.role || "subagente") + " (subagente)" }),
-        clipped("div", "s", (x.description || "") + (x.task_id ? " · de " + x.task_id : "") + " · há " + since(x.started_at) + (x.last_action ? " · " + x.last_action : ""), 110)]),
+        clipped("div", "s", (x.description || "") + (x.task_id ? " · de " + x.task_id : "") + " · há " + since(x.started_at) + (x.last_action ? " · " + act(x.last_action) : ""), 110)]),
         el("div", { cls: "tasks" }, x.task_id ? [el("button", { cls: "chip", type: "button", "data-open": x.task_id, text: x.task_id })] : [])]));
     });
-    if (!rows.length) return empty("Nenhum agente cadastrado.");
+    if (!rows.length && !idle.length) return empty("Nenhum agente cadastrado.");
     rows.forEach(function (r) { box.appendChild(r); });
+    if (idle.length) box.appendChild(el("details", { cls: "grp", "data-dk": "team-idle" }, [el("summary", {}, [el("b", { text: plural(idle.length, "agente sem trabalho registrado", "agentes sem trabalho registrado") }),
+      el("span", { text: "com contrato ativo, prontos para quando forem chamados" })])].concat(idle)));
     return box;
   }
   function lessonsBox() {
@@ -1451,7 +1699,7 @@ a.btn.primary { color: var(--ground); }
     seal.className = "seal" + (ig.status === "ok" ? "" : ig.status === "broken" ? " bad" : " warn");
     seal.title = ig.status === "ok" ? "Integridade do histórico verificada: cadeia, assinaturas e head conferem (sequência " + m.source.head_sequence + ")" : "Veja o aviso de integridade";
     seal.textContent = ""; seal.appendChild(icon("i-shield"));
-    seal.appendChild(el("span", { text: ig.status === "ok" ? "Log íntegro · seq " + m.source.head_sequence : ig.status === "broken" ? "Log comprometido" : "Log com ressalvas" }));
+    seal.appendChild(el("span", { text: ig.status === "ok" ? "Log íntegro · evento #" + m.source.head_sequence : ig.status === "broken" ? "Log comprometido" : "Log com ressalvas" }));
     seal.appendChild(el("span", { cls: "sr-only", text: ig.status === "ok" ? " Integridade do histórico verificada." : "" }));
     var yb = document.getElementById("youbtn");
     yb.hidden = !pend; yb.textContent = ""; yb.appendChild(icon("i-hand")); yb.appendChild(document.createTextNode(plural(pend, "decisão sua", "decisões suas")));
@@ -1500,7 +1748,7 @@ a.btn.primary { color: var(--ground); }
     SCREENS[cur]().forEach(function (n) { if (n) sec.appendChild(n); });
     sec.appendChild(el("div", { cls: "foot", id: "foot-mirror" }));
     view.textContent = ""; view.appendChild(sec);
-    Array.prototype.forEach.call(view.querySelectorAll("details[data-dk]"), function (d) { if (open[d.getAttribute("data-dk")]) d.open = true; });
+    Array.prototype.forEach.call(view.querySelectorAll("details[data-dk]"), function (d) { var k = d.getAttribute("data-dk"); if (Object.prototype.hasOwnProperty.call(open, k)) d.open = open[k]; });
     Array.prototype.forEach.call(view.querySelectorAll(SCR), function (w, i) { if (scrolls[i]) { w.scrollLeft = scrolls[i][0]; w.scrollTop = scrolls[i][1]; } });
     lastPaint = Date.now();
     document.getElementById("foot-mirror").textContent = document.getElementById("foot").textContent;
