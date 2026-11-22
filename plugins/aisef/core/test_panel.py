@@ -324,6 +324,10 @@ if chrome:
     over = {k: v for k, v in (st.get("overflow") or {}).items() if v > 0}
     check("Chrome 375 px: nenhuma das 8 telas rola na horizontal", bool(st) and len(st.get("overflow") or {}) == 8 and not over)
     check("Chrome: filtro, feature, gaveta aberta e rolagem sobrevivem a atualizacao ao vivo", bool(st) and all((st.get("kept") or {}).values()))
+    check("Chrome: arrastar com o mouse rola o mapa/raias; o clique do arrasto nao abre a gaveta e o clique simples abre",
+          bool(st.get("pan")) and all(st["pan"].values()))
+    if not (st.get("pan") and all(st["pan"].values())):
+        print("      arrastar:", st.get("pan"))
     if over or not st or not all((st.get("kept") or {}).values()):
         print("      autoteste:", st)
     out, _ = dump(base, "fatias")

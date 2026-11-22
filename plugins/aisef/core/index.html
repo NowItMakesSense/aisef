@@ -147,6 +147,9 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
 
 /* mapa de execucao */
 .mapwrap { position: relative; overflow: auto; }
+/* arrastar com o mouse para navegar (mapa e raias): a mao aparece so quando ha o que rolar */
+.mapwrap.can-pan, .lanes.can-pan { cursor: grab; }
+.mapwrap.panning, .lanes.panning, .panning * { cursor: grabbing !important; user-select: none; }
 .map { position: relative; }
 .map svg.edges { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
 .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; }
@@ -1221,6 +1224,44 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     var n = e.target.closest && e.target.closest("[data-open]");
     if (n && n.getAttribute("data-open") && byId(n.getAttribute("data-open"))) openDrawer(n.getAttribute("data-open"), true);
   });
+  /* arrastar para navegar: segurar o botao esquerdo e arrastar rola o mapa de execucao e as raias. So mouse (o toque
+     ja rola nativo); um arrasto de mais de 5 px nao vira clique, entao o clique simples num no continua abrindo a gaveta.
+     Enquanto arrasta, a atualizacao ao vivo espera (busy), para o elemento nao ser trocado no meio do gesto. */
+  var PAN = ".mapwrap,.lanes", pan = null, panClick = false;
+  function scrollable(w) { return w.scrollWidth > w.clientWidth + 1 || w.scrollHeight > w.clientHeight + 1; }
+  function markPan() { Array.prototype.forEach.call(view.querySelectorAll(PAN), function (w) { w.classList.toggle("can-pan", scrollable(w)); }); }
+  document.addEventListener("pointerdown", function (e) {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    var w = e.target.closest && e.target.closest(PAN);
+    if (!w || !scrollable(w)) return;
+    pan = { w: w, id: e.pointerId, x: e.clientX, y: e.clientY, l: w.scrollLeft, t: w.scrollTop, moved: false };
+    panClick = false;
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (!pan || e.pointerId !== pan.id) return;
+    var dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+    if (!pan.moved) {
+      if (Math.abs(dx) + Math.abs(dy) < 5) return;
+      pan.moved = true; pan.w.classList.add("panning");
+      try { pan.w.setPointerCapture(e.pointerId); } catch (x) { /* evento sintetico ou ponteiro ja solto */ }
+      if (window.getSelection) window.getSelection().removeAllRanges();
+    }
+    pan.w.scrollLeft = pan.l - dx; pan.w.scrollTop = pan.t - dy;
+    e.preventDefault();
+  });
+  function endPan(e) {
+    if (!pan || (e && e.pointerId !== pan.id)) return;
+    var moved = pan.moved;
+    pan.w.classList.remove("panning"); pan = null;
+    if (moved) { panClick = true; setTimeout(function () { panClick = false; }, 400); }
+  }
+  document.addEventListener("pointerup", endPan);
+  document.addEventListener("pointercancel", endPan);
+  document.addEventListener("click", function (e) {  // o clique que fecha um arrasto nao abre o no embaixo do mouse
+    if (panClick) { panClick = false; e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  window.addEventListener("resize", function () { markPan(); });
+
   document.addEventListener("keydown", function (e) {
     var n = e.target.closest && e.target.closest("tr[data-open]");
     if (n && e.key === "Enter") openDrawer(n.getAttribute("data-open"), true);
@@ -1750,6 +1791,7 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     view.textContent = ""; view.appendChild(sec);
     Array.prototype.forEach.call(view.querySelectorAll("details[data-dk]"), function (d) { var k = d.getAttribute("data-dk"); if (Object.prototype.hasOwnProperty.call(open, k)) d.open = open[k]; });
     Array.prototype.forEach.call(view.querySelectorAll(SCR), function (w, i) { if (scrolls[i]) { w.scrollLeft = scrolls[i][0]; w.scrollTop = scrolls[i][1]; } });
+    markPan();
     lastPaint = Date.now();
     document.getElementById("foot-mirror").textContent = document.getElementById("foot").textContent;
     if (drawerId && drawerId.indexOf("agent:") === 0) openAgent(drawerId.slice(6), false); else if (drawerId) openDrawer(drawerId, false);
@@ -1766,7 +1808,7 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
   }
   function busy() {
     var ae = document.activeElement, tn = ae && ae.tagName;
-    return !!((window.getSelection && String(window.getSelection())) || tn === "INPUT" || tn === "TEXTAREA" || document.getElementById("zoom").open || palette.classList.contains("open"));
+    return !!(pan || (window.getSelection && String(window.getSelection())) || tn === "INPUT" || tn === "TEXTAREA" || document.getElementById("zoom").open || palette.classList.contains("open"));
   }
   function applyData(nd) {
     var prev = (D.approvals.pending || []).map(function (a) { return a.request_id; }), prevSt = D.manifest.integrity.status;
@@ -1856,6 +1898,22 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
     applyData(JSON.parse(JSON.stringify(D)));
     out.kept = { filter: stFilter === (t ? t.st : ""), feature: feat === (t ? t.feature_id : ""), drawer: drawerId === (t ? t.task_id : null), scroll: window.scrollY === y,
                  pressed: !!view.querySelector('.state[aria-pressed="true"]') === !!t };
+    // arrastar com o mouse rola o mapa/raias; o clique que fecha o arrasto nao abre a gaveta; o clique simples abre
+    closeDrawer(); stFilter = ""; feat = ""; render(false);
+    var w = Array.prototype.filter.call(view.querySelectorAll(PAN), scrollable)[0];
+    if (w) {
+      w.scrollLeft = 0;
+      var tg = w.querySelector("[data-open]") || w, r = tg.getBoundingClientRect(), cx = r.left + 10, cy = r.top + r.height / 2;
+      function fire(type, x) { tg.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: "mouse", button: 0, pointerId: 7, clientX: x, clientY: cy })); }
+      fire("pointerdown", cx + 120); fire("pointermove", cx + 60); fire("pointermove", cx);
+      var during = busy() && w.classList.contains("panning");
+      fire("pointerup", cx); tg.click();
+      var dragged = w.scrollLeft > 0, noOpen = drawerId === null;
+      fire("pointerdown", cx); fire("pointerup", cx); tg.click();
+      out.pan = { cursor: w.classList.contains("can-pan"), scrolled: dragged, busy_during: during, released: !pan && !w.classList.contains("panning"),
+                  drag_no_click: noOpen, click_opens: tg === w || drawerId === tg.getAttribute("data-open") };
+      closeDrawer();
+    } else out.pan = null;
     document.getElementById("selftest").textContent = JSON.stringify(out);
   }
 

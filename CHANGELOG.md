@@ -18,6 +18,7 @@ Veio do uso real (HireMe, 8 features e mais de 2.000 eventos no log): o painel m
 - **Coluna TDD com 0/0 em toda fatia revisada.** A contagem guardava só o último relatório lido da tarefa, e os relatórios de revisor e validador (sem ciclos) zeravam o que o executor registrou. Agora os ciclos somam entre as tentativas do executor e relatórios sem ciclos não contam (`tdd_counts`).
 - **Última ação sem o `cd <pasta> &&` do início.** Na equipe, no mapa e na gaveta, o caminho local do projeto não empurra mais o comando útil para fora da linha.
 - **Favicon embutido** (data URI): acaba o 404 de `/favicon.ico` no console. O seletor de feature não estoura mais a largura no celular.
+- **Painel: arrastar para navegar.** O mapa de execução e as raias "Em paralelo" rolam segurando o botão esquerdo do mouse e arrastando (a mão aparece quando há o que rolar). Um arrasto não vira clique, então o clique simples num nó continua abrindo a gaveta; o toque segue com a rolagem nativa; a atualização ao vivo espera o arrasto terminar. Coberto pelo autoteste no Chrome.
 
 ### Repositório sem commit e limpeza de branch sem remoto
 Também veio do uso real (HireMe): o projeto tinha `git init`, mas nenhum commit, e o verify pulou a varredura de segredos e o diff sem que ninguém avisasse.
