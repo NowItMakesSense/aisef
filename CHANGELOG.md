@@ -2,7 +2,8 @@
 
 ## Não lançado: repositório sem commit e limpeza de branch sem remoto
 Também veio do uso real (HireMe): o projeto tinha `git init`, mas nenhum commit, e o verify pulou a varredura de segredos e o diff sem que ninguém avisasse.
-- **Ação `first_commit` no `next`.** Quando o repositório existe e não tem nenhum commit, o `next` mostra a ação com os comandos e o pedido de aprovação (`git_operation commit`). É só aviso, como o `setup_remote`: não conta como trabalho pendente e não impede o `stop_reason`. O doctor avisa o mesmo no início da sessão (`commit_advice`).
+- **Verify sem commit.** A varredura de segredos e o resumo do diff não pulam mais num repositório sem commit: comparam com a árvore vazia, o que cobre tudo que está no index (o que o commit inicial levaria). Antes, o commit inicial, o que mais leva `.env` e chave, passava sem varredura nenhuma.
+- **Ação `first_commit` no `next`.** Quando o repositório existe e não tem nenhum commit, o `next` mostra a ação com os comandos (`git add -A`, varredura de segredos do verify no index, commit) e o pedido de aprovação (`git_operation commit`). É só aviso, como o `setup_remote`: não conta como trabalho pendente e não impede o `stop_reason`. O doctor avisa o mesmo no início da sessão (`commit_advice`).
 - **`git_state` sem commit.** Passa a devolver `has_head` e a branch real pelo HEAD simbólico (`symbolic-ref`), em vez de `"HEAD"`.
 - **Limpeza de branch sem remoto.** Sem o remote do `git.remote`, `delete_merged_branch` sugere só a exclusão local (`git branch -d`) e pede o merge local em `base_branch` (`git branch --merged`), em vez de `git push --delete` e do merge do PR.
 - As skills `aisef-init` e `aisef` explicam as duas situações.

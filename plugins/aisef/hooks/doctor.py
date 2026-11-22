@@ -20,8 +20,8 @@ def _aisef_root(project):
         return project
 
 def commit_advice(project, cfg):
-    """Repositorio Git sem nenhum commit: o verify pula a varredura de segredos e o diff sem ninguem perceber.
-    Le so o .git local. Fora de um repositorio, quem avisa e o remote_advice."""
+    """Repositorio Git sem nenhum commit: sem ponto fixo para o diff, code-review e PR, e o commit inicial e o que mais
+    leva segredo. Le so o .git local. Fora de um repositorio, quem avisa e o remote_advice."""
     import subprocess
 
     def git(*args):
@@ -32,9 +32,9 @@ def commit_advice(project, cfg):
             return None
     if not git("rev-parse", "--git-dir") or git("rev-parse", "--verify", "--quiet", "HEAD"):
         return None
-    return ("o repositorio Git nao tem nenhum commit: o verify pula a varredura de segredos e o diff, e nao ha ponto "
-            "fixo para code-review nem PR. Leve ao usuario o commit inicial (pede aprovacao: git_operation commit; "
-            "acao first_commit do next)")
+    return ("o repositorio Git nao tem nenhum commit: nao ha ponto fixo para o diff das tarefas, code-review nem PR. "
+            "Leve ao usuario o commit inicial (pede aprovacao: git_operation commit; acao first_commit do next), com a "
+            "varredura de segredos do verify no index antes de commitar")
 
 
 def remote_advice(project, cfg):

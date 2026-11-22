@@ -106,16 +106,21 @@ def git_state(project, remote="origin"):
 
 
 def commit_setup(gs):
-    """Acao first_commit quando o repositorio existe mas nao tem nenhum commit: o verify pula a varredura de segredos
-    e o diff, e revisao por diff (code-review, PR) fica sem ponto fixo. So aviso; o commit pede aprovacao."""
+    """Acao first_commit quando o repositorio existe mas nao tem nenhum commit: sem ponto fixo, o diff de cada tarefa
+    mistura o projeto inteiro e revisao por diff (code-review, PR) nao tem base. O commit inicial e o que mais leva
+    segredo (.env, chave), entao a varredura de segredos roda no index antes dele. So aviso; o commit pede aprovacao."""
     if not gs or gs.get("current") is None or gs.get("has_head") is not False:
         return None  # sem repositorio (setup_remote cuida), git_state antigo sem a chave, ou ja ha commit
     return {"kind": "first_commit", "branch": gs["current"],
-            "commands": ["git add -A", "git commit -m \"chore: estado inicial\""],
+            "commands": ["git add -A",
+                         "python -I %s --project . --only secrets,diff"
+                         % os.path.join(HERE, "aisef_verify.py").replace("\\", "/"),
+                         "git commit -m \"chore: estado inicial\""],
             "approval": "git_operation commit",
-            "hint": "o repositorio nao tem nenhum commit: o verify pula a varredura de segredos e o diff, e nao ha "
-                    "ponto fixo para code-review nem PR. Leve ao usuario o commit inicial (aisef-approve) antes de "
-                    "executar a primeira feature"}
+            "hint": "o repositorio nao tem nenhum commit: nao ha ponto fixo para o diff das tarefas, code-review nem "
+                    "PR. Leve ao usuario o commit inicial (aisef-approve) antes de executar a primeira feature; rode a "
+                    "varredura de segredos no index antes de commitar e, se reprovar, tire o arquivo (git rm --cached, "
+                    ".gitignore) em vez de commitar"}
 
 
 def remote_setup(project, gitcfg, gs):
