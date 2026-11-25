@@ -115,9 +115,15 @@ def problems(project):
         cfg = ap.load_config(project)
         key_id = ap.audit_settings(cfg)["key_id"]
         signed = any(n.endswith(".pem") for n in os.listdir(os.path.join(root, "keys")))
-        if signed and not os.path.exists(ap.private_key_path(cfg["project_id"], key_id)):
+        import aisef_keystore
+        if signed and aisef_keystore.locate(cfg["project_id"], key_id) is None:
             found.append("o log e assinado, mas a chave privada %s nao existe nesta maquina: nenhum evento sera "
                          "registrado (confira AISEF_HOME)" % ap.private_key_path(cfg["project_id"], key_id))
+        if aisef_keystore.store_of(cfg) == "os" or aisef_keystore.locate(cfg["project_id"], key_id) == "os":
+            ok, why = aisef_keystore.available()
+            if not ok:
+                found.append("a chave privada do log esta no cofre do sistema (audit.key_store = os), mas o cofre "
+                             "nao responde: %s" % why)
         head_path = ap.external_head_path(cfg["project_id"])
         last = ap.last_event(os.path.join(root, "audit"))
         if signed and last and os.path.exists(head_path):

@@ -53,6 +53,7 @@ SUITES = [
     ("pacote de evidencia por feature (T-02)", [os.path.join(CORE, "test_evidence.py")]),
     ("verificacao de PR no CI (T-01)", [os.path.join(CORE, "test_ci.py")]),
     ("carimbo RFC 3161 nos marcos (E-03)", [os.path.join(CORE, "test_anchor.py")]),
+    ("chave privada no cofre do sistema (E-02)", [os.path.join(CORE, "test_keystore.py")]),
     ("worktree por fatia, de ponta a ponta (L-02)", [os.path.join(CORE, "test_slices.py")]),
     ("worktree grava no .aisef principal (L-02a)", [os.path.join(CORE, "test_worktree.py")]),
     ("log em camadas: telemetria (F-05)", [os.path.join(CORE, "test_telemetry.py")]),

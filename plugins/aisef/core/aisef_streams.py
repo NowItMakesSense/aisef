@@ -73,20 +73,15 @@ def ensure_stream(project, cfg, ctx):
     if al.last_event(ctx["dir"]) is not None:
         return
     pub = os.path.join(aisef_base.aisef_dir(project), "keys", ctx["key_id"] + ".pem")
-    priv = aisef_base.private_key_path(cfg["project_id"], ctx["key_id"])
     if aisef_base.HAS_CRYPTO:
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-        if not os.path.exists(priv):
-            os.makedirs(os.path.dirname(priv), exist_ok=True)
+        import aisef_keystore  # E-02: a chave da pessoa vai para onde audit.key_store manda
+        if aisef_keystore.locate(cfg["project_id"], ctx["key_id"]) is None:
             key = Ed25519PrivateKey.generate()
-            with open(priv, "wb") as fh:
-                fh.write(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
-                                           serialization.NoEncryption()))
-            try:
-                os.chmod(priv, 0o600)
-            except OSError:
-                pass
+            aisef_keystore.write(cfg["project_id"], ctx["key_id"], key.private_bytes(
+                serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()),
+                aisef_keystore.store_of(cfg))
         signer = al.load_signer(cfg["project_id"], ctx["key_id"])
         with open(pub, "wb") as fh:
             fh.write(signer.public_key_pem())

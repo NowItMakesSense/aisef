@@ -33,6 +33,43 @@ jobs:
       - name: latencia dos hooks (informativo)
         run: python tools/bench_hooks.py --runs 5
 
+  keystore:
+    # E-02 (ADR 0031): a chave privada no cofre de verdade de cada sistema; sem cofre o teste falha (nao pula)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      AISEF_REQUIRE_KEYSTORE: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - run: pip install --require-hashes -r requirements-dev.lock
+      - name: Linux, Secret Service (gnome-keyring numa sessao D-Bus, chaveiro destrancado)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q gnome-keyring libsecret-tools dbus-x11
+          dbus-run-session -- sh -c 'echo -n ci | gnome-keyring-daemon --unlock --components=secrets >/dev/null; python -I plugins/aisef/core/test_keystore.py'
+      - name: macOS, Keychain temporario
+        if: runner.os == 'macOS'
+        run: |
+          security create-keychain -p ci aisef-ci.keychain
+          security list-keychains -d user -s aisef-ci.keychain
+          security default-keychain -s aisef-ci.keychain
+          security unlock-keychain -p ci aisef-ci.keychain
+          security set-keychain-settings aisef-ci.keychain
+          python -I plugins/aisef/core/test_keystore.py
+      - name: Windows, DPAPI
+        if: runner.os == 'Windows'
+        run: python -I plugins/aisef/core/test_keystore.py
+
   aisef-verify-demo:
     # T-01: a Action aisef-verify rodando sobre o projeto de demonstracao (log assinado, chave publica, head versionado)
     runs-on: ubuntu-latest

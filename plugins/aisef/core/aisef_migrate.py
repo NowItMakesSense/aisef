@@ -7,6 +7,7 @@ como decisao do usuario e abre o prompt nativo.
 
     python -I aisef_migrate.py --project .            (plano: o que mudaria)
     python -I aisef_migrate.py --project . --apply    (aplica; decisao do usuario)
+    python -I aisef_migrate.py --project . --key-store os [--apply]   (chaves privadas para o cofre; E-02)
 
 Cada migracao preserva o comportamento que o projeto ja tinha. Exemplo: projeto anterior a 0.13 sem `profile`
 ganha `profile: team` (o ciclo completo continua o padrao), nao o `solo` dos projetos novos.
@@ -123,15 +124,53 @@ def apply(project):
     return changes
 
 
+def key_store(project, to, do_apply):
+    """E-02 (ADR 0031): grava `audit.key_store` e leva cada chave privada local do projeto para `to`.
+
+    Devolve [(chave, de, para)]. A chave so sai da origem depois de lida de volta igual do destino."""
+    import aisef_keystore as ks
+    cfg = ap.load_config(project)
+    if to == "os":
+        ok, why = ks.available()
+        if not ok:
+            raise ks.VaultError("este sistema nao tem cofre utilizavel: %s" % why)
+    pid = cfg["project_id"]
+    moves = [(k, ks.locate(pid, k), to) for k in ks.local_keys(pid) if ks.locate(pid, k) != to]
+    if not do_apply or (not moves and ks.store_of(cfg) == to):
+        return moves
+    for k, _src, dst in moves:
+        ks.move(pid, k, dst)
+    cfg.setdefault("audit", {})["key_store"] = to
+    ap.write_json(os.path.join(ap.aisef_dir(project), "config.json"), cfg)
+    ap.append(project, {"event_type": "decision_recorded", "actor": {"type": "user", "id": "user"},
+                        "summary": "chaves privadas do log em %s (%s)" % (
+                            "cofre do sistema" if to == "os" else "arquivo", ", ".join(k for k, _s, _d in moves) or
+                            "nenhuma a mover"),
+                        "data": {"key_store": to, "keys": [k for k, _s, _d in moves]}})
+    return moves
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--project", default=".")
     p.add_argument("--apply", action="store_true")
+    p.add_argument("--key-store", choices=["os", "file"], help="onde ficam as chaves privadas do log (ADR 0031)")
     a = p.parse_args(argv)
     project = os.path.abspath(a.project)
     if not os.path.isfile(os.path.join(project, ".aisef", "config.json")):
         print("sem .aisef/config.json em %s" % project)
         return 2
+    if a.key_store:
+        import aisef_keystore
+        try:
+            moves = key_store(project, a.key_store, a.apply)
+        except aisef_keystore.VaultError as exc:
+            print("ERRO: %s" % exc)
+            return 1
+        print(("aplicado:" if a.apply else "plano (nada gravado; use --apply):") + " audit.key_store = " + a.key_store)
+        for k, src, dst in moves:
+            print("  - %s: %s -> %s" % (k, src, dst))
+        return 0
     changes = apply(project) if a.apply else plan(project)[1]
     if not changes:
         print("projeto em dia com o plugin %s; nada a migrar" % plugin_version())
