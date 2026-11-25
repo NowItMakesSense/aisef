@@ -32,3 +32,4 @@ Cada decisão tem data, contexto, o que foi decidido e as consequências. Para m
 | [0026](0026-log-por-pessoa.md) | Um log de auditoria por pessoa | 2026-11-20 |
 | [0027](0027-gateway-e-camada-o-sandbox-e-a-fronteira.md) | O gateway é uma camada; a fronteira é o sandbox | 2026-11-25 |
 | [0028](0028-dependencia-nova-pergunta.md) | Dependência nova pergunta; a conferência na rede é opt-in | 2026-11-25 |
+| [0029](0029-conteudo-nao-confiavel-marca-a-sessao.md) | Conteúdo não confiável marca a sessão | 2026-11-25 |

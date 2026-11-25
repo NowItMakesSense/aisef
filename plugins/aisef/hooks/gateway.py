@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python -I nao 
 from gateway_rules import *  # noqa: E402,F401,F403  (H-01)
 from gateway_rules import _classify_text, _home_secret_dirs  # noqa: E402,F401
 import gateway_deps  # noqa: E402
+import taint  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CORE = os.path.join(os.path.dirname(HERE), "core")
@@ -387,6 +388,9 @@ def decide(data, project, policy, patterns, config, now):
     elif tool == "WebFetch" and WEBFETCH_SECRET_RE.search(inp.get("url") or ""):
         raise Decision("deny", "a URL parece carregar um segredo (token/chave na query): possivel vazamento de dados")
 
+    tainted = taint.active(project, data.get("session_id"), now)  # S-06: lethal trifecta
+    items = taint.harden(items, operation, tainted, env, tool in SHELL_TOOLS)
+
     contract = agent_contract(project, data)
     if contract is not None:
         enforce_ceiling(contract, tool, items, env)
@@ -404,6 +408,9 @@ def decide(data, project, policy, patterns, config, now):
             lvl = level_for(policy, resource, action, eff_env)
             if destructive:
                 lvl = apply_t1(policy, lvl, eff_env)
+            raised = taint.raise_level(lvl, resource, action, label, tainted)
+            if raised != lvl:
+                lvl, label = raised, label + " [" + taint.note(tainted, now) + "]"
             if lvl == "approve_scope":
                 branches = (gctx or {}).get("push_targets") if tool in SHELL_TOOLS and resource == "git_feature_branch" else None
                 auth = scope_covers(project, resource, eff_env, now,

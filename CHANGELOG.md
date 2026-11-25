@@ -4,6 +4,13 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
+### Conteúdo não confiável marca a sessão (S-06)
+Página da web, resultado de busca e resposta de MCP podem trazer instruções escondidas. O vazamento precisa de três coisas na mesma sessão: dado privado, conteúdo não confiável e canal de saída (ADR 0029).
+- **Marca.** WebFetch, WebSearch e MCP sem confiança do usuário gravam uma marca da sessão em `.aisef/runtime/untrusted/`, por 60 minutos (`untrusted_ttl_minutes` no config.json). MCP no `mcp_allow` ou com `aisef_mcp.py trust` não marca.
+- **Com a marca**, saída de dados com arquivo (`curl -d @arquivo`) passa a exigir aprovação reforçada, escrita em config/CI deixa de ser coberta pela autorização de escopo e qualquer comando de rede (`curl`, `wget`, `ssh`, `Invoke-RestMethod`, também dentro de `bash -c`) pergunta. O motivo diz de onde veio a marca e quantos minutos faltam.
+- Apagar ou reescrever a marca é decisão do usuário; marca ilegível conta como marca.
+- Suíte nova `test_taint.py` (28 casos) e 4 casos no corpus do gateway.
+
 ### Dependência nova pergunta e é conferida (S-05)
 `npm install X` e `pip install X` passavam direto, e instalar um pacote roda código dele. Modelos inventam nomes de pacote; quem registra o nome inventado ganha execução no projeto (ADR 0028).
 - **Gateway.** Pacote novo por `pip`, `uv add`/`uv pip`, `poetry add`, `pdm add`, `npm install|i|add`, `pnpm add`, `yarn add`, `bun add`, `cargo add`, `go get`, `dotnet add package`, `gem install` e `composer require` pergunta, inclusive dentro de `bash -c`. Instalar o que já está declarado (`npm ci`, `npm install` sem nome, `pip install -r`, `pip install -e .`, `uv sync`, caminho local) segue livre.
