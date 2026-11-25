@@ -69,6 +69,7 @@ SUITES = [
     ("grafo nativo de imports (G-06)", [os.path.join(CORE, "test_graph.py")]),
     ("hook consultivo graph_nudge", [os.path.join(HOOKS, "test_graph_nudge.py")]),
     ("benchmark: fixtures validos (sem modelo)", [os.path.join(ROOT, "tools", "bench_outcomes.py"), "--check-fixtures"]),
+    ("benchmark: braco aisef-lean com a triagem real (M-06)", [os.path.join(ROOT, "tools", "test_bench_lean.py")]),
     ("revisores com bugs plantados: fixtures (M-07)", [os.path.join(ROOT, "tools", "bench_reviewers.py"), "--check-fixtures"]),
     ("revisores com bugs plantados: placar (M-07)", [os.path.join(ROOT, "tools", "test_bench_reviewers.py")]),
     ("deteccao de stack e arquitetura", [os.path.join(CORE, "test_detect.py")]),
