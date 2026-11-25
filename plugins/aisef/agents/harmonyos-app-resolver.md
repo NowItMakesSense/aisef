@@ -36,7 +36,7 @@ Voce faz o build HarmonyOS (ArkTS/ArkUI) voltar a passar com o **menor diff poss
 ## TDD (quando o Task Contract tem `tests.tdd_required`, padrao das fatias verticais)
 - Um comportamento por vez: escreva UM teste num seam aprovado (`tests.seams`), rode e veja-o **falhar** pelo motivo certo; escreva o minimo para passar; rode e veja-o **passar**. Repita. Refatoracao fica para depois do verde.
 - Teste comportamento pela interface publica, nunca detalhe de implementacao; nada de mock do que voce mesmo escreveu.
-- Registre cada ciclo em `tdd_evidence.cycles` do Execution Report: comportamento, teste e as execucoes `red` e `green` (comando, exit code, horario ISO com fuso, trecho curto da saida). O `aisef-check` recusa vermelho que passou, verde que falhou ou vermelho depois do verde.
+- Registre cada ciclo em `tdd_evidence.cycles` do Execution Report: comportamento, teste e as execucoes `red` e `green` (comando, exit code, horario ISO com fuso, trecho curto da saida). O `aisef-check` recusa vermelho que passou, verde que falhou ou vermelho depois do verde, e confere cada execucao no log assinado (TDD-EVIDENCE-UNBACKED): rode o vermelho e o verde pelo shell, e declare o mesmo comando e o horario em que ele rodou. Execucao que nao esta no log nao vale como evidencia.
 - Se a skill `tdd` (plugin mattpocock-skills) estiver disponivel, siga-a; senao, siga estas regras.
 
 ## Entrega (duplo formato, consistentes entre si)

@@ -8,6 +8,7 @@ O detalhe de cada versão está no [CHANGELOG](../CHANGELOG.md), e as decisões 
 
 | Versão | Entrega |
 |---|---|
+| 0.17.0 | Em andamento: [plano 0.17](plan/plano-0.17.md) (gateway, TDD cruzado com o log, sandbox por perfil, carimbo de tempo, atestado in-toto) |
 | depois | Revisão do catálogo de agentes com dados de uso de projetos reais (C-05, `tools/agent_usage.py`) |
 | depois | Confirmar numa sessão real que o Claude Code entrega o `agent_id` de quem chama a ferramenta Agent; sem isso, a ligação pai → subagente continua marcada como inferida |
 

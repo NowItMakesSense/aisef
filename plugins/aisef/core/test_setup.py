@@ -74,5 +74,28 @@ check("--roles limita os agentes ativados", st == {"implementer": "active", "val
 check("CLI: item desconhecido sai 2", su.main(["--project", p2, "--only", "tudo"]) == 2)
 check("CLI: sem init sai 2", su.main(["--project", work]) == 2)
 
+# S-04 (0.17): perfil team grava o sandbox estrito em qualquer sistema (e politica do projeto)
+p3 = os.path.join(work, "p3")
+os.makedirs(p3)
+ap.init(p3, "PRJ-SETUP3")
+cfg_path = os.path.join(p3, ".aisef", "config.json")
+cfg = json.load(open(cfg_path, encoding="utf-8"))
+cfg["profile"] = "team"
+ap.write_json(cfg_path, cfg)
+pl3 = su.plan(p3)
+check("S-04: team pede o sandbox estrito no plano, mesmo no Windows",
+      any("allowUnsandboxedCommands" in x for x in pl3.get("sandbox", [])), pl3.get("sandbox"))
+su.apply(p3, only=("sandbox",))
+sb3 = json.load(open(os.path.join(p3, ".claude", "settings.json"), encoding="utf-8"))["sandbox"]
+check("S-04: settings do projeto com o sandbox estrito", sb3.get("enabled") is True and sb3.get("allowUnsandboxedCommands") is False
+      and "~/.aisef" in sb3["filesystem"]["denyRead"], sb3)
+check("S-04: depois de aplicar, o sandbox sai do plano", "sandbox" not in su.plan(p3), su.plan(p3))
+import check_project  # noqa: E402
+rules = {f["rule"] for f in check_project.check(p3).findings}
+check("S-04: check sem PROFILE-SANDBOX com o estrito aplicado", "PROFILE-SANDBOX" not in rules, rules)
+os.remove(os.path.join(p3, ".claude", "settings.json"))
+rules = {f["rule"] for f in check_project.check(p3).findings}
+check("S-04: check acusa PROFILE-SANDBOX sem o sandbox", "PROFILE-SANDBOX" in rules, rules)
+
 print("\n%d testes, %d falhas" % (total, fails))
 sys.exit(1 if fails else 0)

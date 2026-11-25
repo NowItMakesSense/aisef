@@ -1,2 +1,4 @@
+# Entrada legivel. O CI instala o requirements-dev.lock (versoes exatas com hash, H-05). Para atualizar:
+#   uv pip compile --universal --generate-hashes --python-version 3.12 --no-header requirements-dev.txt -o requirements-dev.lock
 jsonschema>=4.20
 cryptography>=42

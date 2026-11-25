@@ -131,10 +131,80 @@ def sandbox_status(project, platform=None, home=None):
     return st
 
 
+STRICT_PROFILES = ("team", "regulated")
+# S-04 (0.17): o que os perfis team e regulated exigem do sandbox nativo. allowUnsandboxedCommands=false fecha a saida
+# por dangerouslyDisableSandbox; denyRead tira a chave e as ancoras do AISEF do alcance de qualquer comando.
+# failIfUnavailable fica de fora de proposito: no settings do projeto ele impediria o Claude Code de abrir no Windows nativo.
+SANDBOX_STRICT = {"enabled": True, "allowUnsandboxedCommands": False, "filesystem": {"denyRead": ["~/.aisef"]}}
+
+
+def sandbox_effective(project, home=None):
+    """O bloco sandbox somado dos settings (usuario < projeto < local; o ultimo valor de cada chave vence)."""
+    import json
+    eff = {}
+    for path in _settings_files(project, home):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                sb = (json.load(fh) or {}).get("sandbox")
+        except (OSError, ValueError, AttributeError):
+            continue
+        if not isinstance(sb, dict):
+            continue
+        for k, v in sb.items():
+            if k == "filesystem" and isinstance(v, dict):
+                fs = eff.setdefault("filesystem", {})
+                for fk, fv in v.items():
+                    fs[fk] = list(dict.fromkeys((fs.get(fk) or []) + list(fv))) if isinstance(fv, list) else fv
+            else:
+                eff[k] = v
+    return eff
+
+
+def sandbox_missing(profile, effective):
+    """O que falta para o perfil, em texto (vazio = atende). Solo so pede enabled."""
+    out = []
+    if effective.get("enabled") is not True:
+        out.append("sandbox.enabled = true")
+    if profile in STRICT_PROFILES:
+        if effective.get("allowUnsandboxedCommands") is not False:
+            out.append("sandbox.allowUnsandboxedCommands = false (sem saida por dangerouslyDisableSandbox)")
+        if "~/.aisef" not in ((effective.get("filesystem") or {}).get("denyRead") or []):
+            out.append("sandbox.filesystem.denyRead inclui ~/.aisef (chave e ancoras do AISEF)")
+    return out
+
+
+def sandbox_merge(current, profile):
+    """Settings com o sandbox que o perfil pede, sem afrouxar nada que ja esteja mais fechado."""
+    cur = dict(current or {})
+    sb = dict(cur.get("sandbox") or {})
+    sb["enabled"] = True
+    if profile in STRICT_PROFILES:
+        sb["allowUnsandboxedCommands"] = False
+        fs = dict(sb.get("filesystem") or {})
+        fs["denyRead"] = list(dict.fromkeys(list(fs.get("denyRead") or []) + ["~/.aisef"]))
+        sb["filesystem"] = fs
+    cur["sandbox"] = sb
+    return cur
+
+
 def sandbox_advice(project, cfg=None, platform=None, home=None):
-    """Aviso do doctor, ou None. Silencioso no Windows nativo, com o sandbox ligado ou com
-    config.json -> "sandbox_reminder": false (o usuario recusou)."""
-    if (cfg or {}).get("sandbox_reminder") is False:
+    """Aviso do doctor, ou None. Perfil solo: silencioso no Windows nativo, com o sandbox ligado ou com
+    config.json -> "sandbox_reminder": false (o usuario recusou). Perfis team e regulated (S-04): avisa enquanto o
+    sandbox nao estiver estrito e, no Windows nativo, recomenda WSL2 ou devcontainer; no regulated o aviso nao cala."""
+    cfg = cfg or {}
+    profile = cfg.get("profile")
+    if profile in STRICT_PROFILES and not (profile == "team" and cfg.get("sandbox_reminder") is False):
+        supported = (platform or sys.platform).startswith(SANDBOX_PLATFORMS)
+        if not supported:
+            return ("perfil %s sem isolamento: no Windows nativo o Claude Code roda os comandos sem sandbox, e o gateway "
+                    "(um hook no seu usuario) fica como unica camada. Rode o Claude Code no WSL2 ou num devcontainer "
+                    "para o sandbox valer" % profile)
+        missing = sandbox_missing(profile, sandbox_effective(project, home))
+        if missing:
+            return ("perfil %s pede o sandbox estrito; falta: %s. Aplique com `aisef_setup.py --apply --only sandbox`"
+                    % (profile, "; ".join(missing)))
+        return None
+    if cfg.get("sandbox_reminder") is False:
         return None
     st = sandbox_status(project, platform, home)
     if not st["supported"] or st["enabled"]:

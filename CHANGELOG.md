@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.17.0 (em andamento)
+
+Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
+
+### Dependência nova pergunta e é conferida (S-05)
+`npm install X` e `pip install X` passavam direto, e instalar um pacote roda código dele. Modelos inventam nomes de pacote; quem registra o nome inventado ganha execução no projeto (ADR 0028).
+- **Gateway.** Pacote novo por `pip`, `uv add`/`uv pip`, `poetry add`, `pdm add`, `npm install|i|add`, `pnpm add`, `yarn add`, `bun add`, `cargo add`, `go get`, `dotnet add package`, `gem install` e `composer require` pergunta, inclusive dentro de `bash -c`. Instalar o que já está declarado (`npm ci`, `npm install` sem nome, `pip install -r`, `pip install -e .`, `uv sync`, caminho local) segue livre.
+- **`aisef_deps.py check <ecossistema> <pacote>`.** Confere se o pacote existe no registro (senão: "não existe no registro, possível pacote inventado"), há quantos dias saiu a primeira versão (menos de 30 é alerta) e os avisos do OSV, com `MAL-*` como malicioso.
+- **Rede só quando o usuário pede.** Por padrão o motivo da pergunta sugere o comando. Com `"dependency_check": "online"` no `.aisef/config.json`, o gateway confere sozinho (até 3 pacotes por comando) e mostra o resultado no motivo.
+- Corpus do gateway: 188 casos (20 novos, 2 contornos). Suíte nova `test_deps.py` (33 casos, sem rede).
+
+### Sandbox estrito nos perfis `team` e `regulated` (S-04)
+O gateway é um hook no seu próprio usuário (ADR 0027); o isolamento de verdade é o sandbox nativo do Claude Code.
+- **Setup.** Com `profile` `team` ou `regulated`, o item `sandbox` do `aisef_setup.py` grava no `.claude/settings.json` do projeto `enabled: true`, `allowUnsandboxedCommands: false` (fecha a saída por `dangerouslyDisableSandbox`) e `filesystem.denyRead` com `~/.aisef` (chave e âncoras fora do alcance de qualquer comando), sem afrouxar nada que já estivesse mais fechado. Grava em qualquer sistema, porque é política do projeto. `failIfUnavailable` fica de fora de propósito: no settings do projeto ele impediria o Claude Code de abrir no Windows nativo.
+- **Doctor.** Perfil exigente sem o sandbox estrito avisa o que falta; no Windows nativo, onde o sandbox não existe, recomenda WSL2 ou devcontainer. No `regulated` o aviso não se cala com `sandbox_reminder: false`. O perfil `solo` segue como antes.
+- **Check.** Regra `PROFILE-SANDBOX` (aviso): perfil `team` ou `regulated` declarado no `config.json` sem o sandbox estrito no settings do projeto. Projeto sem perfil declarado não é cobrado.
+
+### Evidência de TDD conferida no log assinado (E-01)
+Os ciclos vermelho-verde do Execution Report eram declarados pelo próprio agente: o check conferia o código de saída e o horário que ele escreveu, sem olhar o que de fato rodou. Pior: o hook de auditoria só ouvia o `PostToolUse`, que o Claude Code dispara apenas quando o comando dá certo, então o vermelho (o teste falhando) nunca chegava ao log.
+- **O log grava o resultado.** O hook passa a ouvir também o `PostToolUseFailure` de Bash e PowerShell e grava `exit_code` em cada comando: 0 no sucesso, o `N` da primeira linha `Exit code N` na falha (`failed`, e `interrupted` quando foi interrompido).
+- **Regra nova `TDD-EVIDENCE-UNBACKED`** (`check_rules_4.py`). Cada fase de cada ciclo precisa de um comando no log com o mesmo texto (sem o `cd <pasta> &&` do início), o mesmo resultado (falhou no vermelho, passou no verde), até 15 minutos do horário declarado, e o vermelho antes do verde. Erro nos perfis `team` e `regulated`, aviso no `solo`. O agente não faz nada a mais: o hook grava sozinho.
+- Projetos que vêm de antes da 0.17 não passam a falhar: a regra só cobra ciclos cujo verde é posterior ao primeiro comando com resultado no log.
+- O bloco de TDD dos executores diz que a execução fora do log não vale como evidência. Suíte nova `test_tdd_log.py` (18 casos).
+
+### Gateway: sete contornos fechados (S-03)
+A análise rodou o gateway num projeto de teste e passou sete comandos sem nenhuma pergunta. Agora:
+- **Chave e âncoras na home.** O nome partido por aspas ou escape (`~/.ais''ef/keys`, `.ai"s"ef`, `.ais\ef`) é negado como o nome inteiro. Caminho da home montado por variável perto de `keys`, `anchors` ou `aisef` (`d=.aisef; cat ~/$d/keys/x`) e curinga que cobre a pasta do AISEF (`cp -r ~/.ais* /tmp`) viram pergunta, porque o gateway não consegue provar aonde vão.
+- **Script que lê a chave depois.** Write, Edit e MultiEdit cujo texto monta o caminho da chave ou das âncoras na home (`expanduser`, `Path.home`, `~/.aisef/keys`) perguntam. Citar `.aisef/keys/` do projeto (a chave pública) segue livre.
+- **Deploy por script do projeto.** `npm|pnpm|yarn|bun run deploy|release|ship` e `make|just|task deploy|publish|ship` contam como deploy (negado sem aprovação reforçada). `make release` pergunta.
+- **Saída de dados com arquivo.** `curl -d/-F/--data-binary @arquivo`, `curl -T`, `wget --post-file`, `Invoke-WebRequest -InFile` e `scp`/`rsync` para outro host perguntam; com arquivo sensível (`@.env`) são negados.
+- **Hook do Git plantado.** Escrever em `.git/hooks/`, `.githooks/` ou `.claude/hooks/`, pela ferramenta de arquivo ou pelo shell, vira `config_ci_iac` e pergunta: o hook rodaria no seu próximo commit, fora do gateway.
+- Corpus do gateway: 168 casos, 65 contornos (antes 144 e 48), mais 7 casos de Write/Edit no `test_gateway_corpus.py`.
+
+### CI mais fechado e suíte mais rápida (H-05)
+- O token do CI só lê o repositório (`permissions: contents: read`), e as Actions ficam fixadas pelo SHA do commit, com a tag no comentário.
+- O CI e a Action `aisef-verify` instalam o `requirements-dev.lock`: versões exatas com hash (`--require-hashes`), gerado pelo `uv pip compile --universal`. O `requirements-dev.txt` segue como entrada legível.
+- A Action recebe as entradas por variável de ambiente, não mais interpoladas no script (evita injeção de comando por uma entrada maliciosa).
+- `run_tests.py --jobs N` roda as suítes em paralelo (de mais de 10 para 5 minutos no Windows com 6) e `--only <texto>` roda só as suítes daquela área.
+
+### README sem promessa maior que o código (D-03)
+"None get through" saiu dos três READMEs. Entrou a seção "O que o gateway não garante": é um hook no mesmo usuário do sistema, não vê o que um script escrito agora fará depois, e a fronteira de verdade é o sandbox ou um devcontainer.
+
 ## 0.16.0 (2026-11-25)
 
 ### Outra sessão no mesmo projeto: detecção e coordenação

@@ -78,6 +78,23 @@ check("chave: Grep na pasta negado", decide_path("Grep", pattern="PRIVATE", path
 check("chave: Glob na pasta negado", decide_path("Glob", pattern="*.pem", path=os.path.dirname(key)) == "deny")
 check("ancora: Edit negado", decide_path("Edit", file_path=anchor, old_string="a", new_string="b") == "deny")
 check("ancora: Write negado", decide_path("Write", file_path=anchor, content="{}") == "deny")
+
+# S-03 (0.17): script que le a chave escrito agora para rodar depois; hook do Git plantado pela ferramenta de arquivo
+src = os.path.join(proj, "x.py")
+check("S-03: Write de script que monta o caminho da chave pergunta",
+      decide_path("Write", file_path=src, content="import os\nk = os.path.join(os.path.expanduser('~'), '.aisef', 'keys')\n") == "ask")
+check("S-03: Edit com ~/.aisef/anchors no texto pergunta",
+      decide_path("Edit", file_path=src, old_string="a", new_string="open('~/.aisef/anchors/x')") == "ask")
+check("S-03: MultiEdit com o caminho da chave pergunta",
+      decide_path("MultiEdit", file_path=src, edits=[{"old_string": "a", "new_string": "Path.home() / '.aisef/keys'"}]) == "ask")
+check("S-03: Write citando .aisef/keys do projeto (chave publica, sem home) segue livre",
+      decide_path("Write", file_path=os.path.join(proj, "README.md"), content="A chave publica fica em .aisef/keys/.") == "allow")
+check("S-03: Edit em .git/hooks/pre-commit pergunta",
+      decide_path("Edit", file_path=os.path.join(proj, ".git", "hooks", "pre-commit"), old_string="a", new_string="b") == "ask")
+check("S-03: Write em .githooks/ pergunta",
+      decide_path("Write", file_path=os.path.join(proj, ".githooks", "pre-push"), content="#!/bin/sh") == "ask")
+check("S-03: Write em .claude/hooks/ pergunta",
+      decide_path("Write", file_path=os.path.join(proj, ".claude", "hooks", "x.sh"), content="#!/bin/sh") == "ask")
 check("chave publica do projeto: Read continua so perguntando",
       decide_path("Read", file_path=os.path.join(proj, ".aisef", "keys", "audit-key-1.pem")) == "ask")
 link = os.path.join(proj, "atalho")

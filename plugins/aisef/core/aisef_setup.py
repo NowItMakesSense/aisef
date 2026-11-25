@@ -11,7 +11,8 @@ Itens:
     settings   regras nativas de segunda camada em .claude/settings.json (mescla, nunca apaga)
     practices  boas praticas em .claude/rules/aisef/ (nao sobrescreve arquivo mudado no projeto)
     docs       secao AISEF no AGENTS.md e uma linha no CLAUDE.md (acrescenta, nunca sobrescreve)
-    sandbox    sandbox.enabled no .claude/settings.json (so em Linux, macOS e WSL2; F-08)
+    sandbox    sandbox.enabled no .claude/settings.json (so em Linux, macOS e WSL2; F-08). Perfis team e regulated:
+               tambem allowUnsandboxedCommands=false e denyRead ~/.aisef, em qualquer sistema (S-04)
 
     python -I aisef_setup.py --project .                               (plano: o que cada item faria)
     python -I aisef_setup.py --project . --apply [--only agents,docs] [--roles backend,qa]
@@ -73,8 +74,13 @@ def plan(project, roles=None):
     practices = ["%s (%s)" % (r["target"], r["state"]) for r in aisef_practices.plan(project)
                  if r["state"] not in ("igual", "modificado no projeto")]
     import aisef_env
+    profile = ap.load_config(project).get("profile")
     sb = aisef_env.sandbox_status(project)
-    sandbox = ["sandbox.enabled = true em .claude/settings.json"] if sb["supported"] and not sb["enabled"] else []
+    if profile in aisef_env.STRICT_PROFILES:  # S-04: politica do projeto, gravada em qualquer sistema
+        sandbox = ["%s em .claude/settings.json" % m for m in
+                   aisef_env.sandbox_missing(profile, aisef_env.sandbox_effective(project))]
+    else:
+        sandbox = ["sandbox.enabled = true em .claude/settings.json"] if sb["supported"] and not sb["enabled"] else []
     out = {"agents": drafts, "settings": settings, "practices": practices, "docs": _docs_plan(project), "sandbox": sandbox}
     return {k: v for k, v in out.items() if v}
 
@@ -117,8 +123,8 @@ def apply(project, only=ITEMS, roles=None):
     if "sandbox" in only and "sandbox" in todo:
         path = os.path.join(project, ".claude", "settings.json")
         cur = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else {}
-        cur.setdefault("sandbox", {})["enabled"] = True
-        ap.write_json(path, cur)
+        import aisef_env
+        ap.write_json(path, aisef_env.sandbox_merge(cur, ap.load_config(project).get("profile")))
         done["sandbox"] = todo["sandbox"]
     done = {k: v for k, v in done.items() if v}
     if done:

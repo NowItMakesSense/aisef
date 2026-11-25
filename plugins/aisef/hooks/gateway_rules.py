@@ -9,8 +9,10 @@ import json
 import os
 import re
 import sys
-HERE = os.path.dirname(os.path.abspath(__file__))
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE) if HERE not in sys.path else None
+import gateway_deps  # noqa: E402  (S-05)
 
 PATTERNS_PATH = os.path.join(HERE, "sensitive_patterns.json")
 
@@ -60,7 +62,24 @@ DESIGN_LIVE_RE = re.compile(r"\bimpeccable\s+live\b", re.I)
 CONFIG_PATH_RE = re.compile(
     r"(?:^|/)(?:\.github/workflows/|\.gitlab-ci\.yml$|Jenkinsfile$|azure-pipelines\.yml$|\.circleci/|"
     r"Dockerfile[^/]*$|docker-compose[^/]*\.ya?ml$|compose\.ya?ml$|[^/]+\.tf$|[^/]+\.tfvars$|helm/|charts/|k8s/|"
-    r"kubernetes/|\.claude/settings[^/]*\.json$|\.claude/(?:skills|agents|commands)/|\.mcp\.json$)", re.I)
+    r"kubernetes/|\.claude/settings[^/]*\.json$|\.claude/(?:skills|agents|commands|hooks)/|\.mcp\.json$|"
+    r"\.git/hooks/|\.githooks/)", re.I)  # S-03: hook do Git roda no proximo commit do usuario, fora do gateway
+# S-03: deploy escondido num script do projeto (npm run deploy, make deploy) e alvo de make que pode publicar.
+SCRIPT_DEPLOY_RE = re.compile(
+    r"\b(?:npm|pnpm|yarn|bun)\s+(?:run(?:-script)?\s+)?(?:deploy|release|ship)(?:[:\w-]*)(?=\s|$|[;&|])|"
+    r"\b(?:make|just|task|mage)\b(?:\s+-\S+(?:\s+\S+)?)*[^;&|]*?\s(?:deploy|publish|ship)(?:[:\w-]*)(?=\s|$|[;&|])", re.I)
+MAKE_RELEASE_RE = re.compile(r"\b(?:make|just|task|mage)\b[^;&|]*\srelease(?:[:\w-]*)(?=\s|$|[;&|])", re.I)
+# S-03: saida de dados com arquivo (curl -d @arq, -F x=@arq, -T arq, wget --post-file, Invoke-WebRequest -InFile, scp/rsync).
+EGRESS_RE = re.compile(
+    r"\bcurl\b[^;&|]*\s(?:-d|--data(?:-binary|-raw|-urlencode|-ascii)?|-F|--form)\s*['\"]?[^\s'\"]*@|"
+    r"\bcurl\b[^;&|]*\s(?:-T|--upload-file)\s|\bwget\b[^;&|]*--(?:post|body)-file|"
+    r"\bInvoke-(?:WebRequest|RestMethod)\b[^;&|]*\s-InFile\b|\biwr\b[^;&|]*\s-InFile\b|"
+    r"\b(?:scp|rsync|sftp)\b[^;&|]*\s[\w.-]+@[\w.-]+:|\bscp\b[^;&|]*\s[\w-]+(?:\.[\w-]+)+:", re.I)
+EGRESS_FILE_RE = re.compile(r"(?:@|\s-T\s+|--upload-file\s+|--(?:post|body)-file[= ]|-InFile\s+)['\"]?([^\s'\";&|]+)", re.I)
+# S-03: escrita por shell num hook do Git (echo > .git/hooks/pre-commit, cp x .git/hooks/)
+SHELL_HOOK_WRITE_RE = re.compile(
+    r"(?:>>?|\b(?:tee|Set-Content|Add-Content|Out-File|New-Item|ni|Copy-Item|cpi|copy|Move-Item|mi|move|cp|mv|ln|"
+    r"install|sed\s+-i|perl\s+-[a-z]*i)\b)[^;&|]*?(?:^|[/\s\"'=>])\.(?:git/hooks|githooks)/", re.I)
 # Configuracao de qualidade (lint, formatacao, tipos): o agente conserta o codigo, nao afrouxa a regra (ideia do
 # config-protection do ECC). Escrever nela exige config_ci_iac, que os executores nao tem no teto.
 QUALITY_CONFIG_RE = re.compile(
@@ -116,10 +135,66 @@ def _home_secret_dirs():
     return out
 
 
+def _variants(text):
+    """S-03 (0.17): o texto como veio e sem as aspas e escapes que partem palavras (`.ais''ef`, `.ai"s"ef`, `.ais\\ef`).
+    A barra invertida so sai entre letras quando ha uma versao sem ela; a original continua sendo conferida."""
+    out = [text]
+    dequoted = re.sub(r"['\"`]", "", text)
+    if dequoted != text:
+        out.append(dequoted)
+    unescaped = re.sub(r"(?<=[A-Za-z.])\\(?=[A-Za-z])", "", dequoted)
+    if unescaped != dequoted:
+        out.append(unescaped)
+    return out
+
+
 def home_secret_ref(text, cwd=None, is_path=False):
     """O texto (comando ou caminho) aponta para a chave privada ou as ancoras do AISEF?"""
     if not text:
         return False
+    if not is_path and len(_variants(text)) > 1:
+        return any(_home_secret_ref(v, cwd, is_path) for v in _variants(text))
+    return _home_secret_ref(text, cwd, is_path)
+
+
+HOME_PREFIX = r"(?:~|\$\{?HOME\}?|\$env:(?:HOME|USERPROFILE)|%USERPROFILE%|%HOMEPATH%|\$\{?AISEF_HOME\}?|\$env:AISEF_HOME)"
+HOME_VAR_PATH_RE = re.compile(HOME_PREFIX + r"[/\\]+[^\s;&|]*(?:\$\{?\w|\$\(|`)", re.I)
+GLOB_CHARS_RE = re.compile(r"[*?\[]")
+# Codigo escrito num arquivo que monta o caminho da chave ou das ancoras na home (para rodar depois, fora do gateway).
+CODE_HOME_RE = re.compile(r"expanduser|Path\.home|\bhomedir\b|os\.homedir|USERPROFILE|\$HOME\b|\bHOME\b|AISEF_HOME|~[/\\]", re.I)
+CODE_KEY_RE = re.compile(r"\.aisef['\"]?\s*(?:[/\\]+|['\"]?\s*[,+]\s*['\"])\s*['\"]?(?:keys|anchors)\b", re.I)
+
+
+def home_secret_hint(text, cwd=None):
+    """S-03: o comando PODE chegar na chave ou nas ancoras, mas o gateway nao consegue provar (caminho da home montado
+    por variavel, ou curinga que cobre a pasta do AISEF). Retorna o motivo, ou None. Vira pergunta, nao negacao."""
+    if not text:
+        return None
+    bases = {norm(b).rstrip("/").lower() for b in (os.environ.get("AISEF_HOME") or "",
+                                                     os.path.join(os.path.expanduser("~"), ".aisef")) if b}
+    for v in _variants(text):
+        if HOME_VAR_PATH_RE.search(v) and re.search(r"keys|anchors|aisef", v, re.I):
+            return "caminho da home montado por variavel perto da chave do AISEF: o gateway nao sabe onde vai dar"
+        for tok in v.split():
+            tok = tok.strip("\"'();")
+            if not GLOB_CHARS_RE.search(tok) or not ("/" in tok or "\\" in tok):
+                continue
+            try:
+                full = norm(os.path.join(cwd or os.getcwd(), os.path.expanduser(tok))).lower()
+            except (OSError, ValueError):
+                continue
+            if any(fnmatch.fnmatchcase(b + t, full) for b in bases for t in ("", "/keys", "/anchors", "/keys/x")):
+                return "curinga que cobre a pasta do AISEF na home (chave e ancoras): diga o caminho exato"
+    return None
+
+
+def code_secret_ref(content):
+    """S-03: texto escrito num arquivo (Write/Edit) que monta o caminho da chave ou das ancoras na home."""
+    return bool(content) and (bool(HOME_SECRET_VAR_RE.search(content)) or
+                              bool(CODE_KEY_RE.search(content) and CODE_HOME_RE.search(content)))
+
+
+def _home_secret_ref(text, cwd=None, is_path=False):
     if HOME_SECRET_VAR_RE.search(text):
         return True
     dirs = _home_secret_dirs()
@@ -330,6 +405,18 @@ def _classify_text(cmd, patterns, env, ctx=None):
         found.append(("git", "release_publish", env, False, "release/publicacao"))
     if DEPLOY_RE.search(cmd) or DEPLOY_DESTRUCTIVE_RE.search(cmd):
         found.append(("deploy_infra", "execute", "unknown", bool(DEPLOY_DESTRUCTIVE_RE.search(cmd)), "deploy/infra"))
+    if SCRIPT_DEPLOY_RE.search(cmd):
+        found.append(("deploy_infra", "execute", "unknown", False, "deploy por script do projeto (npm run/make deploy)"))
+    elif MAKE_RELEASE_RE.search(cmd):
+        found.append(("unclassified", "execute", env, False, "alvo 'release' de make/just/task (pode publicar)"))
+    if EGRESS_RE.search(cmd):
+        files = [f for f in EGRESS_FILE_RE.findall(cmd) if f not in ("-",)]
+        if any(is_sensitive_path(norm(f), patterns) for f in files):
+            raise Decision("deny", "envio de arquivo sensivel para fora da maquina (%s): possivel vazamento de dados"
+                           % ", ".join(f for f in files if is_sensitive_path(norm(f), patterns)))
+        found.append(("unclassified", "execute", env, False, "envio de arquivo para fora da maquina (saida de dados)"))
+    if SHELL_HOOK_WRITE_RE.search(norm(cmd)):
+        found.append(("config_ci_iac", "write", env, False, "escrita por shell num hook do Git (roda no seu proximo commit)"))
     if RM_RECURSIVE_RE.search(cmd):
         found.append(("repo_code", "write", env, True, "remocao recursiva"))
     if CONTAINER_DESTRUCTIVE_RE.search(cmd):
@@ -338,6 +425,9 @@ def _classify_text(cmd, patterns, env, ctx=None):
         found.append(("unclassified", "execute", env, False, "codigo ofuscado, baixado ou passado por pipe para um interpretador"))
     if TOOLING_INSTALL_RE.search(cmd):
         found.append(("unclassified", "execute", env, False, "instalacao de skill, plugin ou servidor MCP"))
+    deps = gateway_deps.new_dependencies(cmd)  # S-05: pacote novo pergunta; lockfile e manifesto seguem livres
+    if deps:
+        found.append(gateway_deps.item(deps, env))
     if (AISEF_AUDIT_RE.search(norm(cmd)) and not re.search(r"audit_chain\.py\s+verify|aisef_project\.py\s+(?:verify|status)", cmd)
             and not read_only_command(cmd)):  # ler o log (grep, cat, wc, jq...) e permitido; escrever nunca
         raise Decision("deny", "o log de auditoria e as chaves do AISEF so podem ser alterados pelo hook de auditoria")

@@ -6,9 +6,9 @@
 
 AISEF is a Claude Code plugin for teams that must show what the AI did, not just ship faster. A plain-language request becomes a specified feature: triaged in code, split into vertical slices, built test-first by agents in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log that CI can verify on each pull request.
 
-| **166** | **2,500+** | **144** | **66** | **~0.2 s** |
+| **168** | **2,700+** | **188** | **66** | **~0.2 s** |
 |---|---|---|---|---|
-| consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 48 of them bypass attempts, none get through | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
+| consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 67 of them bypass attempts, all blocked ([limits](#what-the-gateway-does-not-guarantee)) | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
 <p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="The AISEF live panel: execution map, a pending decision, a task drawer and a subagent drawer, parallel lanes"></p>
 <p align="center"><sub>The live panel on demo data: who is running, who is waiting and why, which subagent each agent spawned, and the lanes over time.</sub></p>
@@ -19,7 +19,7 @@ AISEF is a Claude Code plugin for teams that must show what the AI did, not just
 |---|---|
 | **Rules that hold** | An Execution Gateway decides allow, ask or deny on every tool call, in code. It reads commands token by token (`bash -c`, `eval`, `$(...)`, inline code), keeps the signing key out of reach, and caps each agent with its own permission ceiling. |
 | **A log nobody can quietly edit** | Each event is hash-chained and signed with Ed25519; the head lives outside the repository. In a team, each person writes to their own stream with their own key, so merges never conflict and every approval carries the signature of whoever gave it. |
-| **Every requirement traced to its proof** | Requirement → slice → acceptance criterion → test → evidence, checked by 166 rules. `aisef_sysgraph.py` answers "what does this requirement touch?" without a model. |
+| **Every requirement traced to its proof** | Requirement → slice → acceptance criterion → test → evidence, checked by 168 rules. `aisef_sysgraph.py` answers "what does this requirement touch?" without a model. |
 | **Proof on every pull request** | The `aisef-verify` GitHub Action fails the PR if the log was tampered with, if the log shrank since the base branch, if `aisef-check` finds an error, or if the PR touches a task nobody validated. |
 | **Evidence your auditor can verify** | `aisef_evidence.py` packs a feature (contracts, reports, approvals, signed events, public keys) with a controls table for SOC 2 CC8.1 and ISO/IEC 27001:2022 A.8.32 and A.5.3. The package verifies itself, without the project. |
 | **Observability you already use** | `aisef_otel.py` exports each feature as OpenTelemetry traces (OTLP/JSON) with the GenAI conventions: one span per agent attempt, one per tool call. |
@@ -159,6 +159,10 @@ On the left, the work is fast and opaque. On the right, every decision was yours
 ## How it works
 
 Skills tell the model what to do. The **gateway** decides what it **may** do.
+
+### What the gateway does not guarantee
+
+The gateway is a hook that runs as your own OS user. It reads each tool call, so it catches what it can read: it does not see what a script written now does when it runs later, and a command it cannot read becomes a question, not an allow. The hard boundary is the OS: turn on Claude Code's native sandbox (Linux, macOS, WSL2) or run the agents in a devcontainer. The `team` and `regulated` profiles write a strict sandbox into the project settings (no `dangerouslyDisableSandbox` escape, no reads of `~/.aisef`), and the doctor warns while it is not in effect. On native Windows the sandbox does not exist: use WSL2 or a devcontainer.
 
 ```mermaid
 flowchart TD

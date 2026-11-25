@@ -88,6 +88,38 @@ json.dump({"sandbox": {"enabled": False}}, open(os.path.join(sbp, ".claude", "se
 check("sandbox: settings.local do projeto vence o do usuario", env.sandbox_status(sbp, "darwin", home)["enabled"] is False)
 check("sandbox: sandbox_reminder false silencia o doctor", env.sandbox_advice(sbp, {"sandbox_reminder": False}, "linux", home) is None)
 
+# S-04 (0.17): sandbox estrito nos perfis team e regulated
+st = os.path.join(work, "strict")
+sth = os.path.join(work, "stricthome")
+os.makedirs(os.path.join(st, ".claude"))
+os.makedirs(sth)
+msg = env.sandbox_advice(st, {"profile": "team"}, "win32", sth) or ""
+check("S-04: team no Windows nativo recomenda WSL2 ou devcontainer", "WSL2" in msg and "devcontainer" in msg, msg)
+check("S-04: regulated no Windows nao cala com sandbox_reminder false",
+      env.sandbox_advice(st, {"profile": "regulated", "sandbox_reminder": False}, "win32", sth) is not None)
+check("S-04: team cala com sandbox_reminder false",
+      env.sandbox_advice(st, {"profile": "team", "sandbox_reminder": False}, "win32", sth) is None)
+json.dump({"sandbox": {"enabled": True}}, open(os.path.join(st, ".claude", "settings.json"), "w"))
+msg = env.sandbox_advice(st, {"profile": "team"}, "linux", sth) or ""
+check("S-04: team com o sandbox so ligado ainda pede o estrito",
+      "allowUnsandboxedCommands" in msg and "~/.aisef" in msg, msg)
+check("S-04: solo com o sandbox ligado fica quieto", env.sandbox_advice(st, {"profile": "solo"}, "linux", sth) is None)
+merged = env.sandbox_merge({"sandbox": {"enabled": False, "filesystem": {"denyRead": ["~/.ssh"]}, "excludedCommands": ["x"]},
+                            "permissions": {"deny": ["Read(.env)"]}}, "regulated")
+check("S-04: merge fecha o sandbox e preserva o resto",
+      merged["sandbox"]["enabled"] is True and merged["sandbox"]["allowUnsandboxedCommands"] is False and
+      merged["sandbox"]["filesystem"]["denyRead"] == ["~/.ssh", "~/.aisef"] and merged["sandbox"]["excludedCommands"] == ["x"]
+      and merged["permissions"] == {"deny": ["Read(.env)"]}, merged)
+check("S-04: merge nao grava failIfUnavailable (travaria o Claude Code no Windows nativo)",
+      "failIfUnavailable" not in merged["sandbox"])
+json.dump(merged, open(os.path.join(st, ".claude", "settings.json"), "w"))
+check("S-04: com o merge aplicado, team no Linux fica quieto", env.sandbox_advice(st, {"profile": "team"}, "linux", sth) is None)
+json.dump({"sandbox": {"allowUnsandboxedCommands": True}}, open(os.path.join(st, ".claude", "settings.local.json"), "w"))
+check("S-04: settings.local que reabre a saida volta a acusar",
+      "allowUnsandboxedCommands" in (env.sandbox_advice(st, {"profile": "team"}, "linux", sth) or ""))
+check("S-04: denyRead soma entre os arquivos de settings",
+      "~/.aisef" in env.sandbox_effective(st, sth)["filesystem"]["denyRead"])
+
 # init sem cryptography: recusa antes de criar qualquer coisa (D5)
 proj = os.path.join(work, "proj")
 os.makedirs(proj)

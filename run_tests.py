@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Roda todas as suites do AISEF e resume. Uso: python run_tests.py   (precisa de jsonschema e cryptography)
+"""Roda todas as suites do AISEF e resume. Uso: python run_tests.py [--jobs N] [--only texto]   (precisa de jsonschema e cryptography)
 
 As suites sao scripts autonomos (sem pytest), cada uma com sua propria contagem de falhas.
 A do painel renderiza em Chrome headless quando o Chrome existe; sem ele, essa parte e pulada.
@@ -20,6 +20,7 @@ SUITES = [
     ("approval-request schema", [os.path.join(CORE, "test_approval_request.py"), os.path.join(CORE, "approval-request.schema.v0.1.json")]),
     ("engineering blueprint schema", [os.path.join(CORE, "test_blueprint.py")]),
     ("check_project (mutacoes)", [os.path.join(CORE, "test_check_project.py")]),
+    ("TDD cruzado com o log assinado (E-01)", [os.path.join(CORE, "test_tdd_log.py")]),
     ("cadeia de hash", [os.path.join(CORE, "audit_chain.py"), "selftest", os.path.join(CORE, "audit-event.schema.v0.1.json")]),
     ("assinatura Ed25519", [os.path.join(CORE, "audit_signing.py"), "selftest", os.path.join(CORE, "audit-event.schema.v0.1.json")]),
     ("politica x schemas", [os.path.join(CORE, "check_policy_consistency.py"), os.path.join(CORE, "permission-policy.v0.1.json"),
@@ -28,6 +29,7 @@ SUITES = [
     ("painel: contraste AA dos tokens", [os.path.join(CORE, "test_panel_contrast.py")]),
     ("gateway: Git por risco (F-03)", [os.path.join(HOOKS, "test_git_risk.py")]),
     ("gateway: corpus e contornos (F-02, S-01, S-02)", [os.path.join(HOOKS, "test_gateway_corpus.py")]),
+    ("gateway: dependencia nova (S-05)", [os.path.join(HOOKS, "test_deps.py")]),
     ("gateway + auditoria + Approval Center", [os.path.join(HOOKS, "test_gateway.py")]),
     ("geradores (briefs e caminho rapido)", [os.path.join(CORE, "test_generators.py")]),
     ("painel ao vivo (Agora, servidor local)", [os.path.join(CORE, "test_panel_live.py")]),
@@ -71,10 +73,33 @@ SUITES = [
     ("referencia de regras do check (docs)", [os.path.join(ROOT, "tools", "gen_docs.py"), "--check"]),
 ]
 
+# H-05 (0.17): --jobs N roda as suites em paralelo (cada uma usa o proprio diretorio temporario); --only filtra pelo nome.
+# A saida sai na ordem da lista, como antes.
+def _opt(flag, default=None):
+    return sys.argv[sys.argv.index(flag) + 1] if flag in sys.argv[:-1] else default
+
+
+JOBS = int(_opt("--jobs", "1"))
+ONLY = _opt("--only")
+if ONLY:
+    SUITES = [s for s in SUITES if ONLY.lower() in s[0].lower()]
+
+
+def _run(args):
+    return subprocess.run([sys.executable, "-I"] + args, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+
+
+if JOBS > 1:
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=JOBS) as pool:
+        RESULTS = list(pool.map(lambda s: _run(s[1]), SUITES))
+else:
+    RESULTS = None
+
 failed = []
 checks_total = 0
-for name, args in SUITES:
-    r = subprocess.run([sys.executable, "-I"] + args, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+for i, (name, args) in enumerate(SUITES):
+    r = RESULTS[i] if RESULTS is not None else _run(args)
     last = (r.stdout.strip().splitlines() or ["(sem saida)"])[-1]
     m = re.match(r"(\d+) (?:testes|verificacoes)", last.strip())
     checks_total += int(m.group(1)) if m else 0
@@ -82,6 +107,10 @@ for name, args in SUITES:
     if r.returncode != 0:
         failed.append(name)
         print("\n".join("    " + line for line in (r.stdout + r.stderr).splitlines() if "FALHA" in line or "Error" in line or "ERRO" in line))
+
+if ONLY:  # filtro: so as suites pedidas, sem demo nem piso do README (o total muda)
+    print("\n%d suite(s) com falha" % len(failed) if failed else "\ntudo verde (so as suites filtradas)")
+    sys.exit(1 if failed else 0)
 
 demo = os.path.join(work, "demo")
 r = subprocess.run([sys.executable, "-I", os.path.join(CORE, "make_demo_project.py"), demo], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)

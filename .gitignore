@@ -9,3 +9,4 @@ __pycache__/
 
 # Graphify (grafo local de docs e decisoes; regenerado, nao versionado)
 graphify-out/
+!requirements-dev.lock
