@@ -6,9 +6,9 @@
 
 O AISEF é um plugin do Claude Code para times que precisam mostrar o que a IA fez, não só entregar mais rápido. Um pedido em linguagem natural vira uma feature especificada: triada em código, quebrada em fatias verticais, construída com testes primeiro por agentes em paralelo, revisada por especialistas, validada por outro agente e aceita por você. Toda chamada de ferramenta passa por uma política aplicada em código, e cada passo vai para um log assinado, à prova de adulteração, que o CI verifica em cada pull request.
 
-| **166** | **2.500+** | **144** | **66** | **~0,2 s** |
+| **166** | **2.500+** | **168** | **66** | **~0,2 s** |
 |---|---|---|---|---|
-| regras de consistência no `aisef-check` | verificações automáticas, CI em Linux e Windows | casos do gateway, 48 deles tentativas de contorno, nenhuma passa | agentes especialistas (15 ativos num projeto Python novo) | custo do gateway por chamada no Windows ([medido](tools/bench_hooks.py)) |
+| regras de consistência no `aisef-check` | verificações automáticas, CI em Linux e Windows | casos do gateway, 65 deles tentativas de contorno, todas barradas ([limites](#o-que-o-gateway-não-garante)) | agentes especialistas (15 ativos num projeto Python novo) | custo do gateway por chamada no Windows ([medido](tools/bench_hooks.py)) |
 
 <p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="O painel ao vivo do AISEF: mapa de execução, decisão pendente, gaveta de tarefa e de subagente, raias em paralelo"></p>
 <p align="center"><sub>O painel ao vivo com dados de demonstração: quem está rodando, quem espera e por quê, qual subagente cada agente disparou e as raias no tempo.</sub></p>
@@ -159,6 +159,10 @@ Do lado esquerdo, o trabalho é rápido e opaco. Do direito, cada decisão foi s
 ## Como funciona
 
 Skills dizem ao modelo o que fazer. O **gateway** decide o que ele **pode** fazer.
+
+### O que o gateway não garante
+
+O gateway é um hook que roda com o seu próprio usuário do sistema. Ele lê cada chamada de ferramenta e pega o que consegue ler: não vê o que um script escrito agora fará quando rodar depois, e comando que ele não consegue ler vira pergunta, não liberação. A fronteira de verdade é o sistema operacional: ligue o sandbox nativo do Claude Code (Linux, macOS, WSL2) ou rode os agentes num devcontainer. Os perfis `team` e `regulated` vão passar a exigir isso ([plano 0.17](docs/plan/plano-0.17.md)).
 
 ```mermaid
 flowchart TD

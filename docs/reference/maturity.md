@@ -55,3 +55,6 @@ próximo projeto. Até lá, eles ficam como **CI**.
 | T-05 | Decisão assinada por quem decidiu; CI pega o corte de um stream | 0.15.0 | CI, opcional | com streams | Vem com o T-04 |
 | H-03 | Números do README conferidos contra o código | 0.15.2 | CI | — | Documentação |
 | H-04 | Teste de combinações de modos | 0.15.2 | CI | — | Só teste |
+| S-03 | Gateway: sete contornos fechados (aspas, variável e curinga na home, script que lê a chave, deploy por script, saída de dados, hook do Git) | 0.17.0 | CI | ligado | Sem volta: é a camada de segurança |
+| D-03 | README sem promessa maior que o código | 0.17.0 | — | — | Documentação |
+| H-05 | CI só leitura, Actions por SHA, dependências com hash, suíte em paralelo | 0.17.0 | CI | ligado | `run_tests.py` sem `--jobs` roda em série, como antes |

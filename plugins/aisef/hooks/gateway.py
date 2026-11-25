@@ -345,6 +345,9 @@ def decide(data, project, policy, patterns, config, now):
                                    "corrija o que o hook acusa")
         gctx = git_context(operation, cwd, config, project)
         items = classify_bash(operation, patterns, env, "ps" if tool == "PowerShell" else "sh", gctx)
+        hint = home_secret_hint(operation, cwd)
+        if hint:
+            items.append(("unclassified", "execute", env, False, hint))
         if inp.get("dangerouslyDisableSandbox") is True:  # F-08: sair do sandbox e decisao do usuario
             items.append(("unclassified", "execute", env, False, "comando pedindo para rodar fora do sandbox"))
     else:
@@ -359,6 +362,11 @@ def decide(data, project, policy, patterns, config, now):
                     continue  # propor pedido pendente nao e decidir
                 if resource != "repo_code":
                     items.append((resource, "write", env, False, label))
+                written = [inp.get("content"), inp.get("new_string"), inp.get("new_source")] + \
+                          [e.get("new_string") for e in inp.get("edits") or [] if isinstance(e, dict)]
+                if any(isinstance(w, str) and code_secret_ref(w) for w in written):
+                    items.append(("unclassified", "execute", env, False, "arquivo com codigo que monta o caminho da "
+                                  "chave ou das ancoras do AISEF na home (rodaria depois, fora do gateway)"))
             elif tool in READ_TOOLS and is_sensitive_path(p, patterns):
                 items.append(("sensitive_files", "read_content", env, False, "arquivo sensivel"))
 

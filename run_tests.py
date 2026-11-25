@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Roda todas as suites do AISEF e resume. Uso: python run_tests.py   (precisa de jsonschema e cryptography)
+"""Roda todas as suites do AISEF e resume. Uso: python run_tests.py [--jobs N] [--only texto]   (precisa de jsonschema e cryptography)
 
 As suites sao scripts autonomos (sem pytest), cada uma com sua propria contagem de falhas.
 A do painel renderiza em Chrome headless quando o Chrome existe; sem ele, essa parte e pulada.
@@ -71,10 +71,33 @@ SUITES = [
     ("referencia de regras do check (docs)", [os.path.join(ROOT, "tools", "gen_docs.py"), "--check"]),
 ]
 
+# H-05 (0.17): --jobs N roda as suites em paralelo (cada uma usa o proprio diretorio temporario); --only filtra pelo nome.
+# A saida sai na ordem da lista, como antes.
+def _opt(flag, default=None):
+    return sys.argv[sys.argv.index(flag) + 1] if flag in sys.argv[:-1] else default
+
+
+JOBS = int(_opt("--jobs", "1"))
+ONLY = _opt("--only")
+if ONLY:
+    SUITES = [s for s in SUITES if ONLY.lower() in s[0].lower()]
+
+
+def _run(args):
+    return subprocess.run([sys.executable, "-I"] + args, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+
+
+if JOBS > 1:
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=JOBS) as pool:
+        RESULTS = list(pool.map(lambda s: _run(s[1]), SUITES))
+else:
+    RESULTS = None
+
 failed = []
 checks_total = 0
-for name, args in SUITES:
-    r = subprocess.run([sys.executable, "-I"] + args, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+for i, (name, args) in enumerate(SUITES):
+    r = RESULTS[i] if RESULTS is not None else _run(args)
     last = (r.stdout.strip().splitlines() or ["(sem saida)"])[-1]
     m = re.match(r"(\d+) (?:testes|verificacoes)", last.strip())
     checks_total += int(m.group(1)) if m else 0
@@ -82,6 +105,10 @@ for name, args in SUITES:
     if r.returncode != 0:
         failed.append(name)
         print("\n".join("    " + line for line in (r.stdout + r.stderr).splitlines() if "FALHA" in line or "Error" in line or "ERRO" in line))
+
+if ONLY:  # filtro: so as suites pedidas, sem demo nem piso do README (o total muda)
+    print("\n%d suite(s) com falha" % len(failed) if failed else "\ntudo verde (so as suites filtradas)")
+    sys.exit(1 if failed else 0)
 
 demo = os.path.join(work, "demo")
 r = subprocess.run([sys.executable, "-I", os.path.join(CORE, "make_demo_project.py"), demo], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)

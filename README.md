@@ -6,9 +6,9 @@
 
 AISEF is a Claude Code plugin for teams that must show what the AI did, not just ship faster. A plain-language request becomes a specified feature: triaged in code, split into vertical slices, built test-first by agents in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log that CI can verify on each pull request.
 
-| **166** | **2,500+** | **144** | **66** | **~0.2 s** |
+| **166** | **2,500+** | **168** | **66** | **~0.2 s** |
 |---|---|---|---|---|
-| consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 48 of them bypass attempts, none get through | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
+| consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 65 of them bypass attempts, all blocked ([limits](#what-the-gateway-does-not-guarantee)) | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
 <p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="The AISEF live panel: execution map, a pending decision, a task drawer and a subagent drawer, parallel lanes"></p>
 <p align="center"><sub>The live panel on demo data: who is running, who is waiting and why, which subagent each agent spawned, and the lanes over time.</sub></p>
@@ -159,6 +159,10 @@ On the left, the work is fast and opaque. On the right, every decision was yours
 ## How it works
 
 Skills tell the model what to do. The **gateway** decides what it **may** do.
+
+### What the gateway does not guarantee
+
+The gateway is a hook that runs as your own OS user. It reads each tool call, so it catches what it can read: it does not see what a script written now does when it runs later, and a command it cannot read becomes a question, not an allow. The hard boundary is the OS: turn on Claude Code's native sandbox (Linux, macOS, WSL2) or run the agents in a devcontainer. The `team` and `regulated` profiles are moving to require it ([plan 0.17](docs/plan/plano-0.17.md)).
 
 ```mermaid
 flowchart TD

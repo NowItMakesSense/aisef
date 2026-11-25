@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.17.0 (em andamento)
+
+Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
+
+### Gateway: sete contornos fechados (S-03)
+A análise rodou o gateway num projeto de teste e passou sete comandos sem nenhuma pergunta. Agora:
+- **Chave e âncoras na home.** O nome partido por aspas ou escape (`~/.ais''ef/keys`, `.ai"s"ef`, `.ais\ef`) é negado como o nome inteiro. Caminho da home montado por variável perto de `keys`, `anchors` ou `aisef` (`d=.aisef; cat ~/$d/keys/x`) e curinga que cobre a pasta do AISEF (`cp -r ~/.ais* /tmp`) viram pergunta, porque o gateway não consegue provar aonde vão.
+- **Script que lê a chave depois.** Write, Edit e MultiEdit cujo texto monta o caminho da chave ou das âncoras na home (`expanduser`, `Path.home`, `~/.aisef/keys`) perguntam. Citar `.aisef/keys/` do projeto (a chave pública) segue livre.
+- **Deploy por script do projeto.** `npm|pnpm|yarn|bun run deploy|release|ship` e `make|just|task deploy|publish|ship` contam como deploy (negado sem aprovação reforçada). `make release` pergunta.
+- **Saída de dados com arquivo.** `curl -d/-F/--data-binary @arquivo`, `curl -T`, `wget --post-file`, `Invoke-WebRequest -InFile` e `scp`/`rsync` para outro host perguntam; com arquivo sensível (`@.env`) são negados.
+- **Hook do Git plantado.** Escrever em `.git/hooks/`, `.githooks/` ou `.claude/hooks/`, pela ferramenta de arquivo ou pelo shell, vira `config_ci_iac` e pergunta: o hook rodaria no seu próximo commit, fora do gateway.
+- Corpus do gateway: 168 casos, 65 contornos (antes 144 e 48), mais 7 casos de Write/Edit no `test_gateway_corpus.py`.
+
+### CI mais fechado e suíte mais rápida (H-05)
+- O token do CI só lê o repositório (`permissions: contents: read`), e as Actions ficam fixadas pelo SHA do commit, com a tag no comentário.
+- O CI e a Action `aisef-verify` instalam o `requirements-dev.lock`: versões exatas com hash (`--require-hashes`), gerado pelo `uv pip compile --universal`. O `requirements-dev.txt` segue como entrada legível.
+- A Action recebe as entradas por variável de ambiente, não mais interpoladas no script (evita injeção de comando por uma entrada maliciosa).
+- `run_tests.py --jobs N` roda as suítes em paralelo (de mais de 10 para 5 minutos no Windows com 6) e `--only <texto>` roda só as suítes daquela área.
+
+### README sem promessa maior que o código (D-03)
+"None get through" saiu dos três READMEs. Entrou a seção "O que o gateway não garante": é um hook no mesmo usuário do sistema, não vê o que um script escrito agora fará depois, e a fronteira de verdade é o sandbox ou um devcontainer.
+
 ## 0.16.0 (2026-11-25)
 
 ### Outra sessão no mesmo projeto: detecção e coordenação
