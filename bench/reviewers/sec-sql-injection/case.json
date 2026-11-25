@@ -1,0 +1,16 @@
+{
+  "id": "sec-sql-injection",
+  "category": "security",
+  "file": "app/users.py",
+  "bug": {
+    "match": "LIKE '%{term}%'",
+    "description": "SQL montado com f-string a partir de entrada do usuario",
+    "keywords": [
+      "injection",
+      "injecao",
+      "injeção",
+      "f-string",
+      "parametr"
+    ]
+  }
+}

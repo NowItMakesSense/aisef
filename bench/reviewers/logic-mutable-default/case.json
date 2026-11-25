@@ -1,0 +1,18 @@
+{
+  "id": "logic-mutable-default",
+  "category": "logic",
+  "file": "app/tags.py",
+  "bug": {
+    "match": "tags=[]",
+    "description": "lista padrao mutavel compartilhada entre chamadas",
+    "keywords": [
+      "mutable",
+      "mutav",
+      "mutáv",
+      "default",
+      "padrao",
+      "padrão",
+      "compartilh"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "clean-extract-function",
+  "category": "clean",
+  "file": "app/report.py",
+  "bug": null,
+  "note": "refatoracao sem mudanca de comportamento"
+}

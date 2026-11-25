@@ -1,5 +1,7 @@
 # Benchmark de resultado
 
+> Revisores: o conjunto de bugs plantados está em [`reviewers/`](reviewers/README.md) (M-07).
+
 Mede se o AISEF entrega código mais correto que o Claude Code puro, usando **testes escondidos** que o agente nunca vê. O harness é `tools/bench_outcomes.py`. É a tarefa M-03 do [plano](../docs/plan/melhorias-0.11-0.14.md).
 
 | Tarefa | Tipo | O que mede |

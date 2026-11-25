@@ -1,0 +1,17 @@
+{
+  "id": "logic-off-by-one",
+  "category": "logic",
+  "file": "app/pagination.py",
+  "bug": {
+    "match": "start + size - 1]",
+    "description": "fatia perde o ultimo item de cada pagina",
+    "keywords": [
+      "off-by-one",
+      "ultimo",
+      "último",
+      "- 1",
+      "size - 1",
+      "perde"
+    ]
+  }
+}

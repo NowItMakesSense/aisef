@@ -1,0 +1,17 @@
+{
+  "id": "test-no-real-assert",
+  "category": "weak-test",
+  "file": "tests/test_discount.py",
+  "bug": {
+    "match": "assert result is not None",
+    "description": "o teste nao confere o valor do desconto",
+    "keywords": [
+      "assert",
+      "valor",
+      "not none",
+      "fraco",
+      "weak",
+      "nada"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "clean-parameterized-search",
+  "category": "clean",
+  "file": "app/products.py",
+  "bug": null,
+  "note": "busca nova com parametro, escape do LIKE e limite"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "silent-except-pass",
+  "category": "silent-failure",
+  "file": "app/settings.py",
+  "bug": {
+    "match": "except Exception:",
+    "description": "erro de gravacao engolido: o usuario acha que salvou",
+    "keywords": [
+      "pass",
+      "engol",
+      "silenc",
+      "swallow",
+      "except"
+    ]
+  }
+}

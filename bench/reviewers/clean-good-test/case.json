@@ -1,0 +1,7 @@
+{
+  "id": "clean-good-test",
+  "category": "clean",
+  "file": "tests/test_pagination.py",
+  "bug": null,
+  "note": "testes com valores esperados e caso de erro"
+}

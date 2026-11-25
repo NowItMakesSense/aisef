@@ -1,0 +1,7 @@
+{
+  "id": "clean-error-context",
+  "category": "clean",
+  "file": "app/config.py",
+  "bug": null,
+  "note": "erro com contexto, propagado"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "sec-hardcoded-secret",
+  "category": "security",
+  "file": "app/payments.py",
+  "bug": {
+    "match": "PAYMENTS_KEY = \"prod-",
+    "description": "chave de producao escrita no codigo",
+    "keywords": [
+      "secret",
+      "segredo",
+      "hardcoded",
+      "chave",
+      "key"
+    ]
+  }
+}

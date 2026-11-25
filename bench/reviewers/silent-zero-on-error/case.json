@@ -1,0 +1,17 @@
+{
+  "id": "silent-zero-on-error",
+  "category": "silent-failure",
+  "file": "app/balance.py",
+  "bug": {
+    "match": "return 0",
+    "description": "falha do ledger vira saldo zero (log em debug)",
+    "keywords": [
+      "0",
+      "zero",
+      "fallback",
+      "mascar",
+      "debug",
+      "silenc"
+    ]
+  }
+}

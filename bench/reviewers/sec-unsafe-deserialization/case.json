@@ -1,0 +1,16 @@
+{
+  "id": "sec-unsafe-deserialization",
+  "category": "security",
+  "file": "app/session.py",
+  "bug": {
+    "match": "pickle.loads",
+    "description": "pickle de dado do cliente: execucao de codigo remota",
+    "keywords": [
+      "pickle",
+      "deserializ",
+      "desserializ",
+      "rce",
+      "execu"
+    ]
+  }
+}

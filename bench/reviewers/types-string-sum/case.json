@@ -1,0 +1,16 @@
+{
+  "id": "types-string-sum",
+  "category": "types",
+  "file": "web/cart.ts",
+  "bug": {
+    "match": "sum + i.price, 0) as number",
+    "description": "soma concatena strings e ignora qty; `as number` esconde",
+    "keywords": [
+      "concaten",
+      "string",
+      "qty",
+      "any",
+      "as number"
+    ]
+  }
+}
