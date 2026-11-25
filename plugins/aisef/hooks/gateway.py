@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python -I nao 
 from gateway_rules import *  # noqa: E402,F401,F403  (H-01)
 from gateway_rules import _classify_text, _home_secret_dirs  # noqa: E402,F401
 import gateway_deps  # noqa: E402
+import gateway_inline  # noqa: E402  (S-07)
 import taint  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -327,7 +328,8 @@ def decide(data, project, policy, patterns, config, now):
             raise Decision("deny", why)
     cwd = data.get("cwd") or project
     if tool in SHELL_TOOLS:
-        secret = home_secret_ref(inp.get("command", "") or "", cwd)
+        cmd0 = inp.get("command", "") or ""
+        secret = home_secret_ref(cmd0, cwd) or home_secret_ref(gateway_inline.joined(cmd0), cwd)
     else:
         secret = any(home_secret_ref(inp.get(k), cwd, is_path=True)
                      for k in ("file_path", "path", "notebook_path", "pattern", "glob") if isinstance(inp.get(k), str))
@@ -348,8 +350,8 @@ def decide(data, project, policy, patterns, config, now):
         gctx = git_context(operation, cwd, config, project)
         items = classify_bash(operation, patterns, env, "ps" if tool == "PowerShell" else "sh", gctx)
         hint = home_secret_hint(operation, cwd)
-        if hint:
-            items.append(("unclassified", "execute", env, False, hint))
+        for h in ([hint] if hint else []) + gateway_inline.hints(operation, cwd):
+            items.append(("unclassified", "execute", env, False, h))
         if config.get("dependency_check") == "online":  # S-05: so com rede quando o usuario liga
             sys.path.insert(0, CORE) if CORE not in sys.path else None
             items = gateway_deps.enrich(items)

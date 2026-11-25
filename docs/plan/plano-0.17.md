@@ -23,13 +23,14 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 | 10 | E-02 | Chave privada no cofre do sistema | `[x]` | Log → 8,5 |
 | 11 | E-05 | Atestado in-toto e mapeamento ISO 42001, EU AI Act art. 12, NIST AI RMF | `[x]` | Evidência 5,5 → 7,5 |
 | 12 | M-07 | Avaliação por revisor com bugs plantados | `[x]` | Equipe 6,0 → 7,5 |
+| 12a | S-07 | Gateway: 6 contornos da reavaliação (código inline, home inteira, pacote baixado) | `[x]` | Gateway 7,0 → 7,5 |
 | 13 | M-06 | Benchmark nas 6 tarefas, com o braço enxuto | `[u]` | Prova de valor 3,5 → 6,0 |
 | 14 | M-05 | Linha de base num projeto real (herdada do plano 0.13–0.15) | `[u]` | Prova de valor |
 
 **Versão:** a 0.16.0 saiu no PR #39. As entregas deste plano entram na seção `## 0.17.0 (em andamento)` do
 CHANGELOG; o bump do `plugin.json` e do marketplace é feito no fechamento.
 
-**PRs:** S-03 a S-05 entraram na `main` pelo PR #43; S-06 pelo #44; E-04 pelo #45; E-03 pelo #46; E-02 pelo #47; E-05 pelo #48; M-07 pelo #49. Próximas tarefas: branch
+**PRs:** S-03 a S-05 entraram na `main` pelo PR #43; S-06 pelo #44; E-04 pelo #45; E-03 pelo #46; E-02 pelo #47; E-05 pelo #48; M-07 pelo #49; preparo da M-06 pelo #50; S-07 pelo #51. Próximas tarefas: branch
 nova a partir da `main` (`feat/v0.17-<id>`), PR e merge depois do CI verde (o usuário pediu que o merge seja feito
 por aqui). Cuidado: outra sessão no mesmo repositório pode trocar a branch da pasta; confira `git status -sb` antes
 de commitar.
