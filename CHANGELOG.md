@@ -4,6 +4,12 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
+### Validação às cegas (E-04)
+O validador recebia o caminho do Execution Report do executor, com o resumo "está pronto" e o resultado de cada critério. Dizer ao revisor que o trabalho está correto reduz a detecção de defeitos de 16% a 93% (arXiv 2603.18740).
+- **Brief cego.** O prompt do `validate-wave` passa a levar só fatos conferíveis: os critérios do Task Contract com os comandos, os arquivos tocados, os testes novos e os comandos dos ciclos de TDD. Ficam de fora `changes`, `criteria_results`, notas, saídas, problemas, riscos e os relatórios dos revisores.
+- O brief e o prompt do agente `validator` mandam não abrir esses relatórios antes do veredito; depois dele, pode, para apontar divergências. A skill `aisef` diz ao orquestrador para não acrescentar o resumo ao chamar o validador.
+- `test_dispatch.py`: marcadores em todos os campos de alegação do relatório do executor e do revisor não aparecem no brief; os fatos aparecem.
+
 ### Conteúdo não confiável marca a sessão (S-06)
 Página da web, resultado de busca e resposta de MCP podem trazer instruções escondidas. O vazamento precisa de três coisas na mesma sessão: dado privado, conteúdo não confiável e canal de saída (ADR 0029).
 - **Marca.** WebFetch, WebSearch e MCP sem confiança do usuário gravam uma marca da sessão em `.aisef/runtime/untrusted/`, por 60 minutos (`untrusted_ttl_minutes` no config.json). MCP no `mcp_allow` ou com `aisef_mcp.py trust` não marca.

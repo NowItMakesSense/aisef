@@ -3,6 +3,7 @@
 reprova sem modelo e `validate-wave` junta a onda num validador so."""
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -128,6 +129,26 @@ check("validate-wave: um validador so para o resto da onda, em nivel >= executor
       and vw["validator"]["level"] >= 3 and vw["validator"]["model"] != "sonnet", vw["validator"])
 check("validate-wave: o prompt manda registrar o veredito como validador, por tarefa",
       "--actor validator --actor-id validator" in vw["validator"]["prompt"] and "AC-12" in vw["validator"]["prompt"])
+# E-04: validacao as cegas. Alegacoes do executor (resumo, motivo, notas, saida) e achados dos revisores nao entram.
+rp = os.path.join(proj, ".aisef", "reports", "RPT-T-012-1.json")
+rep12 = json.load(open(rp, encoding="utf-8"))
+rep12["changes"] = [{"summary": "MARCA-RESUMO tudo pronto", "reason": "MARCA-MOTIVO"}]
+rep12["criteria_results"][0]["notes"] = "MARCA-NOTA criterio atendido"
+rep12["tests"]["new_tests"] = ["tests/audit/test_log.py::test_grava"]
+rep12["tdd_evidence"]["cycles"][0]["red"]["output_excerpt"] = "MARCA-SAIDA"
+rep12["tdd_evidence"]["cycles"][0]["behavior"] = "MARCA-COMPORTAMENTO grava"
+ap.write_json(rp, rep12)
+rv12 = os.path.join(proj, ".aisef", "reports", "RPT-T-012-REV-code-reviewer.json")
+rvd = json.load(open(rv12, encoding="utf-8"))
+rvd["changes"] = [{"summary": "MARCA-REVISOR nada a apontar", "reason": "x"}]
+ap.write_json(rv12, rvd)
+blind = dsp.validation_wave(proj)["validator"]["prompt"]
+leaks = [m for m in ("MARCA-", "met", "passed", "executed") if re.search(r"\b%s" % m, blind.split("Tarefas:", 1)[1])]
+check("validacao as cegas: nenhum summary/result do executor nem achado de revisor no brief", leaks == [], leaks)
+check("validacao as cegas: o brief leva os fatos (arquivos, testes novos, comandos de TDD)",
+      "src/audit/log.py (created)" in blind and "tests/audit/test_log.py::test_grava" in blind and "pytest -q" in blind, blind)
+check("validacao as cegas: o brief manda nao abrir os relatorios antes do veredito",
+      "Nao abra os relatorios do executor nem dos revisores" in blind and "Execution Report do executor" not in blind)
 import aisef_review  # noqa: E402
 review("T-012", "database-reviewer", "BLOCK")
 st = aisef_review.status(proj, t12, dsp._reports(proj, "T-012"))

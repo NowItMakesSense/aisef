@@ -198,6 +198,30 @@ def review_dispatch(project, task, rv, policy):
     return out
 
 
+def blind_facts(project, task):
+    """E-04: o que o validador recebe do Execution Report do executor, so fatos conferiveis: caminhos tocados, testes
+    novos e comandos dos ciclos de TDD. Fica de fora tudo que e alegacao (summary, changes, criteria_results, notes,
+    problems, risks, status, resultados de teste) e os relatorios dos revisores."""
+    agent = task["assigned_agent"]["agent_id"]
+    mine = [r for r in _reports(project, task["task_id"]) if r.get("agent", {}).get("agent_id") == agent]
+    out = {"files": [], "new_tests": [], "tdd_commands": []}
+    if not mine:
+        return out
+    rep = mine[-1]
+    for kind in ("created", "modified", "deleted"):
+        for f in (rep.get("files") or {}).get(kind) or []:
+            path = f.get("path") if isinstance(f, dict) else f
+            if path:
+                out["files"].append("%s (%s)" % (path, kind))
+    out["new_tests"] = [str(x) for x in (rep.get("tests") or {}).get("new_tests") or []]
+    for cyc in (rep.get("tdd_evidence") or {}).get("cycles") or []:
+        for phase in ("red", "green"):
+            cmd = (cyc.get(phase) or {}).get("command")
+            if cmd and cmd not in out["tdd_commands"]:
+                out["tdd_commands"].append(cmd)
+    return out
+
+
 def validation_wave(project, feature=None, dry_run=False, now=None):
     res = nx.compute_next(project, feature, now=now)
     todo = [a for a in res["actions"] if a["kind"] == "validate"]
@@ -240,8 +264,11 @@ def validation_wave(project, feature=None, dry_run=False, now=None):
     route = rt.route(ready[0], policy, validator_for_level=max(levels))
     lines = ["Voce e o validador independente do AISEF. Valide CADA tarefa abaixo separadamente; voce nao executou "
              "nenhuma delas (se executou alguma, recuse aquela e avise).",
-             "Para cada tarefa: leia o Task Contract e o Execution Report do executor, rode de novo os testes dos "
-             "criterios (Bash), confira o diff e a tdd_evidence quando houver. Grave o relatorio de avaliacao "
+             "Validacao as cegas (E-04): este brief traz so fatos (contrato, arquivos tocados, testes, comandos). Nao "
+             "abra os relatorios do executor nem dos revisores (.aisef/reports/RPT-<T>-*.json, *.md) antes do seu "
+             "veredito: o resumo de quem fez ('esta pronto') esconde defeitos. Para cada tarefa: leia o Task Contract, "
+             "rode de novo os testes dos criterios (Bash), leia o diff dos arquivos listados e rode os comandos de TDD "
+             "listados. Grave o relatorio de avaliacao "
              ".aisef/reports/RPT-<T>-VAL.json com execution_profile = {\"model\": \"%s\", \"effort\": \"%s\", \"level\": %d} "
              "e registre o veredito de cada uma:" % (route["model"], route["effort"], route["level"]),
              "  aprovada:  %s append --project . --type task_validated --actor validator --actor-id validator "
@@ -254,6 +281,10 @@ def validation_wave(project, feature=None, dry_run=False, now=None):
         for c in t["acceptance_criteria"]:
             lines.append("    - %s: %s%s" % (c["id"], c["description"],
                                             " [%s]" % c["verification"]["command"] if c["verification"].get("command") else ""))
+        facts = blind_facts(project, t)
+        for label, key in (("arquivos tocados", "files"), ("testes novos", "new_tests"), ("comandos de TDD", "tdd_commands")):
+            if facts[key]:
+                lines.append("    %s: %s" % (label, "; ".join(facts[key])[:1500]))
     out["validator"] = {"subagent_type": "aisef:validator", "model": route["model"], "effort": route["effort"],
                         "level": route["level"], "task_ids": [t["task_id"] for t in ready],
                         "description": "Validar onda: " + ", ".join(t["task_id"] for t in ready)[:40],
