@@ -36,3 +36,4 @@ Cada decisão tem data, contexto, o que foi decidido e as consequências. Para m
 | [0030](0030-carimbo-rfc3161-nos-marcos.md) | Carimbo de tempo RFC 3161 nos marcos do log | 2026-11-25 |
 | [0031](0031-chave-privada-no-cofre-do-sistema.md) | Chave privada do log no cofre do sistema | 2026-11-25 |
 | [0032](0032-atestado-in-toto-e-controles-de-ia.md) | Atestado in-toto por tarefa e controles de IA no pacote de evidência | 2026-11-25 |
+| [0033](0033-codigo-inline-e-pacote-baixado-perguntam.md) | Código inline, home inteira e pacote baixado na hora perguntam | 2026-11-25 |

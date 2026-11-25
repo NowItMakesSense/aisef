@@ -4,6 +4,12 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
+### Gateway: código inline, home inteira e pacote baixado na hora (S-07)
+Na reavaliação, 6 de 19 tentativas novas de contorno passaram direto ([ADR 0033](docs/adr/0033-codigo-inline-e-pacote-baixado-perguntam.md)).
+- **`hooks/gateway_inline.py`:** literais concatenados que montam o caminho da chave (`'~/.ai'+'sef/keys'`) são juntados e negados. Código inline de interpretador (`python -c`, `node -e`, heredoc, pipe) que cita `.aisef` pergunta. Substituição de comando montando caminho da chave na home pergunta. Arquivar ou copiar a home inteira pergunta.
+- **Pacote baixado na hora pergunta:** `pnpm dlx`, `yarn dlx`, `bunx`, `uvx`, `pipx run`, e `npx` com `-y`/`--package` ou com pacote fora do `node_modules` do projeto. `npx skills` e `npx impeccable`, que o plugin usa, seguem livres.
+- Corpus com 207 casos, 80 de contorno. Os 5 casos legítimos novos (`python -c` sem `.aisef`, `tar` de pasta do projeto, `"$(pwd)/keys"`, `npx skills find`, script do projeto) continuam livres. Nenhum caso antigo mudou.
+
 ### Braço enxuto no benchmark (M-06, preparo)
 O plano da M-06 pedia o braço `aisef-lean`, mas o `bench_outcomes.py` só tinha `plain`, `aisef` e `aisef-norev`. Sem ele, o benchmark media só o ciclo completo, que é o mais caro.
 - **`--arms aisef-lean`** roda a triagem de verdade (`aisef_triage.py`, perfil solo) e grava o resultado no Feature Contract. Quando ela dá lean, a feature tem uma fatia com TDD e só o `code-reviewer`; quando dá full (a tarefa de segurança), segue o ciclo completo. O caminho tomado vai para o JSON do resultado.

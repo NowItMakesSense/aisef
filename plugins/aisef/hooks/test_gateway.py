@@ -19,6 +19,8 @@ import aisef_project  # noqa: E402
 proj = os.path.join(work, "proj")
 os.makedirs(proj)
 aisef_project.init(proj, "PRJ-T", "Projeto de teste", "dev")
+os.makedirs(os.path.join(proj, "node_modules", ".bin"))  # projeto Prisma de verdade tem o CLI local (S-07)
+open(os.path.join(proj, "node_modules", ".bin", "prisma"), "w").close()
 fails = total = 0
 
 
