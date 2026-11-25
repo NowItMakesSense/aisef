@@ -19,6 +19,9 @@ inputs:
   now:
     description: Relogio do aisef-check em ISO 8601 (so para projetos de demonstracao com datas fixas)
     default: ""
+  stamp:
+    description: "true: carimbo de tempo RFC 3161 do ultimo evento na TSA de audit.tsa_url (sem rede vira aviso)"
+    default: "false"
 runs:
   using: composite
   steps:
@@ -36,9 +39,11 @@ runs:
         IN_BASE: ${{ inputs.base }}
         IN_STRICT: ${{ inputs.strict }}
         IN_NOW: ${{ inputs.now }}
+        IN_STAMP: ${{ inputs.stamp }}
       run: |
         args=(--project "$IN_PROJECT" --summary "$GITHUB_STEP_SUMMARY")
         [ "$IN_PR" = "true" ] && args+=(--pr --base "$IN_BASE")
         [ "$IN_STRICT" = "true" ] || args+=(--no-strict)
         [ -n "$IN_NOW" ] && args+=(--now "$IN_NOW")
+        [ "$IN_STAMP" = "true" ] && args+=(--stamp)
         python -I "$AISEF_CORE/aisef_ci.py" "${args[@]}"

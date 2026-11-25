@@ -123,6 +123,11 @@ def main(argv):
             partial["corrects_event_id"] = a.corrects
         ev = append(project, partial)
         print("evento %s (sequencia %d) registrado" % (ev["event_id"], ev["sequence"]))
+        if a.type == "feature_accepted":  # E-03: marco com carimbo de tempo RFC 3161 (se audit.tsa_url)
+            import aisef_anchor
+            res = aisef_anchor.milestone(project, "aceite %s" % (a.feature or ""))
+            if res:
+                print(("carimbo de tempo: %s" % res["gen_time"]) if res["ok"] else "AVISO: " + res["warning"])
         return 0
     if a.command == "settings":
         path, added = native_settings(project, a.apply)

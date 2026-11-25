@@ -53,7 +53,8 @@ def verify_log(project):
         for d in audit_chain.stream_dirs(os.path.join(root, "audit")):
             if audit_chain.read_stream(d) and not os.path.exists(os.path.join(d, "head.json")):
                 errors.append("%s sem head.json versionado" % os.path.relpath(d, root).replace("\\", "/"))
-        return errors, warnings
+        te, tw = _timestamps(project)
+        return errors + te, warnings + tw
     head = None
     hp = os.path.join(root, "audit", "head.json")
     if os.path.exists(hp):
@@ -62,7 +63,14 @@ def verify_log(project):
     errors, warnings = audit_signing.AuditVerifier(pubs).verify(log, head)
     if head is None:
         errors.append("sem .aisef/audit/head.json versionado: corte no fim do log nao seria detectado")
-    return errors, warnings
+    te, tw = _timestamps(project)
+    return errors + te, warnings + tw
+
+
+def _timestamps(project):
+    """E-03: carimbos RFC 3161 do projeto conferem com o log (evento carimbado reescrito ou cortado e erro)."""
+    import aisef_anchor
+    return aisef_anchor.verify_tokens(project, audit_chain.read_stream(os.path.join(ap.aisef_dir(project), "audit")))
 
 
 def git(project, *args):
@@ -120,9 +128,14 @@ def unvalidated(project, tids):
     return [t for t in tids if res["states"].get(t) == "executed"]
 
 
-def run(project, pr=False, base="origin/main", strict=True, now=None):
-    rep = {"log_errors": [], "log_warnings": [], "check_errors": [], "check_warnings": [], "pr": None}
+def run(project, pr=False, base="origin/main", strict=True, now=None, stamp=False):
+    rep = {"log_errors": [], "log_warnings": [], "check_errors": [], "check_warnings": [], "pr": None, "timestamp": None}
     rep["log_errors"], rep["log_warnings"] = verify_log(project)
+    if stamp and not rep["log_errors"]:  # E-03: so carimba log integro; sem rede e aviso
+        import aisef_anchor
+        rep["timestamp"] = aisef_anchor.stamp(project, "aisef-verify da PR")
+        if not rep["timestamp"]["ok"]:
+            rep["log_warnings"].append(rep["timestamp"]["warning"])
     import check_project
     c = check_project.check(project, policy_path=POLICY, defaults_path=DEFAULTS, now=now)
     rep["check_errors"] = ["%s %s: %s" % (f["rule"], f["where"], f["message"]) for f in c.findings if f["severity"] == "error"]
@@ -153,6 +166,10 @@ def markdown(rep):
                                                        "; ".join(p["append_only_errors"]) or "sim"))
         L.append("| Tarefas tocadas validadas | %s %s |" % (ok(not p["unvalidated"]), (
             "sem validação: " + ", ".join(p["unvalidated"])) if p["unvalidated"] else (", ".join(p["touched_tasks"]) or "nenhuma tocada")))
+    ts = rep.get("timestamp")
+    if ts:
+        L.append("| Carimbo de tempo RFC 3161 | %s |" % (("✅ %s (evento %s)" % (ts["gen_time"], ts["sequence"])) if ts["ok"]
+                                                      else "⚠️ " + ts["warning"]))
     for title, items in (("Erros do check", rep["check_errors"]), ("Avisos do check", rep["check_warnings"])):
         if items:
             L += ["", "### %s" % title, ""] + ["- %s" % x for x in items[:30]]
@@ -167,9 +184,10 @@ def main(argv=None):
     p.add_argument("--no-strict", action="store_true", help="avisos do check nao falham")
     p.add_argument("--summary")
     p.add_argument("--now", help="relogio do check (ISO 8601), para projetos de demonstracao com datas fixas")
+    p.add_argument("--stamp", action="store_true", help="carimbo RFC 3161 do ultimo evento (E-03); sem rede e aviso")
     p.add_argument("--json", action="store_true")
     a = p.parse_args(argv)
-    rep = run(os.path.abspath(a.project), a.pr, a.base, not a.no_strict, a.now)
+    rep = run(os.path.abspath(a.project), a.pr, a.base, not a.no_strict, a.now, a.stamp)
     md = markdown(rep)
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # console do Windows (cp1252) e os emojis do resumo
