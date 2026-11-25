@@ -4,6 +4,14 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
+### Carimbo de tempo RFC 3161 nos marcos (E-03)
+A assinatura do log prova quem escreveu, não quando: quem tem a chave pode reescrever o passado e reassinar. Agora uma TSA de fora carimba a cabeça do log nos marcos ([ADR 0030](docs/adr/0030-carimbo-rfc3161-nos-marcos.md)).
+- **`core/aisef_anchor.py`** monta o `TimeStampReq` em DER à mão, com o hash do último evento, um nonce e certReq, e envia por HTTP à TSA. O token fica em `.aisef/audit/timestamps/<sequência>.tsr`, com um `.json` ao lado.
+- **Nos marcos.** O carimbo roda no aceite de feature (`append --type feature_accepted`) quando `audit.tsa_url` está no config. Também roda no `aisef-verify` da PR, com `--stamp` ou a entrada `stamp: "true"` da Action. É opt-in: projeto novo não fala com a rede sozinho.
+- **Sem rede vira aviso.** O aceite segue, o pedido fica em `pending.json` e o próximo marco carimba. Uma resposta com outro hash, sem o nonce, com outro nonce ou recusada não é guardada.
+- **Verificação** no `aisef-check`, no `aisef_ci.py` e no `aisef_anchor.py verify`. O token tem que bater com o evento do log: evento reescrito depois do carimbo ou cortado do log é erro. A cadeia de certificados da TSA é conferida por `openssl ts -verify` com `audit.tsa_ca_file`. Sem eles, sai um aviso.
+- `test_anchor.py` (28 casos) usa uma TSA falsa local. O parser foi conferido à mão contra freetsa.org e DigiCert, e o `openssl ts -verify` contra a cadeia da freetsa.
+
 ### Validação às cegas (E-04)
 O validador recebia o caminho do Execution Report do executor, com o resumo "está pronto" e o resultado de cada critério. Dizer ao revisor que o trabalho está correto reduz a detecção de defeitos de 16% a 93% (arXiv 2603.18740).
 - **Brief cego.** O prompt do `validate-wave` passa a levar só fatos conferíveis: os critérios do Task Contract com os comandos, os arquivos tocados, os testes novos e os comandos dos ciclos de TDD. Ficam de fora `changes`, `criteria_results`, notas, saídas, problemas, riscos e os relatórios dos revisores.

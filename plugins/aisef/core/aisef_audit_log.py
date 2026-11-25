@@ -204,7 +204,9 @@ def verify(project):
     import aisef_streams
     if aisef_streams.enabled(cfg) or os.path.isdir(os.path.join(aisef_dir(project), "audit", "streams")):
         e, w = aisef_streams.verify_all(project)  # T-05: cada stream com a propria cadeia, assinaturas e head
-        return e + anchor_errors(cfg, audit_chain.read_stream(os.path.join(aisef_dir(project), "audit"))), w
+        own = audit_chain.read_stream(os.path.join(aisef_dir(project), "audit"))
+        te, tw = _timestamp_findings(project, own)
+        return e + anchor_errors(cfg, own) + te, w + tw
     audit_dir = os.path.join(aisef_dir(project), "audit")
     log = audit_chain.read_log_dir(audit_dir)
     if not log:
@@ -225,7 +227,14 @@ def verify(project):
         errors, warnings = audit_signing.AuditVerifier(pubs).verify(log, head)
         errors += rotation_errors(log)
     errors += anchor_errors(cfg, log)
-    return errors, warnings
+    te, tw = _timestamp_findings(project, log)
+    return errors + te, warnings + tw
+
+
+def _timestamp_findings(project, log):
+    """E-03: carimbos RFC 3161 guardados em .aisef/audit/timestamps/ conferem com o log."""
+    import aisef_anchor
+    return aisef_anchor.verify_tokens(project, log)
 
 
 def rotation_errors(log):

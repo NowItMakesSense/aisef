@@ -26,6 +26,7 @@ python -I CORE/aisef_project.py verify --project .
 ## Manutencao do log (so com OK do usuario)
 - O log cria sozinho um checkpoint assinado a cada 500 eventos (com ancora externa em `~/.aisef/anchors/`) e arquiva segmentos grandes em `.aisef/audit/archive/`; a cadeia continua entre eles. Limites em `config.json` -> `audit`.
 - `python -I CORE/aisef_project.py anchor --project .`: ancora o ponto atual agora (antes de uma entrega, por exemplo).
+- Carimbo de tempo RFC 3161 (E-03): com `audit.tsa_url` no `config.json`, o aceite de feature carimba a cabeca do log numa TSA de fora (`.aisef/audit/timestamps/`). Para carimbar a mao: `python -I CORE/aisef_anchor.py stamp --project .`. A verificacao acusa evento carimbado que foi reescrito ou cortado; sem rede, o carimbo fica pendente (aviso). A cadeia da TSA so e conferida com `openssl` e `audit.tsa_ca_file`.
 - `python -I CORE/aisef_project.py rotate-key --project .`: troca a chave de assinatura; a antiga e apagada e qualquer evento novo assinado por ela vira erro. Use se a chave pode ter vazado ou periodicamente.
 
 Para verificar se a politica e os schemas do plugin estao coerentes entre si (manutencao do plugin):
