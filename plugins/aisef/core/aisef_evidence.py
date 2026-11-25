@@ -8,7 +8,11 @@ O pacote junta o que prova a mudanca: Feature Contract (requisitos, spec, RTM, t
 Reports, pedidos e decisoes do Approval Center, os eventos assinados da feature (registros completos do log, com hash e
 assinatura Ed25519), as chaves publicas, o resultado do verify do log inteiro e do aisef-check, e uma tabela de
 controles: SOC 2 CC8.1 (gestao de mudancas) e ISO/IEC 27001:2022 A.8.32 (gestao de mudancas) e A.5.3 (segregacao de
-funcoes), cada um com o status calculado e onde esta a evidencia.
+funcoes); e, para o uso de IA (0.17, E-05), ISO/IEC 42001 Anexo A, EU AI Act art. 12 (registro de eventos) e NIST AI
+RMF (Govern, Map, Measure, Manage), cada um com o status calculado e onde esta a evidencia.
+
+Com `--in-toto`, cada tarefa ganha um atestado in-toto Statement v1 em envelope DSSE, assinado com a chave do projeto
+(`aisef_attest.py`); o `verify` confere a assinatura com a chave publica do pacote.
 
 Ele se verifica sozinho: `manifest.json` tem o sha256 de cada arquivo; `verify` recalcula os hashes, recalcula o hash
 de cada evento a partir do conteudo e confere a assinatura com a chave publica do pacote. Nao e certificacao: e o
@@ -51,7 +55,7 @@ def _sha(path):
     return h.hexdigest()
 
 
-def controls(feat, tasks, reports, approvals, events):
+def controls(feat, tasks, reports, approvals, events, log_errors=None):
     """Tabela de controles com status (met, partial, missing) e onde esta a evidencia."""
     fid = feat["feature_id"]
     plan_ok = (feat.get("approval", {}).get("plan") or {}).get("status") == "approved" or any(
@@ -72,6 +76,21 @@ def controls(feat, tasks, reports, approvals, events):
     def st(ok, part=False):
         return "met" if ok else ("partial" if part else "missing")
 
+    n_val = len(validated_ids & {t["task_id"] for t in tasks})
+    profiled = [t for t in tasks if any(r.get("task_id") == t["task_id"] and r.get("execution_profile") for r in reports)]
+    user_ok = all(e["actor"]["type"] == "user" for e in events
+                  if e.get("event_type") in ("approval_granted", "feature_accepted"))
+    facts = {"fid": fid, "n": n, "plan_ok": plan_ok, "accepted": accepted, "rtm_ok": rtm_ok, "n_val": n_val,
+             "tested": len(tested), "tdd": len(tdd), "sod_ok": bool(validators) and not sod_bad, "user_ok": user_ok,
+             "profiled": len(profiled), "risked": len([t for t in tasks if t.get("risk")]),
+             "signed": bool(events) and all(e.get("signature") for e in events), "events": len(events),
+             "tools": sum(1 for e in events if e.get("event_type") == "tool_used"),
+             "log_ok": log_errors is not None and not log_errors}
+    return _base_controls(st, facts, sod_bad, validators, done) + ai_controls(st, facts)
+
+
+def _base_controls(st, facts, sod_bad, validators, done):
+    fid, n, plan_ok, accepted, rtm_ok = facts["fid"], facts["n"], facts["plan_ok"], facts["accepted"], facts["rtm_ok"]
     return [
         {"framework": "SOC 2", "control": "CC8.1", "title": "Mudancas autorizadas, documentadas, testadas e aprovadas",
          "checks": [
@@ -80,10 +99,11 @@ def controls(feat, tasks, reports, approvals, events):
              {"what": "documentacao (requisitos com origem, spec e RTM)", "status": st(rtm_ok),
               "evidence": "feature/%s.json (requirements, spec, rtm)" % fid},
              {"what": "testes (relatorios com testes que passaram; TDD quando exigido)",
-              "status": st(n and len(tested) == n, bool(tested)),
-              "evidence": "reports/ (tests, tdd_evidence): %d de %d tarefa(s) com testes, %d com TDD" % (len(tested), n, len(tdd))},
+              "status": st(n and facts["tested"] == n, bool(facts["tested"])),
+              "evidence": "reports/ (tests, tdd_evidence): %d de %d tarefa(s) com testes, %d com TDD"
+                          % (facts["tested"], n, facts["tdd"])},
              {"what": "aprovacao da entrega (validacao independente e aceite do usuario)",
-              "status": st(accepted and n and len(validated_ids & {t["task_id"] for t in tasks}) == n, bool(validated_ids)),
+              "status": st(accepted and n and facts["n_val"] == n, bool(facts["n_val"])),
               "evidence": "eventos task_validated e feature_accepted em audit/events.jsonl"}]},
         {"framework": "ISO/IEC 27001:2022", "control": "A.8.32", "title": "Gestao de mudancas",
          "checks": [
@@ -92,15 +112,14 @@ def controls(feat, tasks, reports, approvals, events):
               "evidence": "feature/%s.json (state), approvals/, audit/events.jsonl" % fid},
              {"what": "rastreabilidade requisito -> tarefa -> criterio -> evidencia", "status": st(rtm_ok),
               "evidence": "feature/%s.json (rtm), tasks/, reports/" % fid},
-             {"what": "registro integro e assinado de cada passo", "status": "met" if events else "missing",
+             {"what": "registro integro e assinado de cada passo", "status": "met" if facts["events"] else "missing",
               "evidence": "audit/events.jsonl (hash e Ed25519 de cada evento), keys/"}]},
         {"framework": "ISO/IEC 27001:2022", "control": "A.5.3", "title": "Segregacao de funcoes",
          "checks": [
              {"what": "quem executou nao validou", "status": st(validators and not sod_bad, False) if validators else "missing",
               "evidence": "atores de task_executed x task_validated em audit/events.jsonl%s"
                           % (" (violado em %s)" % ", ".join(sod_bad) if sod_bad else "")},
-             {"what": "decisoes do Approval Center registradas pelo usuario", "status": st(all(
-                 e["actor"]["type"] == "user" for e in events if e.get("event_type") in ("approval_granted", "feature_accepted"))),
+             {"what": "decisoes do Approval Center registradas pelo usuario", "status": st(facts["user_ok"]),
               "evidence": "eventos approval_granted e feature_accepted (actor user)"}]},
         {"framework": "AISEF", "control": "DONE", "title": "Tarefas concluidas",
          "checks": [{"what": "tarefas concluidas ou validadas", "status": st(n and len(done) == n, bool(done)),
@@ -108,7 +127,52 @@ def controls(feat, tasks, reports, approvals, events):
     ]
 
 
-def build(project, feature_id, out, now=None):
+def ai_controls(st, f):
+    """ISO/IEC 42001 Anexo A, EU AI Act art. 12 e NIST AI RMF, aplicados ao uso de agentes de IA no desenvolvimento."""
+    n, ev = f["n"], "audit/events.jsonl"
+
+    def row(framework, control, title, what, status, evidence):
+        return {"framework": framework, "control": control, "title": title,
+                "checks": [{"what": what, "status": status, "evidence": evidence}]}
+
+    iso, act, nist = "ISO/IEC 42001:2023", "EU AI Act", "NIST AI RMF 1.0"
+    return [
+        row(iso, "A.6.2.8", "Registro de eventos do sistema de IA",
+            "cada acao dos agentes registrada, com hash e assinatura", st(f["signed"], bool(f["events"])),
+            "%s (%d evento(s), %d tool_used)" % (ev, f["events"], f["tools"])),
+        row(iso, "A.6.2.4", "Verificacao e validacao do sistema de IA",
+            "entrega validada por agente diferente do executor",
+            st(n and f["n_val"] == n and f["sod_ok"], bool(f["n_val"])),
+            "task_validated em %s: %d de %d tarefa(s)" % (ev, f["n_val"], n)),
+        row(iso, "A.9.2", "Processos para o uso responsavel de IA",
+            "supervisao humana: plano aprovado e aceite da feature pelo usuario",
+            st(f["plan_ok"] and f["accepted"], f["plan_ok"] or f["accepted"]),
+            "approvals/ e eventos approval_granted e feature_accepted (actor user)"),
+        row(iso, "A.4.4", "Recursos de ferramentas", "modelo e effort de cada tarefa registrados",
+            st(n and f["profiled"] == n, bool(f["profiled"])),
+            "reports/ (execution_profile): %d de %d; attestations/ (model, tools)" % (f["profiled"], n)),
+        row(act, "art. 12(1)", "Registro automatico de eventos",
+            "eventos gravados pelos hooks, sem depender do agente", st(f["tools"] > 0 and f["signed"], bool(f["events"])),
+            "%s (tool_used gravado pelo hook de auditoria)" % ev),
+        row(act, "art. 12(2)", "Rastreabilidade e monitoramento",
+            "data, ator e tarefa em cada evento; log integro (cadeia de hash e assinaturas)",
+            st(f["log_ok"] and f["signed"], bool(f["events"])), "checks.json (log_verify) e %s" % ev),
+        row(nist, "GOVERN", "Papeis, responsabilidades e prestacao de contas",
+            "segregacao executor x validador e decisoes tomadas pelo usuario",
+            st(f["sod_ok"] and f["user_ok"], f["user_ok"]), "atores em %s; approvals/" % ev),
+        row(nist, "MAP", "Contexto e requisitos documentados", "requisitos com origem, spec e RTM antes da execucao",
+            st(f["rtm_ok"]), "feature/%s.json" % f["fid"]),
+        row(nist, "MEASURE", "Medicao e teste", "testes executados e validacao independente por tarefa",
+            st(n and f["tested"] == n and f["n_val"] == n, bool(f["tested"] or f["n_val"])),
+            "reports/ (tests) e task_validated: %d testada(s), %d validada(s) de %d" % (f["tested"], f["n_val"], n)),
+        row(nist, "MANAGE", "Riscos tratados e decisoes registradas",
+            "risco declarado em cada Task Contract e aceite humano da entrega",
+            st(n and f["risked"] == n and f["accepted"], bool(f["risked"])),
+            "tasks/ (risk): %d de %d; feature_accepted em %s" % (f["risked"], n, ev)),
+    ]
+
+
+def build(project, feature_id, out, now=None, in_toto=False):
     root = os.path.join(project, ".aisef")
     fpath = os.path.join(root, "contracts", "features", feature_id + ".json")
     if not os.path.exists(fpath):
@@ -145,7 +209,10 @@ def build(project, feature_id, out, now=None):
     for pem in glob.glob(os.path.join(root, "keys", "*.pem")):
         os.makedirs(os.path.join(out, "keys"), exist_ok=True)
         shutil.copy(pem, os.path.join(out, "keys", os.path.basename(pem)))
-    ctl = controls(feat, tasks, reports, approvals, events)
+    if in_toto:
+        import aisef_attest
+        aisef_attest.build(project, out, tasks, reports, events)
+    ctl = controls(feat, tasks, reports, approvals, events, verr)
     _write(os.path.join(out, "controls.json"), ctl)
     _write(os.path.join(out, "checks.json"), {
         "log_verify": {"errors": verr, "warnings": vwarn},
@@ -221,7 +288,8 @@ def verify(pack):
                              audit_signing._event_message(e.get("log_id"), e.get("sequence"), e.get("hash", "")))
         if problem:
             out.append(where + ": " + problem)
-    return out
+    import aisef_attest
+    return out + aisef_attest.verify_pack(pack, pubs, _load)
 
 
 def main(argv=None):
@@ -232,11 +300,13 @@ def main(argv=None):
     p.add_argument("--out")
     p.add_argument("--pack")
     p.add_argument("--now", help="relogio do aisef-check (ISO 8601), para projetos com datas fixas")
+    p.add_argument("--in-toto", action="store_true", help="atestado in-toto (DSSE) por tarefa, assinado (E-05)")
     a = p.parse_args(argv)
     if a.command == "build":
         if not (a.feature and a.out):
             p.error("build pede --feature e --out")
-        print("pacote em %s" % build(os.path.abspath(a.project), a.feature, os.path.abspath(a.out), a.now))
+        print("pacote em %s" % build(os.path.abspath(a.project), a.feature, os.path.abspath(a.out), a.now,
+                                           a.in_toto))
         return 0
     if not a.pack:
         p.error("verify pede --pack")
