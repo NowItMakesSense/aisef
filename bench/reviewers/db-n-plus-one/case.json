@@ -1,0 +1,17 @@
+{
+  "id": "db-n-plus-one",
+  "category": "sql",
+  "file": "app/orders.py",
+  "bug": {
+    "match": "SELECT price, qty FROM items WHERE order_id = ?",
+    "description": "N+1: uma consulta por pedido no laco",
+    "keywords": [
+      "n+1",
+      "n + 1",
+      "laco",
+      "laço",
+      "loop",
+      "por pedido"
+    ]
+  }
+}

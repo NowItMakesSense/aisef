@@ -1,0 +1,15 @@
+{
+  "id": "sec-path-traversal",
+  "category": "security",
+  "file": "app/files.py",
+  "bug": {
+    "match": "open(os.path.join(UPLOADS, name)",
+    "description": "path traversal: ../ ou caminho absoluto saem de UPLOADS",
+    "keywords": [
+      "traversal",
+      "../",
+      "caminho",
+      "path"
+    ]
+  }
+}

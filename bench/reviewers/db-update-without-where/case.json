@@ -1,0 +1,15 @@
+{
+  "id": "db-update-without-where",
+  "category": "sql",
+  "file": "migrations/0042_disable_trial_users.sql",
+  "bug": {
+    "match": "UPDATE users SET active = false;",
+    "description": "UPDATE sem WHERE desativa todos os usuarios",
+    "keywords": [
+      "where",
+      "todos",
+      "all rows",
+      "todas"
+    ]
+  }
+}

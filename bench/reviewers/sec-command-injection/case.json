@@ -1,0 +1,15 @@
+{
+  "id": "sec-command-injection",
+  "category": "security",
+  "file": "app/thumbs.py",
+  "bug": {
+    "match": "shell=True",
+    "description": "shell=True com entrada do usuario: injecao de comando",
+    "keywords": [
+      "injection",
+      "injecao",
+      "injeção",
+      "shell"
+    ]
+  }
+}

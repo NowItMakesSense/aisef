@@ -1,0 +1,17 @@
+{
+  "id": "test-mocks-subject",
+  "category": "weak-test",
+  "file": "tests/test_tax.py",
+  "bug": {
+    "match": "mock.patch.object(tax, \"compute_tax\"",
+    "description": "o teste faz mock da propria funcao testada",
+    "keywords": [
+      "mock",
+      "propria",
+      "própria",
+      "itself",
+      "testada",
+      "under test"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "types-optional-unchecked",
+  "category": "types",
+  "file": "app/profile.py",
+  "bug": {
+    "match": "nickname(user).strip()",
+    "description": "Optional usado sem checar None: AttributeError sem apelido",
+    "keywords": [
+      "none",
+      "optional",
+      "attributeerror",
+      "nulo"
+    ]
+  }
+}

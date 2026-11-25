@@ -1,0 +1,18 @@
+{
+  "id": "db-self-comparison",
+  "category": "sql",
+  "file": "app/sessions.py",
+  "bug": {
+    "match": "WHERE user_id = user_id",
+    "description": "coluna comparada com ela mesma: apaga as sessoes de todos",
+    "keywords": [
+      "user_id = user_id",
+      "todas",
+      "todos",
+      "all",
+      "sempre verdadeir",
+      "always true",
+      "parametr"
+    ]
+  }
+}

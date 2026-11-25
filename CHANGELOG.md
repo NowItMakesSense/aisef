@@ -4,7 +4,12 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
-### Atestado in-toto e controles de IA no pacote de evidência (E-05)
+### Revisores avaliados com bugs plantados (M-07)
+Não havia medida de quanto cada revisor acha nem de quanto alarme falso dá. Sem ela, não dá para decidir que agente cortar.
+- **`bench/reviewers/`**: 20 casos, 16 com um bug plantado (segurança, SQL, tipos, falha silenciosa, teste fraco, lógica) e 4 mudanças corretas. Cada caso tem o arquivo antes e depois, e o bug é um trecho único numa linha que a mudança acrescentou.
+- **`tools/bench_reviewers.py --run`** roda cada revisor nos casos do seu escopo e em todos os limpos (73 chamadas de `claude -p`, só com Read, Grep e Glob). Mede recall, falso alarme, precisão e custo, e dá um veredito por agente: paga, revisar ou cortar?. A rodada gasta tokens e fica a critério do usuário.
+- `--check-fixtures` (sem modelo) roda na suíte. `test_bench_reviewers.py` (33 casos) testa o placar com respostas sintéticas, os fixtures quebrados e o comando montado.
+
 O pacote de evidência tinha formato próprio e só controles de SOC 2 e ISO 27001 ([ADR 0032](docs/adr/0032-atestado-in-toto-e-controles-de-ia.md)).
 - **`aisef_evidence.py build --in-toto`** grava um in-toto Statement v1 por tarefa, num envelope DSSE assinado com a chave do projeto (arquivo ou cofre). O subject traz os arquivos entregues (sha256) e o commit. O predicate traz o contrato (sha256), o agente, o modelo e o effort, as ferramentas usadas, os testes e a validação.
 - **`verify`** confere cada envelope com a chave pública do pacote e confere que o Task Contract do pacote é o atestado. Payload trocado, outra chave e contrato trocado são acusados.
