@@ -90,13 +90,14 @@ QUALITY_CONFIG_RE = re.compile(
     r"\.clang-format|\.pre-commit-config\.ya?ml|\.husky/[^/]+|lefthook\.ya?ml|\.lintstagedrc[^/]*)$", re.I)
 # Pular hooks ou assinatura do Git esconde problema (block-no-verify do ECC): sempre negado.
 GIT_SKIP_HOOKS_RE = re.compile(r"\bgit\b[^;&|]*\s(?:--no-verify|--no-gpg-sign)\b|\bgit\b[^;&|]*\s-c\s+commit\.gpgsign=false\b", re.I)
-AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:approvals|authorizations|contracts/agents|session)/|(?:^|[/\s\"'=>])\.aisef/(?:config|policy\.local)\.json\b")
+AISEF_PROTECTED_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:(?:approvals|authorizations|contracts/agents|session|runtime/untrusted)/|"
+                                r"runtime(?:/untrusted)?/?(?=[\s\"']|$)|(?:config|policy\.local)\.json\b)")  # S-06: marca
 # Escrita por shell (redirecionamento ou comando que grava, move ou apaga) cujo alvo e um arquivo de decisao do AISEF.
 SHELL_PROTECTED_WRITE_RE = re.compile(
     r"(?:>>?|\b(?:tee|Set-Content|Add-Content|Out-File|New-Item|ni|sc|ac|Copy-Item|cpi|copy|Move-Item|mi|move|"
     r"Rename-Item|rni|ren|Remove-Item|ri|cp|mv|rm|del|erase|truncate|touch|sed\s+-i|perl\s+-[a-z]*i)\b)"
-    r"[^;&|]*?(?:^|[/\s\"'=>])\.aisef/(?:(?:approvals|authorizations|contracts/agents|session)/|(?:config|policy\.local)\.json\b)",
-    re.I)
+    r"[^;&|]*?(?:^|[/\s\"'=>])\.aisef/(?:(?:approvals|authorizations|contracts/agents|session|runtime/untrusted)/|"
+    r"runtime(?:/untrusted)?/?(?=[\s\"']|$)|(?:config|policy\.local)\.json\b)", re.I)
 AISEF_AUDIT_RE = re.compile(r"(?:^|[/\s\"'=>])\.aisef/(?:audit|keys)/")
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 READ_TOOLS = {"Read", "Grep", "Glob"}

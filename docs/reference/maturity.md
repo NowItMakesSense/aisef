@@ -61,3 +61,4 @@ próximo projeto. Até lá, eles ficam como **CI**.
 | E-01 | Evidência de TDD conferida no log assinado (`PostToolUseFailure`, `TDD-EVIDENCE-UNBACKED`) | 0.17.0 | CI | ligado | Perfil `solo` deixa a regra só como aviso |
 | S-04 | Sandbox estrito nos perfis `team` e `regulated` (setup, doctor, `PROFILE-SANDBOX`) | 0.17.0 | CI | sob pedido (setup) | Recuse o item `sandbox` do setup; `profile: "solo"` volta ao aviso simples |
 | S-05 | Dependência nova pergunta; `aisef_deps.py check` confere registro, idade e OSV | 0.17.0 | CI | ligado (rede só com `dependency_check: "online"`) | Sem volta para o ask; tire `dependency_check` para voltar ao modo sem rede |
+| S-06 | Conteúdo não confiável marca a sessão; saída de dados, config/CI e rede ficam mais restritas até a marca vencer | 0.17.0 | CI | ligado | `untrusted_ttl_minutes: 1` no config.json quase desliga |

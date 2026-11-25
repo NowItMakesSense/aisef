@@ -17,7 +17,7 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 | 4 | E-01 | TDD cruzado com o log assinado (`TDD-EVIDENCE-UNBACKED`) | `[x]` | SDD/TDD 7,0 → 8,5 |
 | 5 | S-04 | Sandbox estrito nos perfis `team` e `regulated` | `[x]` | Gateway → 8,0 |
 | 6 | S-05 | Dependência nova pergunta e é conferida (registro, idade, OSV) | `[x]` | Segurança |
-| 7 | S-06 | Conteúdo não confiável marca a sessão e endurece a saída de dados | `[ ]` | Segurança |
+| 7 | S-06 | Conteúdo não confiável marca a sessão e endurece a saída de dados | `[x]` | Segurança |
 | 8 | E-04 | Validação às cegas | `[ ]` | Validador 7,0 → 8,0 |
 | 9 | E-03 | Carimbo de tempo RFC 3161 nos marcos | `[ ]` | Log 6,5 → 8,0 |
 | 10 | E-02 | Chave privada no cofre do sistema | `[ ]` | Log → 8,5 |
@@ -29,10 +29,9 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 **Versão:** a 0.16.0 saiu no PR #39. As entregas deste plano entram na seção `## 0.17.0 (em andamento)` do
 CHANGELOG; o bump do `plugin.json` e do marketplace é feito no fechamento.
 
-**PRs:** S-03, D-03, H-05, E-01, S-04 e S-05 num PR só, o #43 (branch `feat/v0.17`); #40, #41 e #42 foram fechados
-e substituídos por ele. Próximas tarefas: commits na mesma `feat/v0.17` até o merge; depois, branch nova a partir
-da `main`. Cuidado: outra sessão no mesmo repositório pode trocar a branch da pasta; confira `git status -sb` antes
-de commitar.
+**PRs:** S-03 a S-05 entraram na `main` pelo PR #43. S-06 no PR #44 (branch `feat/v0.17-s06`). Próximas
+tarefas: commits na mesma branch até o merge; depois, branch nova a partir da `main`. Cuidado: outra sessão no mesmo
+repositório pode trocar a branch da pasta; confira `git status -sb` antes de commitar.
 
 **Fechamento de cada tarefa:** teste próprio no `run_tests.py`, CHANGELOG, linha na tabela de maturidade
 (`docs/reference/maturity.md`, exigida pelo `tools/gen_docs.py --check` para todo ID citado no CHANGELOG), ADR
