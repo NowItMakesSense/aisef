@@ -1,6 +1,6 @@
 # Plano 0.17: fechar o que o README promete
 
-> **Status:** em andamento, desde 2026-11-25.
+> **Status:** código concluído em 2026-11-25. M-06 e M-05 adiadas pelo usuário (2026-11-25): ficam para depois, sem data; o harness da M-06 (braço `aisef-lean`) já está pronto. Falta também o bump para 0.17.0 no fechamento.
 > **Origem:** análise de 2026-11-25 (nota geral 6,9). Notas por área e provas estão na seção 5.
 > **Como retomar (sessão nova ou depois do `/compact`):** leia só a seção 1 (Estado). Pegue a primeira tarefa `[ ]`
 > e leia o bloco dela na seção 3. Não releia a análise nem o código inteiro.
