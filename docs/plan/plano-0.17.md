@@ -26,9 +26,12 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 | 13 | M-06 | Benchmark nas 6 tarefas, com o braço enxuto | `[u]` | Prova de valor 3,5 → 6,0 |
 | 14 | M-05 | Linha de base num projeto real (herdada do plano 0.13–0.15) | `[u]` | Prova de valor |
 
-**Versão:** o CHANGELOG já tem a 0.16.0 (sessões coordenadas) sem o `plugin.json` ter subido. As entregas deste
-plano entram numa seção `## 0.17.0` nova no topo do CHANGELOG; o bump do `plugin.json` e do marketplace é feito no
-fechamento, junto.
+**Versão:** a 0.16.0 saiu no PR #39. As entregas deste plano entram na seção `## 0.17.0 (em andamento)` do
+CHANGELOG; o bump do `plugin.json` e do marketplace é feito no fechamento.
+
+**PRs:** S-03, D-03 e H-05 no PR #40 (branch `feat/v0.17-s03-h05`). Próximas tarefas: branch nova a partir da `main`
+depois do merge. Cuidado: outra sessão no mesmo repositório pode trocar a branch da pasta; confira `git status -sb`
+antes de commitar.
 
 **Fechamento de cada tarefa:** teste próprio no `run_tests.py`, CHANGELOG, linha na tabela de maturidade
 (`docs/reference/maturity.md`, exigida pelo `tools/gen_docs.py --check` para todo ID citado no CHANGELOG), ADR
