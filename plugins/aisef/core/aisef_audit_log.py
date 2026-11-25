@@ -58,14 +58,14 @@ def last_event(audit_dir):
 
 
 def load_signer(project_id, key_id=KEY_ID):
-    if not os.path.exists(private_key_path(project_id, key_id)):
+    import aisef_keystore  # E-02: arquivo ou cofre do sistema
+    if aisef_keystore.locate(project_id, key_id) is None:
         return None
     if not aisef_base.HAS_CRYPTO:
         # um evento sem assinatura num log assinado quebraria a verificacao: melhor recusar alto
         raise RuntimeError("o log deste projeto e assinado, mas este Python nao tem 'cryptography' "
                            "(instale-a ou defina AISEF_PYTHON)")
-    with open(private_key_path(project_id, key_id), "rb") as fh:
-        key = _load_private_key(fh.read())
+    key = _load_private_key(aisef_keystore.read(project_id, key_id))
     return audit_signing.AuditSigner(key_id, key)
 
 
@@ -179,10 +179,10 @@ def rotate_key(project):
     n = int(old.rsplit("-", 1)[-1]) + 1 if old.rsplit("-", 1)[-1].isdigit() else 2
     new_id = "audit-key-%d" % n
     key = Ed25519PrivateKey.generate()
-    priv = private_key_path(cfg["project_id"], new_id)
-    os.makedirs(os.path.dirname(priv), exist_ok=True)
-    with open(priv, "wb") as fh:
-        fh.write(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
+    import aisef_keystore
+    pem = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+                            serialization.NoEncryption())
+    aisef_keystore.write(cfg["project_id"], new_id, pem, aisef_keystore.store_of(cfg))
     with open(os.path.join(aisef_dir(project), "keys", new_id + ".pem"), "wb") as fh:
         fh.write(key.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo))
     ev = append(project, {"event_type": "checkpoint", "actor": {"type": "system", "id": "aisef"},
@@ -192,7 +192,7 @@ def rotate_key(project):
     write_json(os.path.join(aisef_dir(project), "config.json"), cfg)
     _anchor(cfg, ev)
     try:
-        os.remove(private_key_path(cfg["project_id"], old))
+        aisef_keystore.remove(cfg["project_id"], old)
     except OSError:
         pass
     return new_id

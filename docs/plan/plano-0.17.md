@@ -20,7 +20,7 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 | 7 | S-06 | Conteúdo não confiável marca a sessão e endurece a saída de dados | `[x]` | Segurança |
 | 8 | E-04 | Validação às cegas | `[x]` | Validador 7,0 → 8,0 |
 | 9 | E-03 | Carimbo de tempo RFC 3161 nos marcos | `[x]` | Log 6,5 → 8,0 |
-| 10 | E-02 | Chave privada no cofre do sistema | `[ ]` | Log → 8,5 |
+| 10 | E-02 | Chave privada no cofre do sistema | `[x]` | Log → 8,5 |
 | 11 | E-05 | Atestado in-toto e mapeamento ISO 42001, EU AI Act art. 12, NIST AI RMF | `[ ]` | Evidência 5,5 → 7,5 |
 | 12 | M-07 | Avaliação por revisor com bugs plantados | `[ ]` | Equipe 6,0 → 7,5 |
 | 13 | M-06 | Benchmark nas 6 tarefas, com o braço enxuto | `[u]` | Prova de valor 3,5 → 6,0 |
@@ -29,7 +29,7 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 **Versão:** a 0.16.0 saiu no PR #39. As entregas deste plano entram na seção `## 0.17.0 (em andamento)` do
 CHANGELOG; o bump do `plugin.json` e do marketplace é feito no fechamento.
 
-**PRs:** S-03 a S-05 entraram na `main` pelo PR #43; S-06 pelo #44; E-04 pelo #45; E-03 pelo #46. Próximas tarefas: branch
+**PRs:** S-03 a S-05 entraram na `main` pelo PR #43; S-06 pelo #44; E-04 pelo #45; E-03 pelo #46; E-02 pelo #47. Próximas tarefas: branch
 nova a partir da `main` (`feat/v0.17-<id>`), PR e merge depois do CI verde (o usuário pediu que o merge seja feito
 por aqui). Cuidado: outra sessão no mesmo repositório pode trocar a branch da pasta; confira `git status -sb` antes
 de commitar.
@@ -156,6 +156,8 @@ Prova (2026-11-25, `gateway.py` num projeto temporário): todos estes deram `all
 - **Aceite:** teste com TSA falsa local; aceite de feature sem rede segue, com aviso.
 
 ### E-02: Chave no cofre do sistema
+
+> **Feito** (ADR 0031): `core/aisef_keystore.py` (DPAPI/Keychain/Secret Service, marcador `.pem.os`, `move` com conferencia), `aisef_migrate.py --key-store`, doctor, `test_keystore.py` (32) e job `keystore` no CI com cofre real em Linux, macOS e Windows.
 
 - Opção `audit.key_store`: `file` (hoje), `os` (DPAPI no Windows por `ctypes`, Keychain no macOS por `security`,
   Secret Service no Linux por `secret-tool`). Migração pelo `migrate`.

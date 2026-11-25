@@ -4,6 +4,14 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
+### Chave privada do log no cofre do sistema (E-02)
+A chave que assina o log ficava num PEM sem senha em `~/.aisef/keys/`. Backup, sincronização de nuvem ou disco copiado levavam a chave junto ([ADR 0031](docs/adr/0031-chave-privada-no-cofre-do-sistema.md)).
+- **`audit.key_store: "os"`** guarda a chave no cofre do sistema: DPAPI no Windows (por `ctypes`), Keychain no macOS e Secret Service no Linux (`secret-tool`). O segredo nunca vai na linha de comando. No disco fica só um marcador `<chave>.pem.os`. O padrão continua `"file"`.
+- **`core/aisef_keystore.py`** é o único caminho da chave: assinatura do log, `init`, rotação de chave e chave de cada pessoa no log por pessoa. Sem cofre utilizável, `os` dá erro em vez de cair para arquivo.
+- **Migração:** `aisef_migrate.py --key-store os|file` mostra o plano; `--apply` (decisão do usuário) grava o config e move as chaves. Cada chave só sai da origem depois de lida de volta igual do destino. O doctor avisa quando o cofre não responde.
+- **Limite:** não protege contra código rodando na sessão do usuário, que pode pedir a chave ao cofre como o AISEF pede.
+- `test_keystore.py` (32 casos) faz a ida e volta real pelo cofre, `move` nos dois sentidos e o log assinado pelo cofre com rotação. Um job novo do CI roda o teste no cofre de verdade em Linux (gnome-keyring), macOS (keychain temporário) e Windows (DPAPI).
+
 ### Carimbo de tempo RFC 3161 nos marcos (E-03)
 A assinatura do log prova quem escreveu, não quando: quem tem a chave pode reescrever o passado e reassinar. Agora uma TSA de fora carimba a cabeça do log nos marcos ([ADR 0030](docs/adr/0030-carimbo-rfc3161-nos-marcos.md)).
 - **`core/aisef_anchor.py`** monta o `TimeStampReq` em DER à mão, com o hash do último evento, um nonce e certReq, e envia por HTTP à TSA. O token fica em `.aisef/audit/timestamps/<sequência>.tsr`, com um `.json` ao lado.

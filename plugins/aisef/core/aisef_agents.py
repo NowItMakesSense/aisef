@@ -49,17 +49,11 @@ def init(project, project_id, name=None, environment="dev", profile="solo"):
         fh.write("# gerado pelo AISEF\n*.lock\n*.tmp\npanel/\nruntime/\nworktrees/\n")
     signed = False
     if aisef_base.HAS_CRYPTO:
-        priv_path = private_key_path(project_id)
-        if not os.path.exists(priv_path):
-            os.makedirs(os.path.dirname(priv_path), exist_ok=True)
+        import aisef_keystore  # E-02: projeto novo comeca no arquivo; o migrate leva ao cofre
+        if aisef_keystore.locate(project_id, KEY_ID) is None:
             key = Ed25519PrivateKey.generate()
-            with open(priv_path, "wb") as fh:
-                fh.write(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
-                                           serialization.NoEncryption()))
-            try:
-                os.chmod(priv_path, 0o600)
-            except OSError:
-                pass
+            aisef_keystore.write(project_id, KEY_ID, key.private_bytes(
+                serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
         signer = load_signer(project_id)
         with open(os.path.join(root, "keys", KEY_ID + ".pem"), "wb") as fh:
             fh.write(signer.public_key_pem())

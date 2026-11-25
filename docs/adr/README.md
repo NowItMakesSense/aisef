@@ -34,3 +34,4 @@ Cada decisão tem data, contexto, o que foi decidido e as consequências. Para m
 | [0028](0028-dependencia-nova-pergunta.md) | Dependência nova pergunta; a conferência na rede é opt-in | 2026-11-25 |
 | [0029](0029-conteudo-nao-confiavel-marca-a-sessao.md) | Conteúdo não confiável marca a sessão | 2026-11-25 |
 | [0030](0030-carimbo-rfc3161-nos-marcos.md) | Carimbo de tempo RFC 3161 nos marcos do log | 2026-11-25 |
+| [0031](0031-chave-privada-no-cofre-do-sistema.md) | Chave privada do log no cofre do sistema | 2026-11-25 |
