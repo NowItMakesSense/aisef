@@ -4,6 +4,13 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
+### Atestado in-toto e controles de IA no pacote de evidência (E-05)
+O pacote de evidência tinha formato próprio e só controles de SOC 2 e ISO 27001 ([ADR 0032](docs/adr/0032-atestado-in-toto-e-controles-de-ia.md)).
+- **`aisef_evidence.py build --in-toto`** grava um in-toto Statement v1 por tarefa, num envelope DSSE assinado com a chave do projeto (arquivo ou cofre). O subject traz os arquivos entregues (sha256) e o commit. O predicate traz o contrato (sha256), o agente, o modelo e o effort, as ferramentas usadas, os testes e a validação.
+- **`verify`** confere cada envelope com a chave pública do pacote e confere que o Task Contract do pacote é o atestado. Payload trocado, outra chave e contrato trocado são acusados.
+- **Controles de IA:** ISO/IEC 42001 Anexo A (A.6.2.8, A.6.2.4, A.9.2, A.4.4), EU AI Act art. 12 (registro automático e rastreabilidade) e NIST AI RMF (Govern, Map, Measure, Manage), com status calculado. Mapeamento indicativo, não certificação.
+- `test_attest.py` (24 casos) confere o PAE contra a especificação DSSE e a assinatura com `cryptography` direto, além das adulterações e dos controles.
+
 ### Chave privada do log no cofre do sistema (E-02)
 A chave que assina o log ficava num PEM sem senha em `~/.aisef/keys/`. Backup, sincronização de nuvem ou disco copiado levavam a chave junto ([ADR 0031](docs/adr/0031-chave-privada-no-cofre-do-sistema.md)).
 - **`audit.key_store: "os"`** guarda a chave no cofre do sistema: DPAPI no Windows (por `ctypes`), Keychain no macOS e Secret Service no Linux (`secret-tool`). O segredo nunca vai na linha de comando. No disco fica só um marcador `<chave>.pem.os`. O padrão continua `"file"`.

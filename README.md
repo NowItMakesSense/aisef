@@ -21,7 +21,7 @@ AISEF is a Claude Code plugin for teams that must show what the AI did, not just
 | **A log nobody can quietly edit** | Each event is hash-chained and signed with Ed25519; the head lives outside the repository. In a team, each person writes to their own stream with their own key, so merges never conflict and every approval carries the signature of whoever gave it. |
 | **Every requirement traced to its proof** | Requirement → slice → acceptance criterion → test → evidence, checked by 168 rules. `aisef_sysgraph.py` answers "what does this requirement touch?" without a model. |
 | **Proof on every pull request** | The `aisef-verify` GitHub Action fails the PR if the log was tampered with, if the log shrank since the base branch, if `aisef-check` finds an error, or if the PR touches a task nobody validated. |
-| **Evidence your auditor can verify** | `aisef_evidence.py` packs a feature (contracts, reports, approvals, signed events, public keys) with a controls table for SOC 2 CC8.1 and ISO/IEC 27001:2022 A.8.32 and A.5.3. The package verifies itself, without the project. |
+| **Evidence your auditor can verify** | `aisef_evidence.py` packs a feature (contracts, reports, approvals, signed events, public keys) with a controls table for SOC 2 CC8.1, ISO/IEC 27001:2022 A.8.32 and A.5.3, ISO/IEC 42001, EU AI Act art. 12 and NIST AI RMF. With `--in-toto`, each task gets a signed in-toto attestation (DSSE). The package verifies itself, without the project. |
 | **Observability you already use** | `aisef_otel.py` exports each feature as OpenTelemetry traces (OTLP/JSON) with the GenAI conventions: one span per agent attempt, one per tool call. |
 
 AISEF is for teams in regulated settings and for anyone who has to show how an AI-made change was authorized, tested and approved. If you only want the fastest possible agent, plain Claude Code is cheaper; the "Measured" section below has the numbers.
@@ -41,7 +41,7 @@ Everything below ships in one plugin, runs locally with the Python standard libr
 | 🛡️ | **Execution Gateway** | Every tool call gets allow, ask or deny, enforced in code. Each Git operation needs its own approval. No `--no-verify`. Databases and deploys are denied. Agents cannot loosen lint configs. | always on (hook) |
 | 🧾 | **Signed audit log** | Lifecycle, decisions, shell commands and every blocked or questioned call go into a hash-chained log signed with Ed25519; file edits go to a hash-chained telemetry. One stream per person in a team. | `aisef-check`, `aisef_streams.py` |
 | ✔️ | **CI verification** | The `aisef-verify` Action checks the log, the consistency rules and the tasks touched by each pull request, with a job summary. | `.github/actions/aisef-verify` |
-| 📦 | **Evidence package** | A self-verifying package per feature, with SOC 2 and ISO 27001 controls mapped to the evidence. | `aisef_evidence.py build` |
+| 📦 | **Evidence package** | A self-verifying package per feature, with SOC 2, ISO 27001, ISO 42001, EU AI Act and NIST AI RMF controls mapped to the evidence, and in-toto attestations. | `aisef_evidence.py build` |
 | 🔭 | **OpenTelemetry export** | Features as traces with GenAI attributes, for the observability stack you already run. | `aisef_otel.py export` |
 | 🗳️ | **Approval Center** | Each decision shows its impact, diff, rollback and risk. Only you decide, through the native prompt. | `aisef-approve` |
 | 📊 | **Live panel** | Execution map, who spawned whom, decisions waiting for you, traceability, parallel lanes. | `aisef-panel` |
