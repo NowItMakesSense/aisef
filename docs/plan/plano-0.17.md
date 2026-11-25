@@ -187,6 +187,8 @@ Prova (2026-11-25, `gateway.py` num projeto temporário): todos estes deram `all
   (custo estimado de US$ 30 a 50). Medir defeito que escapa, não só teste passando.
 - M-05: uma feature real com a versão atual, depois `aisef_project.py metrics`.
 
+> **Preparo da M-06 feito** (PR #50): braço `aisef-lean` no `bench_outcomes.py`, com a triagem real no perfil solo (5 tarefas lean, `sec-path-traversal` full). Falta a rodada paga: `python tools/bench_outcomes.py --run --arms plain,aisef,aisef-lean --reps 3 --model sonnet` em Linux ou WSL.
+
 ## 4. Riscos
 
 | Risco | Mitigação |

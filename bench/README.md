@@ -25,8 +25,10 @@ Mede se o AISEF entrega código mais correto que o Claude Code puro, usando **te
 ```
 python tools/bench_outcomes.py --check-fixtures   # sem custo; roda no run_tests.py
 python tools/bench_outcomes.py --prepare-only     # sem custo; monta os dois braços e confere o AISEF
-python tools/bench_outcomes.py --run --reps 3 --model sonnet   # gasta tokens; Linux ou WSL
+python tools/bench_outcomes.py --run --arms plain,aisef,aisef-lean --reps 3 --model sonnet   # gasta tokens; Linux ou WSL
 ```
+
+Braços: `plain` (Claude Code puro), `aisef` (ciclo completo), `aisef-norev` (completo sem os revisores especializados) e `aisef-lean` (a triagem real do AISEF no perfil solo: caminho enxuto quando ela der lean, completo quando der full; hoje 5 das 6 tarefas vão pelo enxuto e `sec-path-traversal` pelo completo).
 
 O resultado vai para `docs/benchmarks/outcomes-<data>.md` (tabela) e `.json` (cada execução).
 

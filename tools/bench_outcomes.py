@@ -20,7 +20,8 @@ Comandos:
         Gasta tokens. Roda `claude -p` em cada tarefa x braco x repeticao e grava docs/benchmarks/<data>.md e .json.
         Use em Linux ou WSL (o sandbox nativo do Claude Code nao existe no Windows).
 
-Bracos (aisef-norev = aisef sem revisores especializados antes do validador, para medir o custo deles):
+Bracos (aisef-norev = aisef sem revisores especializados antes do validador, para medir o custo deles;
+aisef-lean = aisef com a triagem de verdade no perfil solo: caminho enxuto quando ela der lean, completo quando der full):
     plain  o repo e o pedido, sem AISEF. acceptEdits + Bash so para python e git de leitura.
     aisef  o mesmo repo com o AISEF iniciado (--plugin-dir plugins/aisef). Como nao ha ninguem para aprovar, o
            harness faz o papel do usuario ANTES do agente comecar: gera a feature a partir do pedido (uma fatia),
@@ -124,8 +125,23 @@ def prepare(task, arm, base):
     git(workdir, "-c", "user.email=bench@aisef.local", "-c", "user.name=bench", "commit", "-q", "-m", "inicial")
     env = dict(os.environ, AISEF_HOME=os.path.join(base, "aisef-home-" + task["id"]))
     if arm.startswith("aisef"):
-        prepare_aisef(task, workdir, env, reviewers=arm != "aisef-norev")
+        prepare_aisef(task, workdir, env, reviewers=arm != "aisef-norev", lean=arm == "aisef-lean")
     return workdir, env
+
+
+ARMS = ("plain", "aisef", "aisef-norev", "aisef-lean")
+# tipo da tarefa -> tipo de mudanca da triagem (aisef_triage.py --changes); security forca o ciclo completo
+TRIAGE_CHANGES = {"feature": "behavior", "bug": "bugfix", "refactor": "refactor", "security": "security"}
+
+
+def triage(task, workdir, env):
+    """A triagem real do AISEF para a tarefa, no perfil solo (o que um usuario solo teria)."""
+    repo = os.path.join(task["dir"], "repo")
+    files = sum(len([f for f in fs if f.endswith(".py")]) for _d, _s, fs in os.walk(repo)) or 1
+    out = _core("aisef_triage.py", "--project", ".", "--paths", "*.py", "tests/*", "--changes",
+                TRIAGE_CHANGES.get(task["kind"], "behavior"), "--files", str(min(files, 3)), "--lines", "80",
+                "--slices", "1", "--risk", "low", "--profile", "solo", "--json", env=env, cwd=workdir)
+    return json.loads(out)
 
 
 def _core(script, *args, env, cwd):
@@ -136,7 +152,7 @@ def _core(script, *args, env, cwd):
     return r.stdout
 
 
-def prepare_aisef(task, workdir, env, reviewers=True):
+def prepare_aisef(task, workdir, env, reviewers=True, lean=False):
     """Faz o papel do usuario antes do agente: init, agentes ativos, feature de uma fatia e plano aprovado."""
     pid = "PRJ-BENCH-" + re.sub(r"[^A-Z0-9]", "", task["id"].upper())[:20]
     _core("aisef_project.py", "init", "--project", ".", "--project-id", pid, "--name", task["id"], env=env, cwd=workdir)
@@ -144,6 +160,8 @@ def prepare_aisef(task, workdir, env, reviewers=True):
     with open(cfg_path, encoding="utf-8") as fh:
         cfg = json.load(fh)
     cfg["graphify"] = {"enabled": False}  # fixture pequeno: o grafo nao rende (G-05 mede isso a parte)
+    if lean:
+        cfg["profile"] = "solo"  # o padrao de projeto novo; explicito porque a triagem depende dele
     with open(cfg_path, "w", encoding="utf-8") as fh:
         json.dump(cfg, fh, indent=2)
     _core("aisef_project.py", "agents", "--project", ".", "--activate", env=env, cwd=workdir)
@@ -158,6 +176,11 @@ def prepare_aisef(task, workdir, env, reviewers=True):
                         "paths": ["*.py", "tests/*"], "test_cmd": "python -m unittest discover -s tests -t ."}]}
     if not reviewers:  # braco aisef-norev: o mesmo fluxo sem a revisao especializada antes do validador (A-05)
         brief["tasks"][0]["review"] = {"reviewers": []}
+    if lean:
+        tri = triage(task, workdir, env)
+        if tri["path"] == "quick":
+            raise SystemExit("%s: a triagem deu quick; o benchmark mede features, revise o fixture" % task["id"])
+        brief["triage"] = tri
     bpath = os.path.join(workdir, ".aisef", "bench-brief.json")
     with open(bpath, "w", encoding="utf-8") as fh:
         json.dump(brief, fh)
@@ -170,6 +193,16 @@ def prepare_aisef(task, workdir, env, reviewers=True):
         if req.get("status") == "pending" and req.get("request_type") == "plan_approval":
             _core("aisef_project.py", "decide", "--project", ".", "--request", req["request_id"], "--choice", "approve",
                   "--note", "aprovado pelo harness do benchmark (faz o papel do usuario)", env=env, cwd=workdir)
+
+
+def feature_path(workdir):
+    """Caminho que a feature do benchmark tomou: lean ou full (triagem gravada no contrato)."""
+    path = os.path.join(workdir, ".aisef", "contracts", "features", "FEAT-BENCH.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return ((json.load(fh).get("triage") or {}).get("path")) or "full"
+    except (OSError, ValueError):
+        return "?"
 
 
 def aisef_ready(workdir, env):
@@ -277,7 +310,8 @@ def main(argv=None):
     p.add_argument("--prepare-only", action="store_true")
     p.add_argument("--run", action="store_true")
     p.add_argument("--tasks", default="")
-    p.add_argument("--arms", default="plain,aisef")
+    p.add_argument("--arms", default=None, help="bracos separados por virgula (padrao: --run plain,aisef; "
+                   "--prepare-only todos): %s" % ", ".join(ARMS))
     p.add_argument("--reps", type=int, default=3)
     p.add_argument("--model", default="sonnet")
     p.add_argument("--claude", default=shutil.which("claude") or "claude")
@@ -297,19 +331,26 @@ def main(argv=None):
     if a.prepare_only:
         base = tempfile.mkdtemp(prefix="aisef-bench-")
         bad = 0
+        arms = [x for x in a.arms.split(",") if x in ARMS] if a.arms else list(ARMS)
         for t in tasks:
-            prepare(t, "plain", base)
-            wd, env = prepare(t, "aisef", base)
-            ok, res = aisef_ready(wd, env)
-            bad += not ok
-            print("%-22s plain ok, aisef %s" % (t["id"], "pronto para despachar" if ok else
-                                                "NAO pronto: %s" % [x["kind"] for x in res["actions"]]))
+            line = []
+            for arm in arms:
+                wd, env = prepare(t, arm, base)
+                if not arm.startswith("aisef"):
+                    line.append("%s ok" % arm)
+                    continue
+                ok, res = aisef_ready(wd, env)
+                bad += not ok
+                extra = " (%s)" % feature_path(wd) if arm == "aisef-lean" else ""
+                line.append("%s %s%s" % (arm, "pronto" if ok else "NAO pronto: %s" % [x["kind"] for x in res["actions"]],
+                                         extra))
+            print("%-22s %s" % (t["id"], ", ".join(line)))
         shutil.rmtree(base, ignore_errors=True)
         return 1 if bad else 0
     if not a.run:
         p.print_help()
         return 0
-    arms = [x for x in a.arms.split(",") if x in ("plain", "aisef", "aisef-norev")]
+    arms = [x for x in (a.arms or "plain,aisef").split(",") if x in ARMS]
     results = []
     fails_in_row = 0
     base = tempfile.mkdtemp(prefix="aisef-bench-")
@@ -336,6 +377,7 @@ def main(argv=None):
                     res["aisef"]["review_reports"] = len([f for f in os.listdir(rdir) if "-REV-" in f and f.endswith(".json")]) if os.path.isdir(rdir) else 0
                     states = json.loads(_core("aisef_project.py", "next", "--project", ".", "--json", env=env, cwd=wd)).get("states", {})
                     res["aisef"]["task_states"] = states
+                    res["aisef"]["path"] = feature_path(wd)
                 res["hidden"].pop("tail", None)
                 if res["visible"]:
                     res["visible"].pop("tail", None)

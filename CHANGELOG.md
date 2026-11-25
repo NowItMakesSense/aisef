@@ -4,7 +4,11 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
-### Revisores avaliados com bugs plantados (M-07)
+### Braço enxuto no benchmark (M-06, preparo)
+O plano da M-06 pedia o braço `aisef-lean`, mas o `bench_outcomes.py` só tinha `plain`, `aisef` e `aisef-norev`. Sem ele, o benchmark media só o ciclo completo, que é o mais caro.
+- **`--arms aisef-lean`** roda a triagem de verdade (`aisef_triage.py`, perfil solo) e grava o resultado no Feature Contract. Quando ela dá lean, a feature tem uma fatia com TDD e só o `code-reviewer`; quando dá full (a tarefa de segurança), segue o ciclo completo. O caminho tomado vai para o JSON do resultado.
+- `--prepare-only` passa a montar os quatro braços e mostra o caminho de cada tarefa. `test_bench_lean.py` (9 casos) confere a triagem, a fatia única, o revisor e o despacho, sem modelo.
+
 Não havia medida de quanto cada revisor acha nem de quanto alarme falso dá. Sem ela, não dá para decidir que agente cortar.
 - **`bench/reviewers/`**: 20 casos, 16 com um bug plantado (segurança, SQL, tipos, falha silenciosa, teste fraco, lógica) e 4 mudanças corretas. Cada caso tem o arquivo antes e depois, e o bug é um trecho único numa linha que a mudança acrescentou.
 - **`tools/bench_reviewers.py --run`** roda cada revisor nos casos do seu escopo e em todos os limpos (73 chamadas de `claude -p`, só com Read, Grep e Glob). Mede recall, falso alarme, precisão e custo, e dá um veredito por agente: paga, revisar ou cortar?. A rodada gasta tokens e fica a critério do usuário.
