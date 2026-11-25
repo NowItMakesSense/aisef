@@ -58,3 +58,4 @@ próximo projeto. Até lá, eles ficam como **CI**.
 | S-03 | Gateway: sete contornos fechados (aspas, variável e curinga na home, script que lê a chave, deploy por script, saída de dados, hook do Git) | 0.17.0 | CI | ligado | Sem volta: é a camada de segurança |
 | D-03 | README sem promessa maior que o código | 0.17.0 | — | — | Documentação |
 | H-05 | CI só leitura, Actions por SHA, dependências com hash, suíte em paralelo | 0.17.0 | CI | ligado | `run_tests.py` sem `--jobs` roda em série, como antes |
+| E-01 | Evidência de TDD conferida no log assinado (`PostToolUseFailure`, `TDD-EVIDENCE-UNBACKED`) | 0.17.0 | CI | ligado | Perfil `solo` deixa a regra só como aviso |

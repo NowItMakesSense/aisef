@@ -20,6 +20,7 @@ SUITES = [
     ("approval-request schema", [os.path.join(CORE, "test_approval_request.py"), os.path.join(CORE, "approval-request.schema.v0.1.json")]),
     ("engineering blueprint schema", [os.path.join(CORE, "test_blueprint.py")]),
     ("check_project (mutacoes)", [os.path.join(CORE, "test_check_project.py")]),
+    ("TDD cruzado com o log assinado (E-01)", [os.path.join(CORE, "test_tdd_log.py")]),
     ("cadeia de hash", [os.path.join(CORE, "audit_chain.py"), "selftest", os.path.join(CORE, "audit-event.schema.v0.1.json")]),
     ("assinatura Ed25519", [os.path.join(CORE, "audit_signing.py"), "selftest", os.path.join(CORE, "audit-event.schema.v0.1.json")]),
     ("politica x schemas", [os.path.join(CORE, "check_policy_consistency.py"), os.path.join(CORE, "permission-policy.v0.1.json"),

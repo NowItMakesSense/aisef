@@ -1,5 +1,5 @@
 {
-  "description": "AISEF: Execution Gateway (PreToolUse; para Grep|Glob inclui, no mesmo processo, o lembrete consultivo do grafo), Audit & Evidence (PostToolUse) e doctor (SessionStart). Bash e PowerShell sao tratados como shell. So atuam em projetos com .aisef/config.json. A auditoria de Edit/Write/MCP roda em segundo plano (async); a de Bash/PowerShell e sincrona, porque consome a aprovacao reforcada de uso unico. SubagentStart/SubagentStop e o PreToolUse Agent|Task (quem disparou quem; sincrono, para o disparo estar gravado antes do SubagentStart) alimentam a visao 'Agora' e o mapa de execucao do painel (.aisef/runtime/, fora do Git). UserPromptSubmit lembra o modo Ask (so fala nesse modo).",
+  "description": "AISEF: Execution Gateway (PreToolUse; para Grep|Glob inclui, no mesmo processo, o lembrete consultivo do grafo), Audit & Evidence (PostToolUse e, para Bash/PowerShell que falham, PostToolUseFailure com o codigo de saida: E-01) e doctor (SessionStart). Bash e PowerShell sao tratados como shell. So atuam em projetos com .aisef/config.json. A auditoria de Edit/Write/MCP roda em segundo plano (async); a de Bash/PowerShell e sincrona, porque consome a aprovacao reforcada de uso unico. SubagentStart/SubagentStop e o PreToolUse Agent|Task (quem disparou quem; sincrono, para o disparo estar gravado antes do SubagentStart) alimentam a visao 'Agora' e o mapa de execucao do painel (.aisef/runtime/, fora do Git). UserPromptSubmit lembra o modo Ask (so fala nesse modo).",
   "hooks": {
     "SessionStart": [
       {
@@ -54,6 +54,18 @@
             "command": "AISEF_HOOKS=\"${CLAUDE_PLUGIN_ROOT}/hooks\" AISEF_SCRIPT=audit_hook.py AISEF_PHASE=post . \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\"",
             "timeout": 20,
             "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AISEF_HOOKS=\"${CLAUDE_PLUGIN_ROOT}/hooks\" AISEF_SCRIPT=audit_hook.py AISEF_PHASE=post . \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\"",
+            "timeout": 20
           }
         ]
       }

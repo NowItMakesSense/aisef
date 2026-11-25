@@ -115,6 +115,7 @@ FIX_HINTS = {
     "STATE-CLOSED-NO-ACCEPT": {"hint": "o aceite e do usuario: pedido feature_acceptance pelo aisef-approve"},
     "TRIAGE-OVERRIDDEN-DOWN": {"hint": "suba o caminho no contrato (path) ate o calculado; descer nao e permitido"},
     "CONFIG-PROFILE": {"hint": "use solo, team ou regulated em config.json -> profile"},
+    "TDD-EVIDENCE-UNBACKED": {"hint": "rode o teste de novo pelo shell (o hook grava o resultado) e declare no ciclo o mesmo comando e o horario da execucao"},
 }
 
 
@@ -252,6 +253,7 @@ RULE_GROUPS = [
     ("check_rules_2", "rules_tarefas"),  # tarefas
     ("check_rules_2", "rules_relatorios"),  # relatorios
     ("check_rules_2", "rules_sdd_tdd"),  # SDD + TDD (fatias, spec e red-green)
+    ("check_rules_4", "rules_tdd_no_log"),  # E-01: evidencia de TDD cruzada com o log assinado
     ("check_rules_2", "rules_autoridade_de_design_arquitetura_detecta"),  # autoridade de design (0.6.1) / arquitetura detectada (aisef_detect)
     ("check_rules_2", "rules_roteamento_de_modelo"),  # roteamento de modelo (execution_profile)
     ("check_rules_2", "rules_aprovacoes_e_autorizacoes"),  # aprovacoes e autorizacoes

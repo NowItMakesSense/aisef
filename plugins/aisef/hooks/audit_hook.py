@@ -11,6 +11,7 @@ uma falha vira aviso em stderr.
 """
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -27,6 +28,24 @@ def _aisef_root(project):
         return aisef_git.aisef_root(project)
     except Exception:
         return project
+
+EXIT_LINE_RE = re.compile(r"^\s*Exit code (-?\d+)")
+
+
+def shell_result(data):
+    """E-01 (0.17): resultado do comando. O PostToolUse so dispara quando o comando da certo (exit 0); o
+    PostToolUseFailure traz em `error` a primeira linha `Exit code N` (doc oficial dos hooks). Sem essa linha (o shell
+    nem abriu) ou com interrupcao, fica `failed` sem codigo."""
+    if data.get("hook_event_name") != "PostToolUseFailure":
+        return {"exit_code": 0}
+    out = {"failed": True}
+    m = EXIT_LINE_RE.match(str(data.get("error") or ""))
+    if m and not data.get("is_interrupt"):
+        out["exit_code"] = int(m.group(1))
+    if data.get("is_interrupt"):
+        out["interrupted"] = True
+    return out
+
 
 def main():
     try:
@@ -47,6 +66,7 @@ def main():
         cmd = (inp.get("command") or "")[:MAX_COMMAND]
         probe = {"data": {"command": cmd}}
         detail["command"] = "[omitido: possivel segredo]" if audit_chain.find_secrets(probe) else cmd
+        detail.update(shell_result(data))  # E-01: o check cruza a evidencia de TDD com este resultado
         summary = tool + ": " + detail["command"].splitlines()[0][:120] if detail["command"] else tool
     elif tool.startswith("mcp__"):
         # so o nome dos campos: os valores podem carregar segredos ou dados pessoais

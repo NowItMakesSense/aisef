@@ -14,7 +14,7 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 | 1 | S-03 | Gateway: fechar os 7 contornos provados | `[x]` | Gateway 6,0 → 7,5 |
 | 2 | H-05 | Higiene do CI: `permissions`, Actions por SHA, dependências com hash | `[x]` | Engenharia 8,0 → 8,5 |
 | 3 | D-03 | README e maturidade sem promessa maior que o código | `[x]` | Tese 8,5 (mantém) |
-| 4 | E-01 | TDD cruzado com o log assinado (`TDD-EVIDENCE-UNBACKED`) | `[ ]` | SDD/TDD 7,0 → 8,5 |
+| 4 | E-01 | TDD cruzado com o log assinado (`TDD-EVIDENCE-UNBACKED`) | `[x]` | SDD/TDD 7,0 → 8,5 |
 | 5 | S-04 | Sandbox estrito nos perfis `team` e `regulated` | `[ ]` | Gateway → 8,0 |
 | 6 | S-05 | Dependência nova pergunta e é conferida (registro, idade, OSV) | `[ ]` | Segurança |
 | 7 | S-06 | Conteúdo não confiável marca a sessão e endurece a saída de dados | `[ ]` | Segurança |
@@ -91,8 +91,13 @@ Prova (2026-11-25, `gateway.py` num projeto temporário): todos estes deram `all
 ### E-01: TDD cruzado com o log assinado
 
 - **Problema:** `check_rules_2.py:227-241` confere `exit_code` e horário que o próprio agente declarou.
-- **Spike primeiro (0,5 dia):** confirmar o que o `PostToolUse` do Bash traz (`tool_response`: stdout, stderr,
-  `interrupted`; o código de saída pode não vir, ou vir só pelo `PostToolUseFailure`). Registrar a resposta aqui.
+- **Spike (feito):** o `PostToolUse` só dispara com sucesso e não traz código de saída (`stdout`, `stderr`,
+  `interrupted`, `isImage`). A falha vai para o `PostToolUseFailure`, com `error` cuja primeira linha é `Exit code N`
+  (doc oficial dos hooks). O AISEF não ouvia esse evento: o vermelho nunca chegava ao log.
+- **Feito (2026-11-25), branch `feat/v0.17-e01` (em cima do PR #40):** hook grava `exit_code`; `PostToolUseFailure`
+  no `hooks.json`; regra em `core/check_rules_4.py` casando por comando, resultado e janela de 15 min, sem `event_id`
+  (o agente não precisa saber o id); erro em `team`/`regulated`, aviso em `solo`; só cobra ciclos com o verde depois
+  do primeiro comando gravado com resultado. Suíte `core/test_tdd_log.py`.
 - **Mudança:** o `audit_hook.py` grava `exit_code` (ou `failed: true`) no `tool_used` do Bash. Cada ciclo do
   `tdd_evidence` ganha `red.event_id` e `green.event_id`. Regra nova `TDD-EVIDENCE-UNBACKED`: o evento existe no log,
   é um comando de teste, tem o mesmo resultado (falhou / passou) e a ordem bate. Perfil `solo`: aviso. `team` e

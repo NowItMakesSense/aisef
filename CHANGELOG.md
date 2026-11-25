@@ -4,6 +4,13 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
+### Evidência de TDD conferida no log assinado (E-01)
+Os ciclos vermelho-verde do Execution Report eram declarados pelo próprio agente: o check conferia o código de saída e o horário que ele escreveu, sem olhar o que de fato rodou. Pior: o hook de auditoria só ouvia o `PostToolUse`, que o Claude Code dispara apenas quando o comando dá certo, então o vermelho (o teste falhando) nunca chegava ao log.
+- **O log grava o resultado.** O hook passa a ouvir também o `PostToolUseFailure` de Bash e PowerShell e grava `exit_code` em cada comando: 0 no sucesso, o `N` da primeira linha `Exit code N` na falha (`failed`, e `interrupted` quando foi interrompido).
+- **Regra nova `TDD-EVIDENCE-UNBACKED`** (`check_rules_4.py`). Cada fase de cada ciclo precisa de um comando no log com o mesmo texto (sem o `cd <pasta> &&` do início), o mesmo resultado (falhou no vermelho, passou no verde), até 15 minutos do horário declarado, e o vermelho antes do verde. Erro nos perfis `team` e `regulated`, aviso no `solo`. O agente não faz nada a mais: o hook grava sozinho.
+- Projetos que vêm de antes da 0.17 não passam a falhar: a regra só cobra ciclos cujo verde é posterior ao primeiro comando com resultado no log.
+- O bloco de TDD dos executores diz que a execução fora do log não vale como evidência. Suíte nova `test_tdd_log.py` (18 casos).
+
 ### Gateway: sete contornos fechados (S-03)
 A análise rodou o gateway num projeto de teste e passou sete comandos sem nenhuma pergunta. Agora:
 - **Chave e âncoras na home.** O nome partido por aspas ou escape (`~/.ais''ef/keys`, `.ai"s"ef`, `.ais\ef`) é negado como o nome inteiro. Caminho da home montado por variável perto de `keys`, `anchors` ou `aisef` (`d=.aisef; cat ~/$d/keys/x`) e curinga que cobre a pasta do AISEF (`cp -r ~/.ais* /tmp`) viram pergunta, porque o gateway não consegue provar aonde vão.
