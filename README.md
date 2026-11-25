@@ -110,6 +110,7 @@ Features from 0.13 on are covered by CI, including a test that runs a whole feat
 
 ## What's new
 
+- **0.16.0, a panel you can trust and another session in the same project.** The panel shows accepted features as accepted, maps agents to the slice they worked on with a per-feature timeline and an overview in cards, and only raises the gateway alarm when it matters. Two Claude Code sessions in the same project now see each other, reserve separate areas, and get warned before editing or committing over the other's work.
 - **0.15.5, the remote before the first push.** `next` and the doctor flag a project with no Git repository or no remote, and the init asks whether the project already exists on GitHub before creating one. Adding or changing a remote, and creating a GitHub repository, are now your decision.
 - **0.15.4, panel.** A single card in the right column keeps half the map's height instead of stretching to the full height.
 - **0.15.3, panel fixes.** The live indicator shows how long the panel has been open, elapsed times keep moving between updates, and on the Now screen the execution map has a fixed height that the decisions and the attention card split evenly.

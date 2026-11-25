@@ -110,6 +110,7 @@ Os recursos da 0.13 em diante têm cobertura no CI, incluindo um teste que roda 
 
 ## Novidades
 
+- **0.16.0, painel confiável e outra sessão no mesmo projeto.** O painel mostra a feature aceita como aceita, põe cada agente na fatia em que trabalhou, com linha do tempo por feature e visão geral em cartões, e só acende o alarme do gateway quando pesa. Duas sessões do Claude Code no mesmo projeto passam a se enxergar, reservam áreas separadas e são avisadas antes de editar ou fazer commit sobre o trabalho da outra.
 - **0.15.5, o repositório remoto antes do primeiro push.** O `next` e o doctor avisam quando o projeto não é repositório Git ou não tem remote, e o init pergunta se o projeto já existe no GitHub antes de criar outro. Ligar ou trocar o remote e criar repositório no GitHub passam a ser decisão sua.
 - **0.15.4, painel.** Um bloco sozinho na coluna da direita fica com metade da altura do mapa, em vez de esticar até a altura inteira.
 - **0.15.3, correções no painel.** O indicador ao vivo mostra há quanto tempo o painel está aberto, os tempos decorridos continuam andando entre as atualizações e, na tela Agora, o mapa de execução tem altura fixa, dividida em partes iguais entre as decisões e o custo de atenção.
