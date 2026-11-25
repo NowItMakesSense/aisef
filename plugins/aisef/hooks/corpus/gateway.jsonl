@@ -166,3 +166,23 @@
 {"name": "legitimo: ls na home (S-03)", "tool": "Bash", "command": "ls ~/projects", "expect": "allow", "bypass": false}
 {"name": "legitimo: cat de .git/hooks (S-03)", "tool": "Bash", "command": "cat .git/hooks/pre-commit.sample", "expect": "allow", "bypass": false}
 {"name": "legitimo: npm run release-notes nao e deploy (S-03)", "tool": "Bash", "command": "npm run lint", "expect": "allow", "bypass": false}
+{"name": "dependencia nova: pip install (S-05)", "tool": "Bash", "command": "pip install requests==2.32.0", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: python -m pip install (S-05)", "tool": "Bash", "command": "python -m pip install -U flask[async]", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: uv add (S-05)", "tool": "Bash", "command": "uv add httpx", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: poetry add com grupo (S-05)", "tool": "Bash", "command": "poetry add -G dev pytest-randomly", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: npm i com escopo (S-05)", "tool": "Bash", "command": "npm i -D @types/node@20 lodash", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: pnpm add (S-05)", "tool": "Bash", "command": "pnpm add zod", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: yarn add depois de cd (S-05)", "tool": "Bash", "command": "cd web && yarn add react-query", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: cargo add (S-05)", "tool": "Bash", "command": "cargo add serde@1 --features derive", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: go get (S-05)", "tool": "Bash", "command": "go get github.com/spf13/cobra@v1.8.0", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: dotnet add package (S-05)", "tool": "PowerShell", "command": "dotnet add src/App.csproj package Serilog --version 3.1.1", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: gem install (S-05)", "tool": "Bash", "command": "gem install rails -v 7.1", "expect": "ask", "bypass": false}
+{"name": "dependencia nova: composer require (S-05)", "tool": "Bash", "command": "composer require monolog/monolog:^3", "expect": "ask", "bypass": false}
+{"name": "dependencia nova dentro de bash -c (S-05)", "tool": "Bash", "command": "bash -c 'npm install left-pad'", "expect": "ask", "bypass": true}
+{"name": "dependencia nova com variavel de ambiente na frente (S-05)", "tool": "Bash", "command": "PIP_NO_INPUT=1 pip3 install colourama", "expect": "ask", "bypass": true}
+{"name": "legitimo: npm ci instala o lockfile (S-05)", "tool": "Bash", "command": "npm ci", "expect": "allow", "bypass": false}
+{"name": "legitimo: npm install sem nome (S-05)", "tool": "Bash", "command": "npm install", "expect": "allow", "bypass": false}
+{"name": "legitimo: pip install -r (S-05)", "tool": "Bash", "command": "pip install -r requirements.txt", "expect": "allow", "bypass": false}
+{"name": "legitimo: pip install -e . (S-05)", "tool": "Bash", "command": "python -m pip install -e .[dev]", "expect": "allow", "bypass": false}
+{"name": "legitimo: uv sync (S-05)", "tool": "Bash", "command": "uv sync --frozen", "expect": "allow", "bypass": false}
+{"name": "legitimo: go get -u ./... atualiza o que ja existe (S-05)", "tool": "Bash", "command": "go mod download && go get -u ./...", "expect": "allow", "bypass": false}

@@ -23,6 +23,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python -I nao poe a pasta do script no path
 from gateway_rules import *  # noqa: E402,F401,F403  (H-01)
 from gateway_rules import _classify_text, _home_secret_dirs  # noqa: E402,F401
+import gateway_deps  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CORE = os.path.join(os.path.dirname(HERE), "core")
@@ -348,6 +349,9 @@ def decide(data, project, policy, patterns, config, now):
         hint = home_secret_hint(operation, cwd)
         if hint:
             items.append(("unclassified", "execute", env, False, hint))
+        if config.get("dependency_check") == "online":  # S-05: so com rede quando o usuario liga
+            sys.path.insert(0, CORE) if CORE not in sys.path else None
+            items = gateway_deps.enrich(items)
         if inp.get("dangerouslyDisableSandbox") is True:  # F-08: sair do sandbox e decisao do usuario
             items.append(("unclassified", "execute", env, False, "comando pedindo para rodar fora do sandbox"))
     else:

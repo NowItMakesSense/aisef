@@ -6,9 +6,9 @@
 
 AISEF is a Claude Code plugin for teams that must show what the AI did, not just ship faster. A plain-language request becomes a specified feature: triaged in code, split into vertical slices, built test-first by agents in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log that CI can verify on each pull request.
 
-| **168** | **2,500+** | **168** | **66** | **~0.2 s** |
+| **168** | **2,700+** | **188** | **66** | **~0.2 s** |
 |---|---|---|---|---|
-| consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 65 of them bypass attempts, all blocked ([limits](#what-the-gateway-does-not-guarantee)) | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
+| consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 67 of them bypass attempts, all blocked ([limits](#what-the-gateway-does-not-guarantee)) | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
 <p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="The AISEF live panel: execution map, a pending decision, a task drawer and a subagent drawer, parallel lanes"></p>
 <p align="center"><sub>The live panel on demo data: who is running, who is waiting and why, which subagent each agent spawned, and the lanes over time.</sub></p>

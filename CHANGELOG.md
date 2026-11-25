@@ -4,6 +4,13 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
+### Dependência nova pergunta e é conferida (S-05)
+`npm install X` e `pip install X` passavam direto, e instalar um pacote roda código dele. Modelos inventam nomes de pacote; quem registra o nome inventado ganha execução no projeto (ADR 0028).
+- **Gateway.** Pacote novo por `pip`, `uv add`/`uv pip`, `poetry add`, `pdm add`, `npm install|i|add`, `pnpm add`, `yarn add`, `bun add`, `cargo add`, `go get`, `dotnet add package`, `gem install` e `composer require` pergunta, inclusive dentro de `bash -c`. Instalar o que já está declarado (`npm ci`, `npm install` sem nome, `pip install -r`, `pip install -e .`, `uv sync`, caminho local) segue livre.
+- **`aisef_deps.py check <ecossistema> <pacote>`.** Confere se o pacote existe no registro (senão: "não existe no registro, possível pacote inventado"), há quantos dias saiu a primeira versão (menos de 30 é alerta) e os avisos do OSV, com `MAL-*` como malicioso.
+- **Rede só quando o usuário pede.** Por padrão o motivo da pergunta sugere o comando. Com `"dependency_check": "online"` no `.aisef/config.json`, o gateway confere sozinho (até 3 pacotes por comando) e mostra o resultado no motivo.
+- Corpus do gateway: 188 casos (20 novos, 2 contornos). Suíte nova `test_deps.py` (33 casos, sem rede).
+
 ### Sandbox estrito nos perfis `team` e `regulated` (S-04)
 O gateway é um hook no seu próprio usuário (ADR 0027); o isolamento de verdade é o sandbox nativo do Claude Code.
 - **Setup.** Com `profile` `team` ou `regulated`, o item `sandbox` do `aisef_setup.py` grava no `.claude/settings.json` do projeto `enabled: true`, `allowUnsandboxedCommands: false` (fecha a saída por `dangerouslyDisableSandbox`) e `filesystem.denyRead` com `~/.aisef` (chave e âncoras fora do alcance de qualquer comando), sem afrouxar nada que já estivesse mais fechado. Grava em qualquer sistema, porque é política do projeto. `failIfUnavailable` fica de fora de propósito: no settings do projeto ele impediria o Claude Code de abrir no Windows nativo.

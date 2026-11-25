@@ -9,8 +9,10 @@ import json
 import os
 import re
 import sys
-HERE = os.path.dirname(os.path.abspath(__file__))
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE) if HERE not in sys.path else None
+import gateway_deps  # noqa: E402  (S-05)
 
 PATTERNS_PATH = os.path.join(HERE, "sensitive_patterns.json")
 
@@ -423,6 +425,9 @@ def _classify_text(cmd, patterns, env, ctx=None):
         found.append(("unclassified", "execute", env, False, "codigo ofuscado, baixado ou passado por pipe para um interpretador"))
     if TOOLING_INSTALL_RE.search(cmd):
         found.append(("unclassified", "execute", env, False, "instalacao de skill, plugin ou servidor MCP"))
+    deps = gateway_deps.new_dependencies(cmd)  # S-05: pacote novo pergunta; lockfile e manifesto seguem livres
+    if deps:
+        found.append(gateway_deps.item(deps, env))
     if (AISEF_AUDIT_RE.search(norm(cmd)) and not re.search(r"audit_chain\.py\s+verify|aisef_project\.py\s+(?:verify|status)", cmd)
             and not read_only_command(cmd)):  # ler o log (grep, cat, wc, jq...) e permitido; escrever nunca
         raise Decision("deny", "o log de auditoria e as chaves do AISEF so podem ser alterados pelo hook de auditoria")

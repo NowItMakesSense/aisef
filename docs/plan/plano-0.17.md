@@ -16,7 +16,7 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 | 3 | D-03 | README e maturidade sem promessa maior que o código | `[x]` | Tese 8,5 (mantém) |
 | 4 | E-01 | TDD cruzado com o log assinado (`TDD-EVIDENCE-UNBACKED`) | `[x]` | SDD/TDD 7,0 → 8,5 |
 | 5 | S-04 | Sandbox estrito nos perfis `team` e `regulated` | `[x]` | Gateway → 8,0 |
-| 6 | S-05 | Dependência nova pergunta e é conferida (registro, idade, OSV) | `[ ]` | Segurança |
+| 6 | S-05 | Dependência nova pergunta e é conferida (registro, idade, OSV) | `[x]` | Segurança |
 | 7 | S-06 | Conteúdo não confiável marca a sessão e endurece a saída de dados | `[ ]` | Segurança |
 | 8 | E-04 | Validação às cegas | `[ ]` | Validador 7,0 → 8,0 |
 | 9 | E-03 | Carimbo de tempo RFC 3161 nos marcos | `[ ]` | Log 6,5 → 8,0 |
@@ -29,7 +29,7 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 **Versão:** a 0.16.0 saiu no PR #39. As entregas deste plano entram na seção `## 0.17.0 (em andamento)` do
 CHANGELOG; o bump do `plugin.json` e do marketplace é feito no fechamento.
 
-**PRs:** S-03, D-03 e H-05 no PR #40 (branch `feat/v0.17-s03-h05`); E-01 no #41, empilhado. Próximas tarefas: branch nova a partir da `main`
+**PRs:** S-03, D-03 e H-05 no PR #40 (branch `feat/v0.17-s03-h05`); E-01 no #41 e S-04 no #42, empilhados. S-05 na branch `feat/v0.17-s05` (empilhada sobre a S-04), sem commit ainda. Próximas tarefas: branch nova a partir da `main`
 depois do merge. Cuidado: outra sessão no mesmo repositório pode trocar a branch da pasta; confira `git status -sb`
 antes de commitar.
 

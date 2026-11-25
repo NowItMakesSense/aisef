@@ -29,6 +29,7 @@ SUITES = [
     ("painel: contraste AA dos tokens", [os.path.join(CORE, "test_panel_contrast.py")]),
     ("gateway: Git por risco (F-03)", [os.path.join(HOOKS, "test_git_risk.py")]),
     ("gateway: corpus e contornos (F-02, S-01, S-02)", [os.path.join(HOOKS, "test_gateway_corpus.py")]),
+    ("gateway: dependencia nova (S-05)", [os.path.join(HOOKS, "test_deps.py")]),
     ("gateway + auditoria + Approval Center", [os.path.join(HOOKS, "test_gateway.py")]),
     ("geradores (briefs e caminho rapido)", [os.path.join(CORE, "test_generators.py")]),
     ("painel ao vivo (Agora, servidor local)", [os.path.join(CORE, "test_panel_live.py")]),
