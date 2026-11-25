@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.17.0 (em andamento)
+## 0.17.0 (2026-11-25)
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
