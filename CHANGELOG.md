@@ -1,6 +1,6 @@
 # Changelog
 
-## Não lançado
+## 0.16.0 (2026-11-25)
 
 ### Outra sessão no mesmo projeto: detecção e coordenação
 Duas sessões do Claude Code no mesmo projeto (mesma pasta ou worktrees) refaziam o trabalho uma da outra sem saber, e um `git add -A` podia levar o trabalho da outra para o commit. Agora cada sessão deixa um registro em `.aisef/runtime/sessions/` (fora do Git; worktrees gravam no projeto principal), com batimento pelo gateway e os arquivos editados pela auditoria (`core/aisef_sessions.py`).

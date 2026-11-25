@@ -15,6 +15,7 @@ O detalhe de cada versão está no [CHANGELOG](../CHANGELOG.md), e as decisões 
 
 | Versão | Entrega |
 |---|---|
+| 0.16.0 | Painel com informação certa e mais legível (feature aceita como aceita, mapa dos agentes por feature com linha do tempo e visão geral em cartões, alarme do gateway só quando pesa); detecção e coordenação de outra sessão no mesmo projeto |
 | 0.15.5 | Repositório remoto conferido antes do primeiro push: ação `setup_remote` no `next`, aviso no doctor, init pergunta se já existe no GitHub, `remote_config` no gateway |
 | 0.15.4 | Painel: com um bloco só, a coluna da direita fica com metade da altura do mapa, como no artefato aprovado |
 | 0.15.3 | Painel: tempo ativo no topo, tempos decorridos que andam sozinhos, mapa de execução com altura fixa dividida em partes iguais pelos blocos da direita |
