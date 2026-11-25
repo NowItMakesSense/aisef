@@ -6,7 +6,7 @@
 
 O AISEF é um plugin do Claude Code para times que precisam mostrar o que a IA fez, não só entregar mais rápido. Um pedido em linguagem natural vira uma feature especificada: triada em código, quebrada em fatias verticais, construída com testes primeiro por agentes em paralelo, revisada por especialistas, validada por outro agente e aceita por você. Toda chamada de ferramenta passa por uma política aplicada em código, e cada passo vai para um log assinado, à prova de adulteração, que o CI verifica em cada pull request.
 
-| **167** | **2.500+** | **168** | **66** | **~0,2 s** |
+| **168** | **2.500+** | **168** | **66** | **~0,2 s** |
 |---|---|---|---|---|
 | regras de consistência no `aisef-check` | verificações automáticas, CI em Linux e Windows | casos do gateway, 65 deles tentativas de contorno, todas barradas ([limites](#o-que-o-gateway-não-garante)) | agentes especialistas (15 ativos num projeto Python novo) | custo do gateway por chamada no Windows ([medido](tools/bench_hooks.py)) |
 
@@ -19,7 +19,7 @@ O AISEF é um plugin do Claude Code para times que precisam mostrar o que a IA f
 |---|---|
 | **Regras que valem** | Um Execution Gateway decide permitir, perguntar ou negar em cada chamada, em código. Ele lê os comandos por partes (`bash -c`, `eval`, `$(...)`, código inline), mantém a chave de assinatura fora do alcance e limita cada agente ao próprio teto de permissão. |
 | **Um log que ninguém edita em silêncio** | Cada evento tem cadeia de hash e assinatura Ed25519; o head fica fora do repositório. Em time, cada pessoa grava no próprio stream, com a própria chave: o merge nunca conflita e cada aprovação leva a assinatura de quem a deu. |
-| **Cada requisito ligado à prova** | Requisito → fatia → critério de aceite → teste → evidência, conferido por 167 regras. O `aisef_sysgraph.py` responde "o que este requisito toca?" sem modelo. |
+| **Cada requisito ligado à prova** | Requisito → fatia → critério de aceite → teste → evidência, conferido por 168 regras. O `aisef_sysgraph.py` responde "o que este requisito toca?" sem modelo. |
 | **Prova em cada pull request** | A GitHub Action `aisef-verify` reprova a PR quando o log foi adulterado, quando o log encolheu desde a branch base, quando o `aisef-check` acusa erro ou quando a PR toca uma tarefa que ninguém validou. |
 | **Evidência que o auditor verifica** | O `aisef_evidence.py` empacota uma feature (contratos, relatórios, aprovações, eventos assinados, chaves públicas) com uma tabela de controles para SOC 2 CC8.1 e ISO/IEC 27001:2022 A.8.32 e A.5.3. O pacote se verifica sozinho, sem o projeto. |
 | **Observabilidade que você já usa** | O `aisef_otel.py` exporta cada feature como traces OpenTelemetry (OTLP/JSON) com as convenções GenAI: um span por tentativa de agente, um por chamada de ferramenta. |
@@ -162,7 +162,7 @@ Skills dizem ao modelo o que fazer. O **gateway** decide o que ele **pode** faze
 
 ### O que o gateway não garante
 
-O gateway é um hook que roda com o seu próprio usuário do sistema. Ele lê cada chamada de ferramenta e pega o que consegue ler: não vê o que um script escrito agora fará quando rodar depois, e comando que ele não consegue ler vira pergunta, não liberação. A fronteira de verdade é o sistema operacional: ligue o sandbox nativo do Claude Code (Linux, macOS, WSL2) ou rode os agentes num devcontainer. Os perfis `team` e `regulated` vão passar a exigir isso ([plano 0.17](docs/plan/plano-0.17.md)).
+O gateway é um hook que roda com o seu próprio usuário do sistema. Ele lê cada chamada de ferramenta e pega o que consegue ler: não vê o que um script escrito agora fará quando rodar depois, e comando que ele não consegue ler vira pergunta, não liberação. A fronteira de verdade é o sistema operacional: ligue o sandbox nativo do Claude Code (Linux, macOS, WSL2) ou rode os agentes num devcontainer. Os perfis `team` e `regulated` gravam o sandbox estrito no settings do projeto (sem a saída `dangerouslyDisableSandbox` e sem leitura de `~/.aisef`), e o doctor avisa enquanto ele não estiver valendo. No Windows nativo o sandbox não existe: use WSL2 ou um devcontainer.
 
 ```mermaid
 flowchart TD

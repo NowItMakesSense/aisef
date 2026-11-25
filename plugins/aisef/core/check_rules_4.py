@@ -102,3 +102,27 @@ def rules_tdd_no_log(_cx):
             if found.get("red") and found.get("green") and found["red"][0] >= found["green"][0]:
                 say("TDD-EVIDENCE-UNBACKED", where, "%s: no log, o verde (%s) veio antes do vermelho (%s)"
                     % (label, found["green"][3].get("event_id"), found["red"][3].get("event_id")))
+
+
+def rules_sandbox_do_perfil(_cx):
+    """Regras: perfil team/regulated declarado pede o sandbox estrito no settings do projeto (S-04). Aviso: o sandbox
+    depende da maquina (nao existe no Windows nativo); o que vai no Git e a politica."""
+    project, rep = _cx.get("project"), _cx.get("rep")
+    try:
+        with open(os.path.join(project, "config.json"), encoding="utf-8") as fh:
+            profile = (json.load(fh) or {}).get("profile")
+    except (OSError, ValueError, AttributeError):
+        return
+    import aisef_env
+    if profile not in aisef_env.STRICT_PROFILES:
+        return  # solo, ou projeto sem perfil declarado (de antes da 0.13): nada a cobrar
+    path = os.path.join(os.path.dirname(project), ".claude", "settings.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            sb = (json.load(fh) or {}).get("sandbox") or {}
+    except (OSError, ValueError, AttributeError):
+        sb = {}
+    missing = aisef_env.sandbox_missing(profile, sb if isinstance(sb, dict) else {})
+    if missing:
+        rep.warn("PROFILE-SANDBOX", ".claude/settings.json", "perfil %s pede o sandbox estrito; falta: %s"
+                 % (profile, "; ".join(missing)))

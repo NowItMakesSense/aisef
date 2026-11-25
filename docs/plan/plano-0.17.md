@@ -15,7 +15,7 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 | 2 | H-05 | Higiene do CI: `permissions`, Actions por SHA, dependências com hash | `[x]` | Engenharia 8,0 → 8,5 |
 | 3 | D-03 | README e maturidade sem promessa maior que o código | `[x]` | Tese 8,5 (mantém) |
 | 4 | E-01 | TDD cruzado com o log assinado (`TDD-EVIDENCE-UNBACKED`) | `[x]` | SDD/TDD 7,0 → 8,5 |
-| 5 | S-04 | Sandbox estrito nos perfis `team` e `regulated` | `[ ]` | Gateway → 8,0 |
+| 5 | S-04 | Sandbox estrito nos perfis `team` e `regulated` | `[x]` | Gateway → 8,0 |
 | 6 | S-05 | Dependência nova pergunta e é conferida (registro, idade, OSV) | `[ ]` | Segurança |
 | 7 | S-06 | Conteúdo não confiável marca a sessão e endurece a saída de dados | `[ ]` | Segurança |
 | 8 | E-04 | Validação às cegas | `[ ]` | Validador 7,0 → 8,0 |
@@ -29,7 +29,7 @@ Legenda: `[x]` feito, `[~]` em andamento, `[ ]` a fazer, `[u]` depende do usuár
 **Versão:** a 0.16.0 saiu no PR #39. As entregas deste plano entram na seção `## 0.17.0 (em andamento)` do
 CHANGELOG; o bump do `plugin.json` e do marketplace é feito no fechamento.
 
-**PRs:** S-03, D-03 e H-05 no PR #40 (branch `feat/v0.17-s03-h05`). Próximas tarefas: branch nova a partir da `main`
+**PRs:** S-03, D-03 e H-05 no PR #40 (branch `feat/v0.17-s03-h05`); E-01 no #41, empilhado. Próximas tarefas: branch nova a partir da `main`
 depois do merge. Cuidado: outra sessão no mesmo repositório pode trocar a branch da pasta; confira `git status -sb`
 antes de commitar.
 
@@ -115,6 +115,11 @@ Prova (2026-11-25, `gateway.py` num projeto temporário): todos estes deram `all
 - Regra `PROFILE-SANDBOX` no check (aviso, porque depende da máquina).
 - Template de devcontainer opcional em `core/templates/`.
 - **Aceite:** `test_modes.py` cobre os três perfis; o doctor no Windows não acusa erro, só recomenda.
+- **Feito (2026-11-25), branch `feat/v0.17-s04`:** `aisef_env.py` (`SANDBOX_STRICT`, `sandbox_effective`,
+  `sandbox_missing`, `sandbox_merge`, aviso por perfil), setup grava em qualquer sistema, regra `PROFILE-SANDBOX` em
+  `check_rules_4.py`, testes em `test_env.py` e `test_setup.py`. `failIfUnavailable` não é gravado (travaria o Claude
+  Code no Windows nativo). **Ficou para depois:** template de devcontainer em `core/templates/` e `permissions.deny`
+  com `Read(~/.aisef)` (a doc não confirma que `~` expande ali; o gateway já nega a leitura pelo Read).
 
 ### S-05: Dependência nova
 

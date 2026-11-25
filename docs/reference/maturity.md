@@ -59,3 +59,4 @@ próximo projeto. Até lá, eles ficam como **CI**.
 | D-03 | README sem promessa maior que o código | 0.17.0 | — | — | Documentação |
 | H-05 | CI só leitura, Actions por SHA, dependências com hash, suíte em paralelo | 0.17.0 | CI | ligado | `run_tests.py` sem `--jobs` roda em série, como antes |
 | E-01 | Evidência de TDD conferida no log assinado (`PostToolUseFailure`, `TDD-EVIDENCE-UNBACKED`) | 0.17.0 | CI | ligado | Perfil `solo` deixa a regra só como aviso |
+| S-04 | Sandbox estrito nos perfis `team` e `regulated` (setup, doctor, `PROFILE-SANDBOX`) | 0.17.0 | CI | sob pedido (setup) | Recuse o item `sandbox` do setup; `profile: "solo"` volta ao aviso simples |

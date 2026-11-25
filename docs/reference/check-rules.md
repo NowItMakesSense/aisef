@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**167 regras** em 31 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**168 regras** em 31 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -62,7 +62,7 @@ Limites da feature no modo contínuo só podem baixar os do projeto.
 
 Perfil regulated: sem caminho rápido, TDD e blueprint em risco alto.
 
-`PROFILE-BLUEPRINT`, `PROFILE-QUICK`, `PROFILE-TDD`
+`PROFILE-BLUEPRINT`, `PROFILE-QUICK`, `PROFILE-SANDBOX`, `PROFILE-TDD`
 
 ## Plano de tarefas (`PLAN-*`)
 

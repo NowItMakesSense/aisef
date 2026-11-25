@@ -4,6 +4,12 @@
 
 Plano: [plano 0.17](docs/plan/plano-0.17.md), vindo da análise de 2026-11-25.
 
+### Sandbox estrito nos perfis `team` e `regulated` (S-04)
+O gateway é um hook no seu próprio usuário (ADR 0027); o isolamento de verdade é o sandbox nativo do Claude Code.
+- **Setup.** Com `profile` `team` ou `regulated`, o item `sandbox` do `aisef_setup.py` grava no `.claude/settings.json` do projeto `enabled: true`, `allowUnsandboxedCommands: false` (fecha a saída por `dangerouslyDisableSandbox`) e `filesystem.denyRead` com `~/.aisef` (chave e âncoras fora do alcance de qualquer comando), sem afrouxar nada que já estivesse mais fechado. Grava em qualquer sistema, porque é política do projeto. `failIfUnavailable` fica de fora de propósito: no settings do projeto ele impediria o Claude Code de abrir no Windows nativo.
+- **Doctor.** Perfil exigente sem o sandbox estrito avisa o que falta; no Windows nativo, onde o sandbox não existe, recomenda WSL2 ou devcontainer. No `regulated` o aviso não se cala com `sandbox_reminder: false`. O perfil `solo` segue como antes.
+- **Check.** Regra `PROFILE-SANDBOX` (aviso): perfil `team` ou `regulated` declarado no `config.json` sem o sandbox estrito no settings do projeto. Projeto sem perfil declarado não é cobrado.
+
 ### Evidência de TDD conferida no log assinado (E-01)
 Os ciclos vermelho-verde do Execution Report eram declarados pelo próprio agente: o check conferia o código de saída e o horário que ele escreveu, sem olhar o que de fato rodou. Pior: o hook de auditoria só ouvia o `PostToolUse`, que o Claude Code dispara apenas quando o comando dá certo, então o vermelho (o teste falhando) nunca chegava ao log.
 - **O log grava o resultado.** O hook passa a ouvir também o `PostToolUseFailure` de Bash e PowerShell e grava `exit_code` em cada comando: 0 no sucesso, o `N` da primeira linha `Exit code N` na falha (`failed`, e `interrupted` quando foi interrompido).
