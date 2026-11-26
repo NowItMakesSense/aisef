@@ -10,7 +10,7 @@ AISEF is a Claude Code plugin for teams that must show what the AI did, not just
 |---|---|---|---|---|
 | consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 80 of them bypass attempts, all blocked ([limits](#what-the-gateway-does-not-guarantee)) | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
-<p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="The AISEF live panel: execution map, a pending decision, a task drawer and a subagent drawer, parallel lanes"></p>
+<p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="The AISEF live panel: the Now screen with a pending decision and process health, then the execution map, a slice drawer, a subagent drawer, the parallel lanes and who spawned whom"></p>
 <p align="center"><sub>The live panel on demo data: who is running, who is waiting and why, which subagent each agent spawned, and the lanes over time.</sub></p>
 
 ## What only AISEF covers
@@ -50,7 +50,6 @@ Everything below ships in one plugin, runs locally with the Python standard libr
 | 🧠 | **Reviewed learning** | Lessons drawn from errors already on record. They apply only after you approve them and lose confidence when they stop helping. | `aisef_learn.py` |
 | 🎨 | **Design authority** | One approved typography, palette and component set per project, checked in the code. | `aisef-design` |
 | ❓ | **Ask mode** | Answers questions without changing anything, researching the web with cited sources. | `/aisef:ask` |
-| 🧪 | **Outcome benchmark** | Hidden tests, AISEF vs. plain Claude Code, with cost and time. | `tools/bench_outcomes.py` |
 
 ## Meet the team
 
@@ -112,33 +111,6 @@ Features from 0.13 on are covered by CI, including a test that runs a whole feat
 
 - **0.17.0, closing what this README promises.** The gateway closes 13 more bypasses (inline interpreter code, the whole home folder, packages fetched and run on the spot), asks before adding a new dependency, and tightens data egress once a session has read untrusted web or MCP content; `team` and `regulated` get a strict sandbox. TDD red and green are checked against the signed log, the validator works blind to the executor's claims, milestones can get an RFC 3161 timestamp and the signing key can live in the OS vault (both opt-in). The evidence package adds signed in-toto attestations and ISO/IEC 42001, EU AI Act art. 12 and NIST AI RMF controls. Reviewers can now be scored on planted bugs, and the outcome benchmark has a lean arm; the paid runs are still to come.
 - **0.16.0, a panel you can trust and another session in the same project.** The panel shows accepted features as accepted, maps agents to the slice they worked on with a per-feature timeline and an overview in cards, and only raises the gateway alarm when it matters. Two Claude Code sessions in the same project now see each other, reserve separate areas, and get warned before editing or committing over the other's work.
-- **0.15.5, the remote before the first push.** `next` and the doctor flag a project with no Git repository or no remote, and the init asks whether the project already exists on GitHub before creating one. Adding or changing a remote, and creating a GitHub repository, are now your decision.
-- **0.15.4, panel.** A single card in the right column keeps half the map's height instead of stretching to the full height.
-- **0.15.3, panel fixes.** The live indicator shows how long the panel has been open, elapsed times keep moving between updates, and on the Now screen the execution map has a fixed height that the decisions and the attention card split evenly.
-- **0.15.2, what is proven and what is not.** A maturity table tells real-use features from CI-only ones, with the default and the way back for each. A new test runs a whole feature cycle through all 48 mode combinations. The README numbers are now checked against the code.
-- **0.15.1, attention cost and impact in the panel.** The Now screen shows how often you had to stop (approvals and gateway prompts per completed task, first-pass validation, tokens per task), and Traceability gains an "Impact of" filter: type a requirement, task or file and see only the requirements it touches.
-- **0.15.0, for teams and auditors.** The `aisef-verify` GitHub Action on every pull request, a self-verifying evidence package per feature with SOC 2 and ISO 27001 controls, OpenTelemetry export with the GenAI conventions, one audit log per person (merges never conflict, approvals signed by whoever gave them), and a roadmap checked against the changelog.
-- **0.14.0, the system as a graph, the flow as data, slices in their own worktrees.**
-  - no core or hook module is over 500 lines anymore; `aisef_project` keeps the same API, and the check runs a registry of rule groups;
-  - `aisef_sysgraph.py` answers impact questions without a model: which tasks, criteria, tests, files and evidence a requirement touches, and why a task exists;
-  - the flow (task states, events, phases, gates, profiles) lives in `workflow.v0.1.json`, read by the loop, the guide, the triage and the check;
-  - file edits and allowed MCP calls go to a hash-chained telemetry, so the signed log keeps what proves the work;
-  - with `parallel.mode = worktree`, slices that share a file run side by side in their own worktrees, merge through the feature scope, and a merge conflict becomes a new attempt. Hooks inside a worktree write to the main `.aisef`;
-  - `metrics` reports the attention cost: how many times you had to stop, per finished task.
-- **0.13.0, less friction, harder gateway, a loop that knows when to stop.**
-  - code triage picks the path (quick, lean or full); the new lean path is one TDD slice with no blueprint, and ceremony profiles (solo, team, regulated) set the defaults;
-  - a Python project starts with 15 agents instead of 33, and the init applies agents, native rules, practices and docs in one approval;
-  - the gateway reads commands token by token (`bash -c`, `eval`, `$(...)`, inline code), and a 138-command corpus with 48 bypass attempts guards it. It also closed real gaps: a `git -c` force push only asked, and the signing key and head anchor were reachable;
-  - Git by risk: commits on `feat/*` are free, and the feature push is covered by the feature scope. MCP tools can be trusted for up to 7 days;
-  - the continuous loop stops on budget, on repeated identical failures and on stalled agents. Hooks record task start and end, `check --fix` suggests the fix, and `rebase-req` follows a changed requirement;
-  - a native import graph when Graphify is missing, a doctor that finds the right Python, `migrate` and the native sandbox.
-- **0.12.1, field-tested fixes.** These came from running 0.12 on a real project:
-  - architecture decisions can apply to the whole project, so you can adopt a style before the first feature exists;
-  - the radar checks module boundaries and no longer counts skeleton services as microservices;
-  - the gateway no longer blocks read-only commands that touch the audit folder (`grep`, `git check-ignore`, `--dry-run`).
-- **0.12.0, the team, the radar and the practices.** 56 new agents, organized by kind and switched on by stack. Architecture detection with recommendations. 33 best-practice rules. Reviewers chosen in code, with a gate before validation. `verify-loop`. Lint configs that agents cannot loosen. Ideas ported from [everything-claude-code](https://github.com/affaan-m/everything-claude-code) (MIT, see [notices](THIRD_PARTY_NOTICES.md)).
-- **0.11.0, measure.** `metrics` (approvals, rejections, lead time, tokens and cost per task) and the outcome benchmark.
-- **0.10.0, panel v3.** The execution map, who spawned whom, parallel lanes, and the dependency graph with the critical path.
 
 Full history in the [CHANGELOG](CHANGELOG.md) (Portuguese).
 
@@ -198,14 +170,6 @@ flowchart LR
   VA --> AC[Your acceptance]
 ```
 
-| Layer | What it does |
-|---|---|
-| **Process (SDD + TDD)** | Architecture radar, discovery, grill, spec, vertical slices, parallel test-first execution, the review gate, independent validation and your acceptance. Each requirement points to its slice, criterion, test and evidence (RTM). |
-| **Enforcement** | A `PreToolUse` gateway applies the policy to Bash, PowerShell, file tools, WebFetch and MCP. Each Git operation needs its own approval, secrets ask, databases and deploys are denied, and each subagent is capped by its Agent Contract. |
-| **Evidence** | Every operation and every blocked attempt goes to a hash-chained log signed with Ed25519. The signed head is kept outside the repository. |
-| **Cost** | Model and effort are routed per task by risk and complexity, from Haiku to Opus; each failed attempt moves one level up. |
-| **Learning** | Lessons drawn from errors already on record (rejections, blocks), which only apply after your approval and lose confidence when they stop helping. |
-
 ## The panel
 
 <p align="center"><img src="docs/img/panel-tour.gif" width="100%" alt="Tour of the eight panel screens and the global search"></p>
@@ -214,14 +178,14 @@ Eight screens on an icon rail. Each one is derived from the contracts and the si
 
 | Screen | What you see |
 |---|---|
-| **Now** | What runs and what waits, the execution map, decisions waiting for you with the command to copy, the next step, the parallel lanes and the slice table with TDD cycles |
-| **Agent map** | The map and lanes full width, plus the tree of who spawned whom |
-| **Features and slices** | Each feature's stage, its slices, the native dependency graph with the critical path and the delivered execution reports |
-| **Traceability** | Requirement → slice → criterion → evidence, with a "gaps only" filter |
-| **Governance** | Pending decisions, past decisions, architecture choices with discarded options, and risks |
-| **History** | The hash-chained log, each event with its block and signature |
-| **Engineering** | Architecture and data diagrams, endpoints, threats and migrations from the blueprint |
-| **Agent team** | Who works on what, subagents in flight, approved lessons and dispatches per model |
+| **Now** | What runs right now and what waits, the decision waiting for you with the command to copy, and the process health: attention cost, how each slice was proven, first-pass validation and pace, cost in your local currency (per day, model and feature) and shortcuts to proof gaps, risks and decisions |
+| **Agent map** | The feature graph (which feature depends on or derives from which), each feature's waves and agents, and the agents in time or as the tree of who spawned whom |
+| **Features and slices** | Each feature on a timeline from the first agent to acceptance, with the slices that came back from the validator or skipped the TDD red; open a feature for its slices, attempts, TDD cycle and reports |
+| **Traceability** | A proof matrix (one square per requirement) that leads to each requirement's chain: slice → criterion → evidence, with impact search and a "gaps only" filter |
+| **Governance** | Pending decisions, a timeline of every decision with its wait (and the ones recorded before they were requested), architecture choices with the discarded options, and open risks by severity and feature |
+| **History** | What guarantees the record (hash chain, Ed25519 signatures, external anchor), when the work happens by day and hour, and the signed log page by page |
+| **Engineering** | Every blueprint side by side (components, personal data, threats, migrations) and the selected one in detail: architecture and data diagrams, endpoints, threats and migrations |
+| **Agent team** | Who builds, reviews and validates, with each agent's cost, the agents outside the team, and whether each approved lesson actually fixes what it targets |
 
 A broken log puts a red banner on top and hides every approve command. Run it live with `build_panel.py --serve` (it refreshes every 3 s without losing scroll, filters or the open drawer) or as a static page.
 
@@ -243,17 +207,13 @@ Based on each project's README and official docs as of 2026-11-18. "Instruction"
 
 ● covers · ◐ partly · – not described
 
-### Seven gaps nobody covers well, and AISEF's answer
+### Limits, stated up front
 
-| Gap | How AISEF covers it | Limit |
-|---|---|---|
-| Governance at tool-call time | The gateway decides allow, ask or deny on every call, with a per-agent ceiling | It reads commands by tokens and patterns: it reduces risk, it does not isolate. Pair it with the native sandbox, which the init turns on where it exists |
-| Tamper-evident log | Each event carries the previous hash and an Ed25519 signature; the head lives outside the repo | It does not protect against someone holding your machine's private key |
-| Requirement to evidence | The RTM links requirement → slice → criterion → test → evidence, and the check flags gaps | The quick maintenance path has lighter traceability |
-| Validation with separate privileges | The validator only reads Git, never validates its own work and runs at an equal or higher level, preferably on another model | A large wave on one validator should be split |
-| Model chosen by risk | A Haiku → Opus ladder driven by risk, sensitive resources, complexity and attempts | Claude Code environment variables can override it; the router warns |
-| One place for decisions | Each decision is a request with impact, diff, rollback and risk; a reinforced approval covers the exact command, once | If you approve without reading, no technical layer stops it |
-| Memory reviewed before it becomes a rule | Lessons from recorded errors, approved by you, with confidence computed in code | Without your review at milestones nothing is learned, by design |
+- The signed log does not protect against someone holding your machine's private key.
+- The quick maintenance path has lighter traceability than the lean and full paths.
+- A large wave on a single validator should be split.
+- Claude Code environment variables can override the model router; the router warns when they do.
+- If you approve without reading, no technical layer stops it.
 
 ### Adding up instead of competing
 
@@ -286,15 +246,6 @@ If the Python with `cryptography` is not the first one on your PATH, set `AISEF_
 
 To explore without spending tokens, follow the [walkthrough with the demo project](docs/guide/walkthrough.md) (Portuguese).
 
-## What's inside
-
-| Component | Role |
-|---|---|
-| Skills | `aisef` (orchestrator), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel`, `ask`, `modo` |
-| Agents | 66 roles from one catalog (`core/agents/catalog.v0.1.json`): executors (`implementer`, `backend`, `frontend`...), evaluators, fixers, advisors and the `validator`; stack-specific ones switch on with detection. Each has a permission ceiling |
-| Hooks | gateway (`PreToolUse`), audit (`PostToolUse`), doctor (`SessionStart`), subagent events and who spawned whom (`PreToolUse` Agent), Ask-mode reminder |
-| Core | JSON Schemas, permission and model policies, consistency checker, signed log, brief generators, batch dispatch, context packs, reviewed learning, live panel, stack and architecture detection, best practices, reviewer routing and verify-loop |
-
 ## Documentation
 
 Start at [docs/README.md](docs/README.md) (Portuguese) for:
@@ -313,12 +264,6 @@ claude plugin validate plugins/aisef
 claude plugin eval plugins/aisef --tag trigger --no-publish
 ```
 
-The repository uses Graphify on itself (code, docs, ADRs and skills; structural pass only, nothing leaves the machine). Rebuild the graph after changing code or docs; `graphify-out/` is not versioned:
-
-```
-GRAPHIFY_BACKEND=none python -m graphify update .
-python -m graphify query "how does the gateway decide on git push"
-```
 
 ## License
 

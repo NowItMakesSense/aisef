@@ -83,7 +83,9 @@
           "requirements_covered": { "type": "integer", "minimum": 0 },
           "risks_open": { "type": "integer", "minimum": 0 },
           "effective_status": { "type": "string", "description": "Opcional (0.16): estado efetivo no painel. accepted (aceite aprovado e fatias encerradas), acceptance_rejected, acceptance_changes_requested, awaiting_acceptance, closed ou o estado do contrato." },
-          "accepted_at": { "type": ["string", "null"], "description": "Opcional (0.16): quando o aceite da feature foi aprovado." }
+          "accepted_at": { "type": ["string", "null"], "description": "Opcional (0.16): quando o aceite da feature foi aprovado." },
+          "depends_on": { "type": "array", "items": { "type": "string" }, "description": "Opcional (0.17.1): features que o contrato declara em dependencies.features." },
+          "derived_from": { "type": "array", "items": { "type": "string" }, "description": "Opcional (0.17.1): outras features que o titulo, o problema ou o objetivo cita, pelo id dela ou de uma fatia dela." }
         }
       }
     },
@@ -436,6 +438,34 @@
         "timeline": { "type": "array", "description": "Opcional (0.2.0): {task_id, wave, start, end, state} para a raia de ondas.", "items": { "type": "object" } },
         "learning": { "type": "array", "items": { "type": "object" } },
         "model_runs": { "type": "object" }
+      }
+    },
+    "activity": {
+      "type": "array",
+      "description": "Opcional (0.17.1): eventos do log inteiro por dia e hora local, para o mapa de calor do historico.",
+      "items": { "type": "object", "required": ["day", "hour", "n"], "properties": { "day": { "type": "string" }, "hour": { "type": "integer", "minimum": 0, "maximum": 23 }, "n": { "type": "integer", "minimum": 1 } } }
+    },
+    "cost": {
+      "type": "object",
+      "description": "Opcional (0.17.1): custo estimado pelo preco de tabela da API (model-pricing.v0.1.json) a partir de .aisef/runtime/usage.jsonl, em dolar, com a moeda local e a cotacao do dia para o painel converter. Nao e a fatura.",
+      "required": ["available"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "note": { "type": "string" },
+        "total_usd": { "type": "number", "minimum": 0 },
+        "per_completed_task_median_usd": { "type": ["number", "null"], "minimum": 0 },
+        "by_model": { "type": "array", "items": { "type": "object", "required": ["model", "usd", "runs"], "properties": { "model": { "type": "string" }, "usd": { "type": "number" }, "runs": { "type": "integer" } } } },
+        "by_day": { "type": "array", "items": { "type": "object", "required": ["day", "usd"], "properties": { "day": { "type": "string" }, "usd": { "type": "number" } } } },
+        "by_agent": { "type": "array", "items": { "type": "object", "required": ["agent", "usd", "runs"], "properties": { "agent": { "type": "string" }, "usd": { "type": "number" }, "runs": { "type": "integer" } } } },
+        "by_feature": { "type": "array", "items": { "type": "object", "required": ["feature_id", "usd"], "properties": { "feature_id": { "type": "string" }, "usd": { "type": "number" } } } },
+        "runs": { "type": "integer", "minimum": 0 },
+        "unpriced_runs": { "type": "integer", "minimum": 0 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "rate": { "type": ["number", "null"] },
+        "rate_date": { "type": ["string", "null"] },
+        "rate_source": { "type": ["string", "null"] },
+        "prices_as_of": { "type": ["string", "null"] },
+        "prices_source": { "type": ["string", "null"] }
       }
     },
     "attention": {
