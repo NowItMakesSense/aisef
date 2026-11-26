@@ -271,25 +271,29 @@ def dump(dest, tab, offline=False):
 
 if chrome:
     expected = {
-        "overview": ["Integridade do histórico verificada", "Mapa de execução", "Em paralelo", "Fatias"],
-        "features": ["FEAT-001", "Autenticacao JWT", "1/3 fatias", "Grafo de dependências"],
-        "tasks": ["T-001", "Gerar access token", "Execuções entregues", "RPT-001"],
+        "overview": ["Integridade do histórico verificada", "Saúde do processo", "Fatias"],
+        "features": ["FEAT-001", "Autenticacao JWT", "Entregas no tempo"],
+        "tasks": ["T-001", "Gerar access token", "Entregas no tempo", "RPT-001"],
         "rtm": ["REQ-001", "Coberto", "Não iniciado", "FEAT-001"],
         "approvals": ["Escopo de trabalho em dev para a T-003", "o trabalho independente continua", "APR-000", "Decida no chat", "aisef_project.py decide --project . --request APR-001 --choice approve"],
         "decisions": ["Algoritmo de assinatura do JWT", "seguiu a recomendação", "HS256"],
         "agents": ["Agente Backend", "Agente Validador"],
         "risks": ["Algoritmo de assinatura mal escolhido", "Regressao nas rotas protegidas"],
         "timeline": ["concluida", "Escopo para T-003 aguardando aprovacao"],
-        "engineering": ["Desenho tecnico da autenticacao JWT", "POST /auth/token", "Token forjado", "dado pessoal", "MIG-1"],
+        "engineering": ["Comparativo de blueprints", "Desenho tecnico da autenticacao JWT", "POST /auth/token", "Token forjado", "dado pessoal", "MIG-1"],
         # telas novas (hash canonico), com os mesmos conteudos
-        "agora": ["Integridade do histórico verificada", "1 decisão sua", "Esperando você", "Mapa de execução", "Em paralelo", "esperando outra fatia"],
-        "trabalho": ["FEAT-001", "Gerar access token", "Execuções entregues", "1/3 fatias"],
-        "mapa": ["Mapa dos agentes", "Quem disparou quem", "Orquestrador"],
-        "rastreabilidade": ["REQ-001", "Coberto", "Cobertura", "cobertos"],
-        "governanca": ["Escopo de trabalho em dev para a T-003", "HS256", "Regressao nas rotas protegidas"],
+        # Agora: o que roda, o que depende de voce e a saude do processo; mapa e raias ficam no Mapa dos agentes
+        "agora": ["Integridade do histórico verificada", "1 decisão sua", "Esperando você", "esperando outra fatia", "Saúde do processo",
+                  "interrupções por fatia concluída", "fatias concluídas com validação independente", "aprovadas na 1ª validação", "Rastreabilidade"],
+        "trabalho": ["FEAT-001", "Gerar access token", "Entregas no tempo"],
+        "mapa": ["Mapa dos agentes", "Quem disparou quem", "No tempo", "Mapa de execução", "Em paralelo"],
+        "mapa/arvore": ["Quem disparou quem", "Orquestrador", "Mapa de execução"],
+        "agora/atalhos": ["Lacunas de prova", 'href="#rastro"', 'href="#hist"'],
+        "rastreabilidade": ["REQ-001", "Coberto", "Cobertura", "cobertos", "Matriz de prova", "Cadeia de prova"],
+        "governanca": ["Escopo de trabalho em dev para a T-003", "HS256", "Regressao nas rotas protegidas", "Linha das decisões", "Riscos abertos", "Pedidos decididos"],
         "governanca/decisoes": ["seguiu a recomendação"],
-        "historico": ["concluida", "Origem dos dados", "hash ", 'class="day"', "eventos"],
-        "agentes": ["Agente Backend", "Despachos por modelo"] if False else ["Agente Backend", "Agente Validador"],
+        "historico": ["concluida", "Origem dos dados", "hash ", 'class="day"', "eventos", "Quando o trabalho acontece", "Assinaturas Ed25519", "Âncora externa"],
+        "agentes": ["Agente Backend", "Agente Validador", "Mapa da equipe"],
         "dependencias": [],
         "deps": [],  # tratado a parte: SVG do Mermaid (com internet) ou codigo de fallback (sem internet)
     }
@@ -331,8 +335,13 @@ if chrome:
     if over or not st or not all((st.get("kept") or {}).values()):
         print("      autoteste:", st)
     out, _ = dump(base, "fatias")
-    check("Chrome: grafo de dependencias nativo desenha um no por fatia, que abre a gaveta",
-          out.count('class="dnode') == 3 and 'data-open="T-002"' in out)
+    check("Chrome: entregas no tempo tem uma linha por feature e as fatias abrem a gaveta",
+          'class="dl-feat' in out and all('data-open="T-00%d"' % i in out for i in (1, 2, 3)))
+    check("Chrome: a feature abre por um botao com aria-expanded e nenhum ponto clicavel fica dentro de <summary>",
+          'class="dl-label"' in out and 'aria-expanded="true"' in out and 'summary class="dl-row"' not in out)
+    out, _ = dump(base, "rastreabilidade")
+    check("Chrome: matriz de prova marca a feature escolhida e a cadeia mostra so ela",
+          out.count('class="pm-g on"') == 1 and 'aria-pressed="true"' in out and "Cadeia de prova" in out)
     out, _ = dump(base, "engineering", offline=True)
     body = out[out.find("<body"):]
     check("Chrome sem rede: aba Engenharia desenha arquitetura e ER (2 SVGs)", body.count("<svg") >= 2)

@@ -91,11 +91,11 @@ READMES = ("README.md", "README.pt-BR.md")
 ROW = r"^\| \*\*(\d+)\*\* \| \*\*[\d.,]+\+?\*\* \| \*\*(\d+)\*\* \| \*\*(\d+)\*\* \|"  # regras | verificacoes | gateway | agentes
 CLAIMS = {  # (padrao, numero) por idioma; a linha de numeros do topo vale para os dois
     "README.md": [(r"checked by (\d+) rules", "rules"), (r"(\d+) of them bypass attempts", "bypass"),
-                  (r"(\d+) specialists:", "agents"), (r"(\d+) roles from one catalog", "agents"),
+                  (r"(\d+) specialists:", "agents"),
                   (r"\((\d+) active on a new Python project", "python_agents"), (r"core team \((\d+) subagents", "core_agents"),
                   (r"Best-practice library\*\* \| (\d+) rules", "practices")],
     "README.pt-BR.md": [(r"conferido por (\d+) regras", "rules"), (r"(\d+) deles tentativas de contorno", "bypass"),
-                        (r"(\d+) especialistas:", "agents"), (r"(\d+) papéis num catálogo", "agents"),
+                        (r"(\d+) especialistas:", "agents"),
                         (r"\((\d+) ativos num projeto Python novo", "python_agents"), (r"núcleo \((\d+) subagentes", "core_agents"),
                         (r"Biblioteca de boas práticas\*\* \| (\d+) regras", "practices")],
 }

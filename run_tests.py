@@ -27,6 +27,8 @@ SUITES = [
                             os.path.join(CORE, "authorization.schema.v0.1.json"), os.path.join(CORE, "approval-request.schema.v0.1.json")]),
     ("painel", [os.path.join(CORE, "test_panel.py"), os.path.join(work, "panel")]),
     ("painel: contraste AA dos tokens", [os.path.join(CORE, "test_panel_contrast.py")]),
+    ("painel: ligacoes entre features", [os.path.join(CORE, "test_panel_links.py")]),
+    ("painel: custo estimado na moeda local", [os.path.join(CORE, "test_panel_cost.py")]),
     ("gateway: Git por risco (F-03)", [os.path.join(HOOKS, "test_git_risk.py")]),
     ("gateway: corpus e contornos (F-02, S-01, S-02)", [os.path.join(HOOKS, "test_gateway_corpus.py")]),
     ("gateway: dependencia nova (S-05)", [os.path.join(HOOKS, "test_deps.py")]),

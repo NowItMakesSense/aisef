@@ -36,6 +36,7 @@ import aisef_project  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python -I nao poe a pasta do script no path
 from panel_mermaid import *  # noqa: E402,F401,F403  (H-01)
 from panel_mermaid import _UNSAFE_LABEL  # noqa: E402,F401
+import panel_links  # noqa: E402
 import panel_live  # noqa: E402
 
 BUILDER_VERSION = "0.2.0"
@@ -290,6 +291,7 @@ def derive(loaded, log, integrity):
 
     feature_rows = []
     accepted = panel_live.feature_acceptance(approvals)
+    links = panel_links.feature_links(features, task_rows)
     for f in features:
         fid = f["feature_id"]
         ft = [r for r in task_rows if r["feature_id"] == fid]
@@ -310,6 +312,7 @@ def derive(loaded, log, integrity):
             "requirements_total": len(fr),
             "requirements_covered": sum(1 for r in fr if r["status"] == "covered"),
             "risks_open": len(f.get("risks", [])),
+            **links[fid],
         })
 
     def approval_item(a):
@@ -491,6 +494,9 @@ def build(project, out, schemas_dir, now=None):
     views = derive(loaded, log, integrity)
     views["engineering"] = derive_engineering(loaded["blueprints"])
     views["attention"] = attention_summary(project, loaded, log)  # F-09
+    import panel_cost
+    views["activity"] = panel_links.activity(log)  # mapa de calor do historico, log inteiro
+    views["cost"] = panel_cost.cost_summary(project, loaded["tasks"], out, now)  # custo estimado na moeda local
     import panel_live
     views["live"] = panel_live.derive_live(project, loaded, log, now)
 

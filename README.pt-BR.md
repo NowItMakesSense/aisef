@@ -10,7 +10,7 @@ O AISEF é um plugin do Claude Code para times que precisam mostrar o que a IA f
 |---|---|---|---|---|
 | regras de consistência no `aisef-check` | verificações automáticas, CI em Linux e Windows | casos do gateway, 80 deles tentativas de contorno, todas barradas ([limites](#o-que-o-gateway-não-garante)) | agentes especialistas (15 ativos num projeto Python novo) | custo do gateway por chamada no Windows ([medido](tools/bench_hooks.py)) |
 
-<p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="O painel ao vivo do AISEF: mapa de execução, decisão pendente, gaveta de tarefa e de subagente, raias em paralelo"></p>
+<p align="center"><img src="docs/img/panel-now.gif" width="100%" alt="O painel ao vivo do AISEF: a tela Agora com uma decisão pendente e a saúde do processo, depois o mapa de execução, a gaveta da fatia, a gaveta do subagente, as raias em paralelo e quem disparou quem"></p>
 <p align="center"><sub>O painel ao vivo com dados de demonstração: quem está rodando, quem espera e por quê, qual subagente cada agente disparou e as raias no tempo.</sub></p>
 
 ## O que só o AISEF cobre
@@ -50,7 +50,6 @@ Tudo isto vem num plugin só, roda localmente com a biblioteca padrão do Python
 | 🧠 | **Aprendizado revisado** | Lições tiradas de erros já registrados. Só valem depois que você aprova e perdem confiança quando deixam de ajudar. | `aisef_learn.py` |
 | 🎨 | **Autoridade de design** | Uma tipografia, uma paleta e um conjunto de componentes aprovados por projeto, conferidos no código. | `aisef-design` |
 | ❓ | **Modo Ask** | Responde perguntas sem mudar nada, pesquisando na internet com fontes citadas. | `/aisef:ask` |
-| 🧪 | **Benchmark de resultado** | Testes escondidos, AISEF contra o Claude Code puro, com custo e tempo. | `tools/bench_outcomes.py` |
 
 ## Conheça a equipe
 
@@ -112,33 +111,6 @@ Os recursos da 0.13 em diante têm cobertura no CI, incluindo um teste que roda 
 
 - **0.17.0, fechar o que este README promete.** O gateway fecha mais 13 contornos (código inline de interpretador, a home inteira, pacote baixado e executado na hora), pergunta antes de dependência nova e endurece a saída de dados depois que a sessão leu conteúdo não confiável da web ou de MCP; `team` e `regulated` ganham sandbox estrito. O vermelho e o verde do TDD são conferidos contra o log assinado, o validador trabalha às cegas às alegações do executor, os marcos podem ganhar carimbo de tempo RFC 3161 e a chave de assinatura pode ficar no cofre do sistema (os dois opt-in). O pacote de evidência ganha atestados in-toto assinados e os controles ISO/IEC 42001, EU AI Act art. 12 e NIST AI RMF. Os revisores podem ser medidos com bugs plantados e o benchmark de resultado ganhou o braço enxuto; as rodadas pagas ainda vão acontecer.
 - **0.16.0, painel confiável e outra sessão no mesmo projeto.** O painel mostra a feature aceita como aceita, põe cada agente na fatia em que trabalhou, com linha do tempo por feature e visão geral em cartões, e só acende o alarme do gateway quando pesa. Duas sessões do Claude Code no mesmo projeto passam a se enxergar, reservam áreas separadas e são avisadas antes de editar ou fazer commit sobre o trabalho da outra.
-- **0.15.5, o repositório remoto antes do primeiro push.** O `next` e o doctor avisam quando o projeto não é repositório Git ou não tem remote, e o init pergunta se o projeto já existe no GitHub antes de criar outro. Ligar ou trocar o remote e criar repositório no GitHub passam a ser decisão sua.
-- **0.15.4, painel.** Um bloco sozinho na coluna da direita fica com metade da altura do mapa, em vez de esticar até a altura inteira.
-- **0.15.3, correções no painel.** O indicador ao vivo mostra há quanto tempo o painel está aberto, os tempos decorridos continuam andando entre as atualizações e, na tela Agora, o mapa de execução tem altura fixa, dividida em partes iguais entre as decisões e o custo de atenção.
-- **0.15.2, o que está provado e o que não está.** Uma tabela de maturidade separa o que já rodou em uso real do que só tem CI, com o padrão e o jeito de voltar atrás de cada recurso. Um teste novo roda o ciclo inteiro de uma feature nas 48 combinações de modos. Os números do README passam a ser conferidos contra o código.
-- **0.15.1, custo de atenção e impacto no painel.** A tela Agora mostra quantas vezes você precisou parar (aprovações e perguntas do gateway por tarefa concluída, aprovação de primeira, tokens por tarefa), e a Rastreabilidade ganha o filtro "Impacto de": digite um requisito, uma tarefa ou um arquivo e veja só os requisitos ligados a ele.
-- **0.15.0, para times e auditores.** A GitHub Action `aisef-verify` em cada pull request, um pacote de evidência por feature que se verifica sozinho, com os controles SOC 2 e ISO 27001, exportação OpenTelemetry com as convenções GenAI, um log de auditoria por pessoa (o merge nunca conflita e cada aprovação é assinada por quem a deu) e um roadmap conferido contra o CHANGELOG.
-- **0.14.0, o sistema como grafo, o fluxo como dado e as fatias em worktrees.**
-  - nenhum módulo do núcleo ou dos hooks passa de 500 linhas; o `aisef_project` mantém a mesma API, e o check roda um registro de grupos de regras;
-  - o `aisef_sysgraph.py` responde perguntas de impacto sem modelo: que tarefas, critérios, testes, arquivos e evidências um requisito toca, e por que uma tarefa existe;
-  - o fluxo (estados, eventos, fases, portões, perfis) fica no `workflow.v0.1.json`, lido pelo loop, pelo guia, pela triagem e pelo check;
-  - edições de arquivo e chamadas MCP liberadas vão para uma telemetria com cadeia de hash, e o log assinado fica com o que prova o trabalho;
-  - com `parallel.mode = worktree`, fatias que mexem no mesmo arquivo rodam lado a lado, cada uma no seu worktree, integram pelo escopo da feature, e conflito no merge vira nova tentativa. Hooks dentro de um worktree gravam no `.aisef` principal;
-  - o `metrics` mostra o custo de atenção: quantas vezes você precisou parar, por tarefa concluída.
-- **0.13.0, menos atrito, gateway mais duro e um loop que sabe parar.**
-  - a triagem em código escolhe o caminho (rápido, enxuto ou completo); o caminho enxuto é uma fatia com TDD e sem blueprint, e os perfis (solo, team, regulated) definem o padrão;
-  - um projeto Python começa com 15 agentes, não 33, e o init aplica agentes, regras nativas, boas práticas e docs numa aprovação só;
-  - o gateway lê os comandos por partes (`bash -c`, `eval`, `$(...)`, código inline), protegido por um corpus de 138 comandos com 48 tentativas de contorno. Também fechou falhas reais: um force push com `git -c` só pedia aprovação, e a chave de assinatura e a âncora do head estavam ao alcance dos agentes;
-  - Git por risco: commit em `feat/*` é livre, e o push da feature vale pelo escopo dela. Ferramentas MCP ganham confiança por até 7 dias;
-  - o modo contínuo para por orçamento, por falha repetida e por agente travado. O hook registra início e fim da tarefa, o `check --fix` sugere a correção e o `rebase-req` acompanha requisito que mudou;
-  - grafo de imports nativo quando falta o Graphify, doctor que acha o Python certo, `migrate` e sandbox nativo.
-- **0.12.1, correções vindas do uso.** Saíram de rodar a 0.12 num projeto real:
-  - decisão de arquitetura pode valer para o projeto todo, então dá para adotar um estilo antes da primeira feature;
-  - o radar confere as fronteiras entre módulos e não chama mais de microsserviço um serviço que é só esqueleto;
-  - o gateway não bloqueia mais comandos só de leitura na pasta de auditoria (`grep`, `git check-ignore`, `--dry-run`).
-- **0.12.0, a equipe, o radar e as práticas.** 56 agentes novos, organizados por tipo e ligados pela stack. Detecção de arquitetura com recomendações. 33 regras de boas práticas. Revisores escolhidos em código, com portão antes da validação. `verify-loop`. Configs de lint que os agentes não afrouxam. Ideias portadas do [everything-claude-code](https://github.com/affaan-m/everything-claude-code) (MIT, ver [avisos](THIRD_PARTY_NOTICES.md)).
-- **0.11.0, medir.** `metrics` (aprovações, reprovações, lead time, tokens e custo por tarefa) e o benchmark de resultado.
-- **0.10.0, painel v3.** O mapa de execução, quem disparou quem, raias em paralelo e o grafo de dependências com o caminho crítico.
 
 Histórico completo no [CHANGELOG](CHANGELOG.md).
 
@@ -198,14 +170,6 @@ flowchart LR
   VA --> AC[Seu aceite]
 ```
 
-| Camada | O que faz |
-|---|---|
-| **Processo (SDD + TDD)** | Radar de arquitetura, Discovery, Grill, Spec, fatias verticais, execução paralela com TDD, portão de revisão, validação independente e o seu aceite. Cada requisito aponta para a fatia, o critério, o teste e a evidência (RTM). |
-| **Aplicação técnica** | Um gateway `PreToolUse` aplica a política a Bash, PowerShell, ferramentas de arquivo, WebFetch e MCP. Cada operação Git pede a própria aprovação, segredos pedem aprovação, banco e deploy são negados, e cada subagente fica limitado pelo seu Agent Contract. |
-| **Evidência** | Toda operação e toda tentativa bloqueada vão para um log encadeado por hash e assinado com Ed25519. O head assinado fica fora do repositório. |
-| **Custo** | Modelo e effort escolhidos por tarefa, conforme risco e complexidade, do Haiku ao Opus; cada tentativa que falha sobe um nível. |
-| **Aprendizado** | Lições tiradas de erros já registrados (reprovações, bloqueios), que só valem com a sua aprovação e perdem confiança quando param de ajudar. |
-
 ## O painel
 
 <p align="center"><img src="docs/img/panel-tour.gif" width="100%" alt="Passeio pelas oito telas do painel e pela busca global"></p>
@@ -214,14 +178,14 @@ Oito telas num trilho de ícones. Todas são derivadas dos contratos e do log as
 
 | Tela | O que mostra |
 |---|---|
-| **Agora** | O que roda e o que espera, o mapa de execução, as decisões que esperam você com o comando para copiar, o próximo passo, as raias em paralelo e a tabela de fatias com os ciclos de TDD |
-| **Mapa dos agentes** | O mapa e as raias em largura total, mais a árvore de quem disparou quem |
-| **Features e fatias** | A etapa de cada feature, as fatias, o grafo de dependências com o caminho crítico e os relatórios de execução entregues |
-| **Rastreabilidade** | Requisito → fatia → critério → evidência, com o filtro "só lacunas" |
-| **Governança** | Decisões pendentes, decisões tomadas, escolhas de arquitetura com as opções descartadas, e riscos |
-| **Histórico** | O log encadeado por hash, cada evento com o seu bloco e a assinatura |
-| **Engenharia** | Diagramas de arquitetura e de dados, endpoints, ameaças e migrações do blueprint |
-| **Equipe de agentes** | Quem trabalha em quê, os subagentes em execução, as lições aprovadas e os despachos por modelo |
+| **Agora** | O que roda agora e o que espera, a decisão que espera você com o comando para copiar e a saúde do processo: custo de atenção, como cada fatia foi provada, aprovação de primeira e ritmo, custo na sua moeda (por dia, modelo e feature) e atalhos para lacunas de prova, riscos e decisões |
+| **Mapa dos agentes** | O grafo de features (qual depende ou deriva de qual), as ondas e os agentes de cada feature, e os agentes no tempo ou na árvore de quem disparou quem |
+| **Features e fatias** | Cada feature numa linha do tempo, do primeiro agente ao aceite, com as fatias que voltaram do validador ou pularam o vermelho do TDD; abra a feature para ver fatias, tentativas, ciclo TDD e relatórios |
+| **Rastreabilidade** | Uma matriz de prova (um quadrado por requisito) que leva à cadeia de cada requisito: fatia → critério → evidência, com busca de impacto e o filtro "só lacunas" |
+| **Governança** | Decisões pendentes, a linha do tempo de cada decisão com a espera (e as registradas antes do pedido), escolhas de arquitetura com as opções descartadas e os riscos abertos por severidade e feature |
+| **Histórico** | O que garante o registro (cadeia de hash, assinaturas Ed25519, âncora externa), quando o trabalho acontece por dia e hora, e o log assinado página a página |
+| **Engenharia** | Todos os blueprints lado a lado (componentes, dados pessoais, ameaças, migrações) e o escolhido em detalhe: diagramas de arquitetura e de dados, endpoints, ameaças e migrações |
+| **Equipe de agentes** | Quem constrói, revisa e valida, com o custo de cada agente, os agentes fora da equipe e se cada lição aprovada de fato resolve o que promete |
 
 Com o log comprometido, uma faixa vermelha aparece no topo e todos os comandos de aprovar somem. Rode ao vivo com `build_panel.py --serve` (atualiza a cada 3 s sem perder rolagem, filtros nem a gaveta aberta) ou como página estática.
 
@@ -243,17 +207,13 @@ Leitura dos READMEs e da documentação oficial em 18/11/2026. "Instrução" que
 
 ● cobre · ◐ em parte · – não descrito
 
-### As sete lacunas que ninguém cobre bem, e a resposta do AISEF
+### Limites, ditos de saída
 
-| Lacuna | Como o AISEF cobre | Limite |
-|---|---|---|
-| Governança aplicada na hora da chamada | Gateway decide allow, ask ou deny em cada chamada, com teto por agente | Lê comandos por partes e por padrões: reduz risco, não isola. Use com o sandbox nativo, que o init liga onde ele existe |
-| Log que denuncia adulteração | Cada evento tem o hash do anterior e assinatura Ed25519; o head fica fora do repositório | Não protege contra quem tem a chave privada da sua máquina |
-| Requisito até a evidência | RTM liga requisito → fatia → critério → teste → evidência, e o check acusa buracos | O caminho rápido de manutenção tem rastreio mais leve |
-| Validação com privilégio separado | O validador só lê o Git, nunca valida o próprio trabalho e roda em nível igual ou maior, de preferência em outro modelo | Uma onda grande num validador só pede para ser dividida |
-| Modelo escolhido pelo risco | Escada Haiku → Opus por risco, recursos sensíveis, complexidade e tentativas | Variáveis de ambiente do Claude Code podem anular; o roteador avisa |
-| Uma central de decisões | Cada decisão é um pedido com impacto, diff, rollback e risco; a reforçada vale para o comando exato, uma vez | Se você aprovar sem ler, nenhuma camada técnica impede |
-| Memória revisada antes de virar regra | Lições de erros registrados, aprovadas por você, com confiança calculada em código | Sem a sua revisão nos marcos, nada é aprendido, e isso é de propósito |
+- O log assinado não protege contra quem tem a chave privada da sua máquina.
+- O caminho rápido de manutenção tem rastreio mais leve que os caminhos enxuto e completo.
+- Uma onda grande num validador só pede para ser dividida.
+- Variáveis de ambiente do Claude Code podem anular o roteador de modelos; ele avisa quando isso acontece.
+- Se você aprovar sem ler, nenhuma camada técnica impede.
 
 ### Somar em vez de competir
 
@@ -286,15 +246,6 @@ Se o Python que tem o `cryptography` não for o primeiro do PATH, defina `AISEF_
 
 Para explorar sem gastar tokens, siga o [passo a passo com o projeto de demonstração](docs/guide/walkthrough.md).
 
-## O que vem dentro
-
-| Componente | Papel |
-|---|---|
-| Skills | `aisef` (orquestrador), `aisef-init`, `aisef-discovery`, `aisef-tooling`, `aisef-design`, `aisef-feature`, `aisef-approve`, `aisef-check`, `aisef-panel`, `ask`, `modo` |
-| Agentes | 66 papéis num catálogo único (`core/agents/catalog.v0.1.json`): executores (`implementer`, `backend`, `frontend`...), avaliadores, corretores, consultores e o `validator`; os de stack entram com a detecção. Cada um com teto de permissão |
-| Hooks | gateway (`PreToolUse`), auditoria (`PostToolUse`), doctor (`SessionStart`), eventos dos subagentes e quem disparou quem (`PreToolUse` Agent), lembrete do modo Ask |
-| Núcleo | JSON Schemas, políticas de permissão e de modelo, verificador de consistência, log assinado, geradores por brief, despacho em lote, pacotes de contexto, aprendizado revisado, painel ao vivo, detecção de stack e arquitetura, boas práticas, roteamento de revisores e verify-loop |
-
 ## Documentação
 
 Comece por [docs/README.md](docs/README.md). Lá estão:
@@ -313,12 +264,6 @@ claude plugin validate plugins/aisef
 claude plugin eval plugins/aisef --tag trigger --no-publish
 ```
 
-O repositório usa o Graphify em si mesmo (código, docs, ADRs e skills; só o passo estrutural, nada sai da máquina). Regenere o grafo depois de mudar código ou docs; `graphify-out/` não é versionado:
-
-```
-GRAPHIFY_BACKEND=none python -m graphify update .
-python -m graphify query "como o gateway decide um git push"
-```
 
 ## Licença
 
