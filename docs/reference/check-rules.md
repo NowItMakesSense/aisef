@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**168 regras** em 31 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**171 regras** em 32 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -81,6 +81,12 @@ Requisitos e critérios ligados, sem ciclos.
 Dependências existem e não formam ciclo.
 
 `DEP-CROSS-FEATURE`, `DEP-CYCLE`, `DEP-UNKNOWN`
+
+## Dependências entre features (`FEATURE-*`)
+
+Toda feature declara de quais depende ([] = independente), sem dependência inexistente nem ciclo.
+
+`FEATURE-DEP-CYCLE`, `FEATURE-DEP-UNKNOWN`, `FEATURE-DEPS-UNDECLARED`
 
 ## Paralelismo (`PAR-*`)
 

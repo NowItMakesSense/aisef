@@ -1123,6 +1123,30 @@ button.hbr.lnk:hover .hbr-l, button.hbr.lnk:focus-visible .hbr-l { color: var(--
 .dag-desc { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .dag-when { display: grid; justify-items: end; gap: 2px; font-size: 12px; color: var(--faint); white-space: nowrap; }
 @media (max-width: 760px) { .drawer { width: auto; } .drawer .kv { grid-template-columns: 110px 1fr; } .drawer .steps li { grid-template-columns: 1fr; gap: 2px; } }
+/* ---- U-01: telas pequenas e baixas, alvos de toque (WCAG 2.5.8, 24 px) ---- */
+.rail::-webkit-scrollbar { display: none; }
+.searchbtn { display: none; }
+@media (max-width: 760px) {
+  /* as 8 telas cabem na barra inferior; abaixo de ~340 px ela rola na horizontal em vez de esconder telas */
+  .rail { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; gap: 0; scrollbar-width: none; }
+  .rail .hide-m { display: grid; }
+  .rail a { flex: 1 0 36px; width: 36px; max-width: 64px; margin: 0 auto; }
+  .searchbtn { display: grid; }
+  .app { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+}
+/* janela baixa: o trilho rola na vertical (as dicas laterais somem nesse caso; o aria-label continua) */
+@media (max-height: 500px) and (min-width: 761px) { .rail { overflow-y: auto; scrollbar-width: none; } .rail .tip { display: none; } .mark { margin-bottom: 6px; flex: none; } .rail .sep { margin: 4px 0; flex: none; } .rail a { flex: none; } }
+button.chip, button.pm-l, button.rm-h, .chain button.lk { min-height: 24px; }
+button.chip { display: inline-flex; align-items: center; }
+.tl-bar::after, .dl-dot::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 24px); height: 24px; transform: translate(-50%, -50%); }
+.chain .lk { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.pm-l small.num, .dl-dot.rw b { font-size: 11px; }
+@media (max-width: 520px) { .dl-head, .dl-row { grid-template-columns: 150px minmax(0, 1fr); } }
+/* 320 px (WCAG 1.4.10, zoom de 400%): nenhum cartao empurra a pagina para o lado */
+.hc { grid-template-columns: minmax(0, 1fr); }
+.lc { grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); }
+.tm-chips .chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 360px) { .vc-c:nth-child(even) .vc-x { visibility: hidden; } .hc { padding-inline: 12px; } }
 </style>
 </head>
 <body>
@@ -1163,6 +1187,7 @@ button.hbr.lnk:hover .hbr-l, button.hbr.lnk:focus-visible .hbr-l { color: var(--
     <div class="live" id="live" data-s="static"><i class="dot" aria-hidden="true"></i><span id="livetxt"></span></div>
     <div class="seal" id="seal"></div>
     <button class="youbtn" id="youbtn" type="button" hidden></button>
+    <button class="iconbtn searchbtn" type="button" id="searchbtn" aria-label="Buscar fatia, agente, requisito"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
     <button class="iconbtn" type="button" id="theme" aria-label="Alternar tema (t)"><svg class="i" aria-hidden="true"><use href="#i-sun"/></svg></button>
   </header>
   <main class="main" id="main" tabindex="-1">
@@ -2194,6 +2219,9 @@ button.hbr.lnk:hover .hbr-l, button.hbr.lnk:focus-visible .hbr-l { color: var(--
   document.addEventListener("keydown", function (e) {
     var n = e.target.closest && e.target.closest("tr[data-open]");
     if (n && e.key === "Enter") openDrawer(n.getAttribute("data-open"), true);
+    // cartao clicavel que nao e botao (role=button, tabindex=0): Enter e espaco fazem o mesmo que o clique (U-01)
+    var c = e.target.getAttribute && e.target.getAttribute("role") === "button" && !/^(BUTTON|A)$/.test(e.target.tagName) && (e.target.hasAttribute("data-agent") || e.target.hasAttribute("data-open")) ? e.target : null;
+    if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); c.click(); }
   });
 
   /* ====================================== telas ====================================== */
@@ -2691,7 +2719,8 @@ button.hbr.lnk:hover .hbr-l, button.hbr.lnk:focus-visible .hbr-l { color: var(--
       feats.forEach(function (f) {
         var n = risks.filter(function (r) { return r.feature_id === f && r.severity === sv[0]; }).length, key = f + "|" + sv[0], on = riskSel === key;
         var c = el("button", { cls: "rm-c t-" + (SEV[sv[0]] || "todo") + (n ? "" : " zero") + (acc[f] && n ? " acc" : "") + (on ? " on" : ""), type: "button", style: n ? "--n:" + Math.min(1, 0.25 + n * 0.25) : null,
-          "data-tip": f + " · " + plural(n, "risco " + sv[1], "riscos " + sv[1]) + (acc[f] && n ? " · em feature já aceita" : ""), text: n ? String(n) : "" });
+          "data-tip": f + " · " + plural(n, "risco " + sv[1], "riscos " + sv[1]) + (acc[f] && n ? " · em feature já aceita" : ""), text: n ? String(n) : "",
+          "aria-label": f + ": " + plural(n, "risco " + sv[1], "riscos " + sv[1]) + (acc[f] && n ? ", em feature já aceita" : "") });
         if (n) c.addEventListener("click", function () { riskSel = riskSel === key ? "" : key; store("risksel", riskSel); pages.risks = 0; render(false); });
         else { c.setAttribute("tabindex", "-1"); c.setAttribute("aria-disabled", "true"); }
         tbl.appendChild(c);
@@ -2795,7 +2824,8 @@ button.hbr.lnk:hover .hbr-l, button.hbr.lnk:focus-visible .hbr-l { color: var(--
     });
     function card(it) {
       var cost = costBy[it.a.agent_id], run = running[it.a.agent_id];
-      return el("div", { cls: "tm-card" + (it.outside ? " out" : "") + (run ? " live" : ""), "data-agent": run ? run.agent_id : null }, [
+      return el("div", { cls: "tm-card" + (it.outside ? " out" : "") + (run ? " live" : ""), "data-agent": run ? run.agent_id : null,
+        role: run ? "button" : null, tabindex: run ? "0" : null, "aria-label": run ? "Abrir " + (it.a.name || it.a.agent_id) + ", rodando agora" : null }, [
         el("div", { cls: "tm-h" }, [glyph(run ? "run" : it.outside ? "you" : "done"), el("span", { cls: "tm-n" }, [el("b", { text: it.a.name || it.a.agent_id }), el("small", { cls: "mono", text: it.a.agent_id })])]),
         el("div", { cls: "tm-m" }, [el("span", {}, [el("b", { cls: "num", text: String(it.n) }), " " + it.unit]), cost ? el("span", {}, [el("b", { cls: "num", text: M(cost.usd) }), " · " + pct(cost.usd, tot) + "%"]) : el("span", { cls: "tm-nc", text: "sem custo registrado" })]),
         cost ? el("span", { cls: "tm-bar" }, [el("i", { style: "width:" + Math.max(2, pct(cost.usd, tot)) + "%" })]) : null,
@@ -3403,6 +3433,7 @@ button.hbr.lnk:hover .hbr-l, button.hbr.lnk:focus-visible .hbr-l { color: var(--
   palette.addEventListener("click", function (e) { if (e.target === palette) closeSearch(); });
   document.getElementById("search").addEventListener("click", openSearch);
   document.getElementById("search").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSearch(); } });
+  document.getElementById("searchbtn").addEventListener("click", openSearch);
   var gPending = 0;
   document.addEventListener("keydown", function (e) {
     var tn = e.target && e.target.tagName, typing = tn === "INPUT" || tn === "TEXTAREA";

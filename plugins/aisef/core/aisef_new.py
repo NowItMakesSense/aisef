@@ -16,6 +16,7 @@ Brief de feature (so os campos marcados com * sao obrigatorios):
     {"id"*: "FEAT-002", "title"*: "...", "objective"*: "...", "problem"*: "...", "priority": "medium",
      "requirements"*: {"REQ-010": "texto", "REQ-011": {"text": "...", "origin": "investigated", "kind": "non_functional"}},
      "scope_in"*: ["..."], "scope_out": ["..."], "risks": [["descricao", "medium", "mitigacao"]],
+     "depends_on_features": ["FEAT-001"],   (* quando o projeto ja tem outra feature; [] = independente)
      "spec": {"solution": "...", "user_stories": ["..."], "test_seams": ["POST /x"], "implementation_decisions": [], "testing_decisions": []},
      "tasks"*: [{"id": "T-010", "kind": "slice", "title": "...", "role": "implementer", "reqs": ["REQ-010"], "touches": ["api", "data"], "seams": ["POST /x"],
                  "criteria": {"AC-10": "descricao verificavel"}, "paths": ["src/x/*"], "depends_on": [],
@@ -45,7 +46,7 @@ MAINT_REQ = "REQ-MAINT"
 EXAMPLES = {
     "feature": {
         "id": "FEAT-002", "title": "Recuperacao de senha", "objective": "Permitir redefinir a senha por e-mail",
-        "problem": "Usuarios bloqueados dependem do suporte", "priority": "high",
+        "problem": "Usuarios bloqueados dependem do suporte", "priority": "high", "depends_on_features": [],
         "requirements": {"REQ-010": "Enviar link de redefinicao valido por 30 minutos",
                          "REQ-011": "Invalidar o link apos o uso"},
         "scope_in": ["fluxo de redefinicao por e-mail"], "scope_out": ["redefinicao por SMS"],
@@ -181,8 +182,26 @@ def apply_triage(brief):
     return {k: tri[k] for k in ("computed", "path", "profile", "reasons", "note", "forced_by_user") if k in tri}
 
 
+def feature_deps(brief, project):
+    """dependencies.features (F-10): exigido quando ja ha outra feature; [] = independente; FEAT-MAINT nao conta."""
+    fdir = os.path.join(ap.aisef_dir(project), "contracts", "features")
+    known = {f[:-5] for f in os.listdir(fdir) if f.endswith(".json")} if os.path.isdir(fdir) else set()
+    known -= {MAINT_FEATURE, brief["id"]}
+    deps = brief.get("depends_on_features")
+    if deps is None:
+        if known and brief["id"] != MAINT_FEATURE:
+            raise SystemExit('declare "depends_on_features" no brief: as features de que esta depende ou de que partiu '
+                             '(existem %s), ou [] se ela for independente' % ", ".join(sorted(known)))
+        return {}
+    bad = [d for d in deps if d not in known]
+    if bad:
+        raise SystemExit("depends_on_features cita feature inexistente: %s" % ", ".join(bad))
+    return {"features": list(deps)}
+
+
 def feature_docs(brief, project, now):
     need(brief, "id", "title", "objective", "problem", "requirements", "scope_in", "tasks")
+    deps = feature_deps(brief, project)
     triage = apply_triage(brief)
     cfg = ap.load_config(project)
     fid = brief["id"]
@@ -240,7 +259,7 @@ def feature_docs(brief, project, now):
         "business_priority": {"level": brief.get("priority", "medium"), "set_by": "user"},
         "requirements": reqs, "business_rules": [],
         "scope": {"included": brief["scope_in"], "excluded": brief.get("scope_out", [])},
-        "architectural_decisions": [], "dependencies": {}, "constraints": [],
+        "architectural_decisions": [], "dependencies": deps, "constraints": [],
         **({"spec": {k: v for k, v in spec.items() if v not in (None, [], "")}} if spec else {}),
         **({"triage": triage} if triage else {}),
         "risks": [{"id": "RISK-%s-%d" % (fid, i + 1), "description": r[0], "severity": r[1],

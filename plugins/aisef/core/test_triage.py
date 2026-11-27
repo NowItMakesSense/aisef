@@ -107,6 +107,7 @@ ap.activate_agents(proj)
 TRI = tr.triage(proj, **lean_args)
 BRIEF = {"id": "FEAT-010", "title": "Slugify", "objective": "Gerar slugs de titulos", "problem": "URLs com acento quebram",
          "requirements": {"REQ-100": "Gerar slug minusculo sem acentos"}, "scope_in": ["funcao slugify"],
+         "depends_on_features": [],
          "spec": {"solution": "Funcao pura slugify(texto) em src/slug.py", "user_stories": ["Como autor quero URLs limpas"],
                   "test_seams": ["slugify()"]},
          "triage": TRI,

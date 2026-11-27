@@ -51,6 +51,7 @@ Quebre a feature em **fatias verticais** (`"kind": "slice"`):
 Regras:
 - **Nunca fatie por camada** (uma tarefa de backend e outra de frontend): isso é horizontal, serializa o trabalho e não prova nada sozinho.
 - `depends_on` = blocking edges. A primeira fatia é o *tracer bullet*: o caminho mais fino que liga tudo de ponta a ponta.
+- **Dependências entre features:** no brief, `depends_on_features` lista as features de que esta depende ou de que partiu (correção da revisão de outra, pendências, extensão). Confirme com o usuário; use `[]` só para feature de fato independente. Com outra feature no projeto, o gerador recusa o brief sem o campo, e o `aisef-check` avisa `FEATURE-DEPS-UNDECLARED` em contrato antigo sem ele.
 - Refatoração ampla primeiro ("deixe a mudança fácil, depois faça a mudança fácil"). Se for grande, use expand-contract em vez de fatias.
 - Fatias sem conflito de arquivos e sem dependência entre si podem ter `"parallelizable": true`, e vão para a mesma onda.
 - O `role` padrão de uma fatia é `implementer`. Use outro papel só quando a fatia for de um único domínio: `devops` para pipeline, `database` para migração pura.

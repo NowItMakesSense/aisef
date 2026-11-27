@@ -2,6 +2,22 @@
 
 ## Não lançado
 
+### Painel em telas pequenas e baixas (U-01)
+Auditoria no navegador, com os dados reais do HireMe, nas oito telas, de 320 a 1280 px e numa janela de 480 px de altura: transbordo, elemento cortado ou coberto, alvo de toque abaixo de 24 px (WCAG 2.5.8), controle sem nome e clique sem teclado.
+- **Nenhuma tela some no celular.** A barra inferior escondia Rastreabilidade, Histórico e Engenharia, e a Engenharia ficava sem caminho nenhum. Agora as oito telas cabem na barra (36 px cada); abaixo disso ela rola na horizontal. Com a janela baixa (até 500 px), o trilho lateral rola na vertical em vez de cortar os últimos ícones.
+- **Busca no celular.** A caixa de busca some abaixo de 760 px; no lugar entra um botão de lupa no topo que abre a mesma paleta.
+- **320 px sem rolagem lateral** (WCAG 1.4.10): a lista longa de critérios (`AC-001, AC-002…`) na Rastreabilidade quebra linha (antes empurrava a página 29 px); o cartão da Saúde do processo, os chips de tarefa da Equipe e a grade de lições encolhem.
+- **Alvos de toque de 24 px:** chips de tarefa, rótulos de feature da matriz de prova, cabeçalhos do mapa de riscos e elos da cadeia de prova. Os pontos de Entregas no tempo e as barras de Em paralelo ganham uma área de toque invisível de 24 px.
+- **Teclado e leitor de tela:** o cartão do agente rodando (Equipe) abre com Enter e espaço; as células do mapa de riscos têm nome (`FEAT-003: 2 riscos altos`), inclusive as vazias.
+- Em Entregas no tempo, a coluna da feature cai para 150 px abaixo de 520 px, para sobrar espaço para a linha do tempo.
+- Testes em `core/test_panel_responsive.py` (16).
+
+### Features nascem ligadas às outras (F-10)
+Veio do uso real (HireMe): toda feature nova nascia com `dependencies` vazio, porque o gerador gravava `{}` fixo e o brief não tinha onde declarar. No painel, as features apareciam soltas, sem relação com as outras.
+- **Brief com `depends_on_features`.** O `aisef_new.py feature` grava a lista em `dependencies.features`. Quando o projeto já tem outra feature, o brief sem o campo é recusado sem gravar nada; `[]` é a declaração explícita de "independente". Feature inexistente na lista é recusada. A primeira feature e a FEAT-MAINT ficam de fora.
+- **Regras novas no `aisef-check`:** `FEATURE-DEPS-UNDECLARED` (aviso, para contratos antigos sem o campo), `FEATURE-DEP-UNKNOWN` e `FEATURE-DEP-CYCLE` (erro).
+- A skill `aisef-feature` pede para confirmar as dependências com o usuário na fase das fatias. Testes em `core/test_feature_deps.py` (15).
+
 ### Painel: Agora vira "o que roda, o que depende de você e a saúde do processo"
 - **Agora** perde o que já tinha tela própria: o Mapa de execução e as raias Em paralelo ficam no Mapa dos agentes; a tabela de fatias, em Features e fatias.
 - A faixa de estados só mostra quantas fatias há em cada estado: clicar nela não filtra mais o mapa nem as tabelas de outras telas, e a feature escolhida no mapa não filtra mais a faixa nem a tabela de fatias. Decisão pendente aparece como faixa própria, só quando existe.
