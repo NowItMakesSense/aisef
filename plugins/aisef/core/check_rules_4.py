@@ -126,3 +126,40 @@ def rules_sandbox_do_perfil(_cx):
     if missing:
         rep.warn("PROFILE-SANDBOX", ".claude/settings.json", "perfil %s pede o sandbox estrito; falta: %s"
                  % (profile, "; ".join(missing)))
+
+
+def rules_dependencias_de_feature(_cx):
+    """Regras: dependencias entre features (F-10). Sem `dependencies.features` a feature fica solta no painel; [] e a
+    declaracao explicita de independente. A primeira feature do projeto e a FEAT-MAINT nao precisam declarar."""
+    feats, rep = _cx.get("feats") or {}, _cx.get("rep")
+    graph = {}
+    for fid, f in feats.items():
+        deps = (f.get("dependencies") or {}).get("features")
+        graph[fid] = list(deps or [])
+        for d in deps or []:
+            if d == fid:
+                rep.err("FEATURE-DEP-CYCLE", "feature " + fid, "depende de si mesma")
+            elif d not in feats:
+                rep.err("FEATURE-DEP-UNKNOWN", "feature " + fid, "depende de %s, que nao existe" % d)
+    order = sorted((k for k in feats if k != "FEAT-MAINT"),
+                   key=lambda k: ((feats[k].get("audit") or {}).get("created_at") or "", k))
+    for fid in order[1:]:
+        if "features" not in (feats[fid].get("dependencies") or {}):
+            rep.warn("FEATURE-DEPS-UNDECLARED", "feature " + fid, "sem dependencies.features: declare as features de "
+                     "que ela depende ou partiu, ou [] se for independente (sem isso ela aparece solta no painel)")
+    state = {}
+
+    def dfs(n, path):
+        state[n] = 1
+        for m in graph.get(n, []):
+            if m == n or m not in graph:
+                continue
+            if state.get(m) == 1:
+                rep.err("FEATURE-DEP-CYCLE", "features", "ciclo de dependencias: %s" % " -> ".join(path[path.index(m):] + [m]))
+            elif m not in state:
+                dfs(m, path + [m])
+        state[n] = 2
+
+    for n in sorted(graph):
+        if n not in state:
+            dfs(n, [n])
