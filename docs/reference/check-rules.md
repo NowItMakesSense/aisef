@@ -2,7 +2,7 @@
 
 Gerado por `tools/gen_docs.py` a partir de `core/check_project.py` e `core/check_knowledge.py`. Não edite à mão.
 
-**172 regras** em 32 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
+**175 regras** em 33 grupos. Erro bloqueia a transição de estado; aviso não bloqueia.
 
 ## Projeto (`PROJECT-*`)
 
@@ -141,6 +141,12 @@ Evidencia de teste vermelho antes do verde, no relatorio do executor.
 Deteccao valida, estilo adotado aprovado como decisao arquitetural e regra de dependencia.
 
 `ARCH-DEPENDENCY`, `ARCH-PENDING`, `ARCH-SCHEMA`, `ARCH-UNAPPROVED`
+
+## Verificação de UI (`UI-*`)
+
+UI declarada (ui_behavior), provada pela sonda num navegador real e verificada por outro agente.
+
+`UI-BEHAVIOR-MISSING`, `UI-PROBE-DIRTY`, `UI-PROBE-MISSING`
 
 ## Autoridade de design (`DESIGN-*`)
 

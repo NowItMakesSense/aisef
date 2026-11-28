@@ -32,6 +32,8 @@ SUITES = [
     ("painel", [os.path.join(CORE, "test_panel.py"), os.path.join(work, "panel")]),
     ("painel: contraste AA dos tokens", [os.path.join(CORE, "test_panel_contrast.py")]),
     ("painel: telas pequenas e alvos de toque (U-01)", [os.path.join(CORE, "test_panel_responsive.py")]),
+    ("sonda de UI num Chrome real (V-05)", [os.path.join(CORE, "test_ui_probe.py")]),
+    ("UI declarada e provada pela sonda (V-06)", [os.path.join(CORE, "test_ui_behavior.py")]),
     ("painel: ligacoes entre features", [os.path.join(CORE, "test_panel_links.py")]),
     ("painel: custo estimado na moeda local", [os.path.join(CORE, "test_panel_cost.py")]),
     ("gateway: Git por risco (F-03)", [os.path.join(HOOKS, "test_git_risk.py")]),

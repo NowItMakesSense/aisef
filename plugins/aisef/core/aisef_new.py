@@ -36,6 +36,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import aisef_catalog  # noqa: E402
 import aisef_project as ap  # noqa: E402
+import aisef_ui  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python -I nao poe a pasta do script no path
 from aisef_rebase import *  # noqa: E402,F401,F403  (H-01)
 
@@ -63,7 +64,7 @@ EXAMPLES = {
                    "criteria": {"AC-10": "POST /auth/reset envia e-mail com link que expira em 30 minutos (teste de integracao)"},
                    "paths": ["src/auth/*", "migrations/*", "tests/auth/*"], "test_cmd": "pytest -q tests/auth"},
                   {"id": "T-011", "kind": "slice", "title": "Redefinir a senha com o link e invalida-lo",
-                   "reqs": ["REQ-011"], "touches": ["ui", "api", "domain"], "seams": ["POST /auth/reset/confirm"],
+                   "reqs": ["REQ-011"], "touches": ["ui", "api", "domain"], "seams": ["POST /auth/reset/confirm"], "ui_behavior": aisef_ui.EXAMPLE,
                    "criteria": {"AC-11": "Segundo uso do mesmo link e recusado (teste de integracao)"},
                    "paths": ["src/auth/*", "web/reset/*", "tests/auth/*"], "depends_on": ["T-010"],
                    "test_cmd": "pytest -q tests/auth"}]},
@@ -127,6 +128,7 @@ def task_doc(t, feature_id, feature_version, env, now):
     doc = {
         "schema_version": "0.1.0", "task_id": t["id"], "contract_version": 1, "kind": kind,
         **({"touches": t["touches"]} if t.get("touches") else {}),
+        **({"ui_behavior": t["ui_behavior"]} if t.get("ui_behavior") else {}),
         **({"tests": tests} if tests else {}),
         "feature_id": feature_id, "feature_contract_version": feature_version, "title": t["title"],
         "objective": t.get("objective") or t["title"],
@@ -228,12 +230,7 @@ def feature_docs(brief, project, now):
     for t in brief["tasks"]:
         if t.get("kind") == "slice" and not t.get("criteria"):
             raise SystemExit("%s: fatia sem criterio de aceite verificavel" % t["id"])
-    if os.path.isfile(os.path.join(ap.aisef_dir(project), "design", "tokens.json")):
-        for t in brief["tasks"]:
-            if "ui" in (t.get("touches") or []) or t.get("role") == "frontend":
-                t["criteria"].setdefault("AC-%s-DESIGN" % t["id"], {
-                    "text": "UI sem cores nem fontes fora da autoridade de design (.aisef/design/tokens.json)",
-                    "command": "python -I <CORE>/design_check.py scan --project . --task %s" % t["id"]})
+    aisef_ui.add_criteria(project, brief["tasks"])
     tasks = [task_doc(t, fid, 1, cfg.get("environment", "dev"), now) for t in brief["tasks"]]
     for t in tasks:
         add_review(project, t)

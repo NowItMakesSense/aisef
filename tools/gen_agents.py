@@ -130,6 +130,26 @@ def render_special(name):
             % (name, desc.replace("'", "''"), tools, model, effort, name, body))
 
 
+# V-06 (0.18): processo de UI de quem implementa tela (frontend e implementer em fatia que toca UI). Os componentes
+# saiam sem se adaptar a outras larguras, com conteudo escondido e gesto prometido que nao existia; ninguem testava.
+UI_ROLES = ("frontend", "implementer")
+UI_PROCESS = """
+## UI: responsividade, conteudo alcancavel e interacao (quando a tarefa toca UI)
+**1. Antes de codar, declare.** O pacote de contexto traz `mandatory.ui.behavior` (a `ui_behavior` do contrato). Sem ela, pare e devolva ao orquestrador: rotas a testar; o que muda em cada faixa de largura (ex.: ate 480 px a tabela vira cartoes e os filtros vao para um menu); o que fazer quando o conteudo nao cabe (`wrap`, `scroll_visible`, `drag`, `more`, `truncate_accessible`, `paginate`); os gestos esperados (`drag`, `swipe`, `wheel`, `keyboard`, `hover`, `long_press`, `click`) e os estados (vazio, carregando, erro, conteudo demais, de menos).
+**2. Durante, regras fixas.**
+- Nada de largura fixa em conteiner de conteudo; `min-width: 0` em filho de flex e grid; nada de `100vw` dentro de pagina com barra.
+- Texto com `overflow: hidden` ou reticencias sempre com o texto inteiro acessivel (dica no foco e no toque, nome acessivel ou expandir).
+- Rolagem horizontal sempre com indicio visivel (barra, sombra na borda ou setas) e alcancavel por arrastar, roda e teclado. Lista que nao cabe: quebra de linha, rolagem visivel, "ver mais" ou paginacao, nunca conteudo cortado sem caminho.
+- Toda acao de hover tem equivalente no toque e no foco. Alvo de toque de 24x24 px no minimo. Barra fixa com `scroll-padding` para o foco nao ficar embaixo dela. Janela e gaveta: o Esc fecha e o foco volta a quem abriu.
+- Teste com conteudo do pior caso (nome de 80 caracteres, 100 itens, numero enorme, lista vazia); a skill `break-ui`, se instalada, gera esses dados.
+**3. Antes de entregar, prove.**
+- Um teste por gesto declarado: no Playwright do projeto, quando houver, ou pela propria sonda, que le os gestos do contrato.
+- Rode a sonda com a UI no ar: `python -I <CORE>/ui_probe.py run --project . --task <T-ID> --base <url>`. Ela passa por 320, 375, 768, 1024 e 1440 px, com toque e teclado, e grava capturas com hash.
+- Entregue so com a sonda sem achado medium ou pior. Excecao legitima (ex.: tamanho que representa dado, com alternativa na mesma tela) vai em `.aisef/ui-probe.ignore.json` com o motivo, e o motivo aparece no relatorio.
+- Anexe `.aisef/reports/ui/<T-ID>/probe/report.json` como evidencia do tipo `ui_probe` no Execution Report. Sem isso, o `aisef-check` acusa UI-PROBE-MISSING.
+- Sua prova nao substitui a verificacao independente: outro agente roda a sonda de novo e confere o que voce nao declarou.
+"""
+
 # Skills pre-carregadas no subagente (campo `skills:` do Claude Code). Sem o plugin instalado, o Claude Code pula
 # o nome (aviso no log de debug) e o agente segue as regras de TDD do bloco COMMON.
 PRELOAD = {rid: r["preload_skills"] for rid, r in CATALOG.items() if r.get("preload_skills")}
@@ -147,6 +167,8 @@ def render(name):
         a = common.index("## TDD (")
         common = common[:a] + common[common.index("## Entrega"):]
     common += KIND_BLOCKS.get(kind, "")
+    if name in UI_ROLES:
+        common += UI_PROCESS
     if name in EVALUATORS:
         common = common.replace("## Entrega (duplo formato",
                                 "## Entrega (duplo formato; para voce, o relatorio e de avaliacao, nao de execucao")

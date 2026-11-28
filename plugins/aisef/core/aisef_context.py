@@ -361,7 +361,7 @@ def build_pack(project, task_id, limit=DEFAULT_LIMIT, graph=True):
             "blueprint": ({"path": _rel(project, bp_path), "id": bp.get("blueprint_id"), "version": bp.get("contract_version"),
                            "elements": elements} if bp else None),
             "requirements": reqs, "business_rules": rules, "acceptance_criteria": criteria, "decisions": decisions,
-            "design": design, "architecture": architecture},
+            "design": design, "ui": _ui_for(task, warnings), "architecture": architecture},
         "referenced": {"limit": limit, "files": shown, "matched_total": len(files), "truncated": max(0, len(files) - len(shown)),
                        "patterns_without_match": unmatched, "docs": docs},
         "on_demand": {"knowledge": know, "knowledge_truncated": know_cut,
@@ -395,6 +395,20 @@ def _architecture_for(project, paths):
                     "adopted": bool(approved), "path": _rel(project, apath),
                     "dependency_check": "python -I <CORE>/aisef_detect.py deps --project ."})
     return out
+
+
+def _ui_for(task, warnings):
+    """V-06: como a UI se comporta (declarado no contrato) e como provar; tarefa de UI sem declaracao ganha aviso."""
+    import aisef_ui
+    if not aisef_ui.is_ui(task):
+        return None
+    tid = task.get("task_id")
+    if not task.get("ui_behavior"):
+        warnings.append("tarefa de UI sem ui_behavior: antes de codar, devolva ao orquestrador as rotas, o que muda em cada "
+                        "largura, o que fazer quando o conteudo nao cabe, os gestos e os estados")
+    return {"behavior": task.get("ui_behavior"),
+            "probe": "python -I <CORE>/ui_probe.py run --project . --task %s --base <url da UI rodando>" % tid,
+            "evidence": ".aisef/reports/ui/%s/probe/report.json (evidencia do tipo ui_probe no Execution Report)" % tid}
 
 
 def _design_for(project, task):

@@ -54,6 +54,14 @@ Regras:
 - **Dependências entre features:** no brief, `depends_on_features` lista as features de que esta depende ou de que partiu (correção da revisão de outra, pendências, extensão). Confirme com o usuário; use `[]` só para feature de fato independente. Com outra feature no projeto, o gerador recusa o brief sem o campo, e o `aisef-check` avisa `FEATURE-DEPS-UNDECLARED` em contrato antigo sem ele.
 - Refatoração ampla primeiro ("deixe a mudança fácil, depois faça a mudança fácil"). Se for grande, use expand-contract em vez de fatias.
 - Fatias sem conflito de arquivos e sem dependência entre si podem ter `"parallelizable": true`, e vão para a mesma onda.
+- **Fatia que toca UI declara como a tela se comporta** (`ui_behavior`, V-06), antes de qualquer código. Pergunte ao usuário o que não der para tirar do blueprint:
+  - `routes`: as telas a testar (`name`, `path`; `wait_for` quando a tela carrega devagar); e `base_url`, onde a UI roda em dev;
+  - `widths`: o que muda em cada faixa (ex.: `"<=480": "tabela vira cartões; filtros num menu"`);
+  - `overflow`: o que fazer quando o conteúdo não cabe (`wrap`, `scroll_visible`, `drag`, `more`, `truncate_accessible`, `paginate`);
+  - `interactions`: os gestos esperados (`drag`, `swipe`, `wheel`, `keyboard`, `hover`, `long_press`, `click`), com o alvo (seletor CSS) e o que deve acontecer (`scroll` ou `change`);
+  - `states`: vazio, carregando, erro, conteúdo demais, de menos.
+
+  O gerador acrescenta o critério da sonda de UI (`AC-<T>-UIPROBE`), e o executor só entrega com ela limpa. Sem a declaração, o `aisef-check` avisa `UI-BEHAVIOR-MISSING`.
 - O `role` padrão de uma fatia é `implementer`. Use outro papel só quando a fatia for de um único domínio: `devops` para pipeline, `database` para migração pura.
 
 Mostre a lista ao usuário (título, camadas, blocking edges, seams) e ajuste a granularidade com ele antes de gerar. Veja o formato com `python -I CORE/aisef_new.py example feature`, escreva o brief num arquivo temporário fora de `.aisef/` e rode:
