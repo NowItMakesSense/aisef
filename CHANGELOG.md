@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+## 0.17.2 (2026-11-27)
+
 ### Autorização de escopo termina de verdade (A-01)
 Veio do HireMe: a AUTH-001 e a AUTH-002 eram da FEAT-001, aceita em 21/11, mas seguiram `active` até vencer em 27/11, quando o check passou a acusar `AUTH-EXPIRED`. O `termination_condition` (`expiry`, `feature_accepted`) era só declarado: nada encerrava a autorização.
 - Novo `core/aisef_auth_life.py`: autorização de feature aceita vira `closed`; a vencida vira `expired`. Cada encerramento entra no histórico da autorização e no log assinado (`authorization_closed`, tipo novo, ou `authorization_expired`). Idempotente.
