@@ -272,7 +272,8 @@ def rules_blueprints(_cx):
         for e in ents.values():
             reqs("entidade", e["id"], e["requirement_ids"])
             fields = {x["name"] for x in e["fields"]}
-            if not any(x.get("primary_key") for x in e["fields"]):
+            # so tabela precisa de chave primaria; arquivo, documento ou memoria (storage) nao (A-01)
+            if e.get("storage", "table") == "table" and not any(x.get("primary_key") for x in e["fields"]):
                 rep.warn("BP-NO-PK", where, "entidade %s sem chave primaria" % e["id"])
             for x in e["fields"]:
                 ref = x.get("references")
@@ -374,7 +375,9 @@ def rules_dependencias_e_paralelismo(_cx):
             pa, pb = ta["scope"].get("paths_allowed", []), tb["scope"].get("paths_allowed", [])
             if any(overlaps(x, y) for x in ea for y in eb + pb) or any(overlaps(x, y) for x in eb for y in ea + pa):
                 rep.err("PAR-FILE-CONFLICT", "tarefas %s/%s" % (a, b), "tarefas paralelas com arquivos exclusivos em conflito")
-            elif any(overlaps(x, y) for x in pa for y in pb):
+            elif any(overlaps(x, y) for x in pa for y in pb) and not all(
+                    (t.get("state") or {}).get("status") in ("completed", "cancelled") for t in (ta, tb)):
+                # duas tarefas ja encerradas nao rodam mais juntas: a sobreposicao so importa enquanto alguma esta aberta
                 rep.warn("PAR-PATH-OVERLAP", "tarefas %s/%s" % (a, b), "tarefas paralelas com caminhos permitidos que se sobrepoem")
 
     _cx.update({k: v for k, v in locals().items() if k != "_cx"})

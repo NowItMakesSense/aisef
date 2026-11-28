@@ -6,7 +6,7 @@
 
 O AISEF é um plugin do Claude Code para times que precisam mostrar o que a IA fez, não só entregar mais rápido. Um pedido em linguagem natural vira uma feature especificada: triada em código, quebrada em fatias verticais, construída com testes primeiro por agentes em paralelo, revisada por especialistas, validada por outro agente e aceita por você. Toda chamada de ferramenta passa por uma política aplicada em código, e cada passo vai para um log assinado, à prova de adulteração, que o CI verifica em cada pull request.
 
-| **171** | **2.800+** | **207** | **66** | **~0,2 s** |
+| **172** | **2.800+** | **207** | **66** | **~0,2 s** |
 |---|---|---|---|---|
 | regras de consistência no `aisef-check` | verificações automáticas, CI em Linux e Windows | casos do gateway, 80 deles tentativas de contorno, todas barradas ([limites](#o-que-o-gateway-não-garante)) | agentes especialistas (15 ativos num projeto Python novo) | custo do gateway por chamada no Windows ([medido](tools/bench_hooks.py)) |
 
@@ -19,7 +19,7 @@ O AISEF é um plugin do Claude Code para times que precisam mostrar o que a IA f
 |---|---|
 | **Regras que valem** | Um Execution Gateway decide permitir, perguntar ou negar em cada chamada, em código. Ele lê os comandos por partes (`bash -c`, `eval`, `$(...)`, código inline), mantém a chave de assinatura fora do alcance e limita cada agente ao próprio teto de permissão. |
 | **Um log que ninguém edita em silêncio** | Cada evento tem cadeia de hash e assinatura Ed25519; o head fica fora do repositório. Em time, cada pessoa grava no próprio stream, com a própria chave: o merge nunca conflita e cada aprovação leva a assinatura de quem a deu. |
-| **Cada requisito ligado à prova** | Requisito → fatia → critério de aceite → teste → evidência, conferido por 171 regras. O `aisef_sysgraph.py` responde "o que este requisito toca?" sem modelo. |
+| **Cada requisito ligado à prova** | Requisito → fatia → critério de aceite → teste → evidência, conferido por 172 regras. O `aisef_sysgraph.py` responde "o que este requisito toca?" sem modelo. |
 | **Prova em cada pull request** | A GitHub Action `aisef-verify` reprova a PR quando o log foi adulterado, quando o log encolheu desde a branch base, quando o `aisef-check` acusa erro ou quando a PR toca uma tarefa que ninguém validou. |
 | **Evidência que o auditor verifica** | O `aisef_evidence.py` empacota uma feature (contratos, relatórios, aprovações, eventos assinados, chaves públicas) com uma tabela de controles para SOC 2 CC8.1, ISO/IEC 27001:2022 A.8.32 e A.5.3, ISO/IEC 42001, EU AI Act art. 12 e NIST AI RMF. Com `--in-toto`, cada tarefa ganha um atestado in-toto assinado (DSSE). O pacote se verifica sozinho, sem o projeto. |
 | **Observabilidade que você já usa** | O `aisef_otel.py` exporta cada feature como traces OpenTelemetry (OTLP/JSON) com as convenções GenAI: um span por tentativa de agente, um por chamada de ferramenta. |
@@ -109,6 +109,7 @@ Os recursos da 0.13 em diante têm cobertura no CI, incluindo um teste que roda 
 
 ## Novidades
 
+- **0.17.2, autorização que termina de verdade.** A autorização de escopo agora é encerrada quando a feature é aceita e expira quando o prazo acaba, com evento no log assinado, em vez de ficar ativa para sempre. O check deixa de avisar o que não pede ação, e o texto cortado do painel fica legível no teclado e no toque.
 - **0.17.1, features ligadas e um painel que funciona em qualquer tela.** Feature nova precisa declarar de quais depende, e o check aponta as que não declaram. O painel mostra todas as telas no celular, mantém o foco do teclado visível, devolve o foco ao fechar a gaveta, deixa arrastar as pílulas de feature para o lado e explica uma falha de integridade: o que mudou, em qual evento, como foi detectado e quando pode ter acontecido.
 - **0.17.0, fechar o que este README promete.** O gateway fecha mais 13 contornos (código inline de interpretador, a home inteira, pacote baixado e executado na hora), pergunta antes de dependência nova e endurece a saída de dados depois que a sessão leu conteúdo não confiável da web ou de MCP; `team` e `regulated` ganham sandbox estrito. O vermelho e o verde do TDD são conferidos contra o log assinado, o validador trabalha às cegas às alegações do executor, os marcos podem ganhar carimbo de tempo RFC 3161 e a chave de assinatura pode ficar no cofre do sistema (os dois opt-in). O pacote de evidência ganha atestados in-toto assinados e os controles ISO/IEC 42001, EU AI Act art. 12 e NIST AI RMF. Os revisores podem ser medidos com bugs plantados e o benchmark de resultado ganhou o braço enxuto; as rodadas pagas ainda vão acontecer.
 - **0.16.0, painel confiável e outra sessão no mesmo projeto.** O painel mostra a feature aceita como aceita, põe cada agente na fatia em que trabalhou, com linha do tempo por feature e visão geral em cartões, e só acende o alarme do gateway quando pesa. Duas sessões do Claude Code no mesmo projeto passam a se enxergar, reservam áreas separadas e são avisadas antes de editar ou fazer commit sobre o trabalho da outra.

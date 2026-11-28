@@ -43,7 +43,9 @@ próximo projeto. Até lá, eles ficam como **CI**.
 | F-09 | Custo de atenção (métrica e card do painel) | 0.14.0 | CI | ligado | Só leitura |
 | F-10 | Dependências entre features exigidas no brief e conferidas no check (`FEATURE-DEPS-UNDECLARED`, `FEATURE-DEP-UNKNOWN`, `FEATURE-DEP-CYCLE`) | 0.17.1 | CI e HireMe | ligado | Contrato antigo sem o campo só gera aviso |
 | U-01 | Painel em telas pequenas e baixas: todas as telas na barra do celular, busca no celular, reflow a 320 px, alvos de 24 px, teclado nos cartões | 0.17.1 | CI (estático) e auditoria manual no navegador | ligado | Ver U-02 |
-| U-02 | Usabilidade dos componentes do painel: integridade explicada (o que, como e quando), pílulas arrastáveis, foco nunca encoberto, gaveta devolve o foco, dicas no teclado e no toque, controles que respondem a clique e teclado, pontos sem sobreposição | 0.17.1 | CI (estático) e auditoria de interação no navegador | ligado | Textos cortados com reticências mostram o texto inteiro só no `title` (mouse) ou na gaveta |
+| U-02 | Usabilidade dos componentes do painel: integridade explicada (o que, como e quando), pílulas arrastáveis, foco nunca encoberto, gaveta devolve o foco, dicas no teclado e no toque, controles que respondem a clique e teclado, pontos sem sobreposição | 0.17.1 | CI (estático) e auditoria de interação no navegador | ligado | Sem ressalvas conhecidas |
+| A-01 | Autorização de escopo encerrada no aceite da feature (`closed`) e no vencimento (`expired`), com evento no log; aviso `AUTH-NOT-CLOSED` | 0.17.2 | CI e HireMe | ligado | Só autorizações de escopo; confiança MCP já vencia pelo gateway |
+| A-02 | Check sem aviso que não pede ação: sobreposição só entre tarefas abertas, `storage` na entidade do blueprint | 0.17.2 | CI e HireMe | ligado | Sem ressalvas conhecidas |
 | G-07 | Grafo do sistema (`impact`, `why`) e filtro no painel | 0.14.0 | CI | ligado | Só leitura |
 | H-01 | Módulos menores, sem mudar comportamento | 0.14.0 | CI | — | Refatoração; a API de `aisef_project` ficou igual |
 | L-02 | Worktree por fatia | 0.14.0 | CI, opcional | desligado | `parallel.mode: "paths"` (o padrão) |

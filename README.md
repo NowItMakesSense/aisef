@@ -6,7 +6,7 @@
 
 AISEF is a Claude Code plugin for teams that must show what the AI did, not just ship faster. A plain-language request becomes a specified feature: triaged in code, split into vertical slices, built test-first by agents in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log that CI can verify on each pull request.
 
-| **171** | **2,800+** | **207** | **66** | **~0.2 s** |
+| **172** | **2,800+** | **207** | **66** | **~0.2 s** |
 |---|---|---|---|---|
 | consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 80 of them bypass attempts, all blocked ([limits](#what-the-gateway-does-not-guarantee)) | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
@@ -19,7 +19,7 @@ AISEF is a Claude Code plugin for teams that must show what the AI did, not just
 |---|---|
 | **Rules that hold** | An Execution Gateway decides allow, ask or deny on every tool call, in code. It reads commands token by token (`bash -c`, `eval`, `$(...)`, inline code), keeps the signing key out of reach, and caps each agent with its own permission ceiling. |
 | **A log nobody can quietly edit** | Each event is hash-chained and signed with Ed25519; the head lives outside the repository. In a team, each person writes to their own stream with their own key, so merges never conflict and every approval carries the signature of whoever gave it. |
-| **Every requirement traced to its proof** | Requirement → slice → acceptance criterion → test → evidence, checked by 171 rules. `aisef_sysgraph.py` answers "what does this requirement touch?" without a model. |
+| **Every requirement traced to its proof** | Requirement → slice → acceptance criterion → test → evidence, checked by 172 rules. `aisef_sysgraph.py` answers "what does this requirement touch?" without a model. |
 | **Proof on every pull request** | The `aisef-verify` GitHub Action fails the PR if the log was tampered with, if the log shrank since the base branch, if `aisef-check` finds an error, or if the PR touches a task nobody validated. |
 | **Evidence your auditor can verify** | `aisef_evidence.py` packs a feature (contracts, reports, approvals, signed events, public keys) with a controls table for SOC 2 CC8.1, ISO/IEC 27001:2022 A.8.32 and A.5.3, ISO/IEC 42001, EU AI Act art. 12 and NIST AI RMF. With `--in-toto`, each task gets a signed in-toto attestation (DSSE). The package verifies itself, without the project. |
 | **Observability you already use** | `aisef_otel.py` exports each feature as OpenTelemetry traces (OTLP/JSON) with the GenAI conventions: one span per agent attempt, one per tool call. |
@@ -109,6 +109,7 @@ Features from 0.13 on are covered by CI, including a test that runs a whole feat
 
 ## What's new
 
+- **0.17.2, authorizations that actually end.** A scope authorization now closes when its feature is accepted and expires when its time runs out, with an event in the signed log, instead of staying active forever. The check stops warning about things there is nothing to do about, and truncated text in the panel is readable by keyboard and touch.
 - **0.17.1, features linked and a panel that works on any screen.** New features must declare which features they depend on, and the check flags the ones that do not. The panel shows every screen on phones, keeps keyboard focus visible, returns focus when the drawer closes, lets you drag the feature pills sideways, and explains an integrity failure: what changed, which event, how it was caught and when it could have happened.
 - **0.17.0, closing what this README promises.** The gateway closes 13 more bypasses (inline interpreter code, the whole home folder, packages fetched and run on the spot), asks before adding a new dependency, and tightens data egress once a session has read untrusted web or MCP content; `team` and `regulated` get a strict sandbox. TDD red and green are checked against the signed log, the validator works blind to the executor's claims, milestones can get an RFC 3161 timestamp and the signing key can live in the OS vault (both opt-in). The evidence package adds signed in-toto attestations and ISO/IEC 42001, EU AI Act art. 12 and NIST AI RMF controls. Reviewers can now be scored on planted bugs, and the outcome benchmark has a lean arm; the paid runs are still to come.
 - **0.16.0, a panel you can trust and another session in the same project.** The panel shows accepted features as accepted, maps agents to the slice they worked on with a per-feature timeline and an overview in cards, and only raises the gateway alarm when it matters. Two Claude Code sessions in the same project now see each other, reserve separate areas, and get warned before editing or committing over the other's work.

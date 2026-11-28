@@ -163,3 +163,17 @@ def rules_dependencias_de_feature(_cx):
     for n in sorted(graph):
         if n not in state:
             dfs(n, [n])
+
+
+def rules_fim_das_autorizacoes(_cx):
+    """Regras: autorizacao de escopo de feature ja aceita nao pode seguir 'active' (A-01). O `next`, o doctor e o
+    aceite encerram sozinhos (aisef_auth_life.py); este aviso pega o projeto que ainda nao rodou nenhum deles."""
+    auths, approvals, log, rep = _cx.get("auths") or {}, _cx.get("approvals") or {}, _cx.get("log") or [], _cx.get("rep")
+    accepted = {a.get("feature_id") for a in approvals.values()
+                if a.get("request_type") == "feature_acceptance" and a.get("status") == "approved"}
+    accepted |= {e.get("feature_id") for e in log if e.get("event_type") == "feature_accepted"}
+    for aid, au in auths.items():
+        if au.get("kind") == "scope" and au.get("status") == "active" and au.get("feature_id") in accepted \
+                and "feature_accepted" in (au.get("termination_condition") or []):
+            rep.warn("AUTH-NOT-CLOSED", "autorizacao " + aid, "%s ja foi aceita, mas a autorizacao segue 'active': "
+                     "rode python -I <CORE>/aisef_auth_life.py --project ." % au["feature_id"])

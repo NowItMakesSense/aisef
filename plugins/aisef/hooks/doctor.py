@@ -104,6 +104,12 @@ def problems(project):
     except Exception:
         pass
     try:
+        import aisef_auth_life  # A-01: encerra autorizacoes vencidas ou de feature aceita e avisa
+        for aid, st, why in aisef_auth_life.close_finished(project):
+            found.append("%s %s (%s)" % (aid, "encerrada" if st == "closed" else "expirada", why))
+    except Exception:
+        pass
+    try:
         import aisef_migrate
         mig = aisef_migrate.status(project)  # F-06: projeto atras do plugin
         if mig:
