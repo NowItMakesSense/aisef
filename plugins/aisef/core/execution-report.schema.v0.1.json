@@ -134,7 +134,7 @@
         "required": ["id", "type", "ref", "secrets_redacted"],
         "properties": {
           "id": { "$ref": "#/$defs/id" },
-          "type": { "enum": ["test_output", "command_output", "diff", "file_hash", "static_analysis", "report", "screenshot", "other"] },
+          "type": { "enum": ["test_output", "command_output", "diff", "file_hash", "static_analysis", "report", "screenshot", "ui_probe", "other"] },
           "ref": { "type": "string", "description": "Referencia ao artefato guardado. Nunca conteudo com segredos." },
           "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
           "secrets_redacted": { "const": true, "description": "Segredos nunca entram em evidencias, logs ou relatorios." }

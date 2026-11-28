@@ -2,6 +2,40 @@
 
 ## Não lançado
 
+### Frontend declara como a tela se comporta e prova com a sonda (V-06)
+O `frontend` e o `implementer` passam a ter um processo de UI em três passos, igual para os dois (bloco gerado pelo `tools/gen_agents.py`):
+1. **Declarar antes de codar.** O Task Contract ganha `ui_behavior`: rotas a testar, o que muda em cada faixa de largura, o que fazer quando o conteúdo não cabe (`wrap`, `scroll_visible`, `drag`, `more`, `truncate_accessible`, `paginate`), os gestos esperados e os estados (vazio, carregando, erro, conteúdo demais, de menos). A `aisef-feature` pergunta isso na fase de fatias, e o pacote de contexto entrega ao agente (`mandatory.ui`).
+2. **Regras fixas no prompt:** nada de largura fixa em contêiner de conteúdo; texto cortado sempre com o inteiro acessível; rolagem horizontal com indício visível e com arrastar, roda e teclado; hover com equivalente no toque e no foco; alvo de 24 px; Esc fecha e devolve o foco; teste com conteúdo do pior caso.
+3. **Provar antes de entregar:**
+   - `ui_probe.py run --project . --task <T>` lê rotas e gestos do contrato;
+   - a fatia de UI ganha o critério `AC-<T>-UIPROBE`;
+   - o relatório da sonda vai como evidência do tipo `ui_probe` (tipo novo no Execution Report);
+   - exceção legítima vai em `.aisef/ui-probe.ignore.json`, com motivo.
+- Regras novas (`core/check_rules_5.py`):
+  - `UI-BEHAVIOR-MISSING` (aviso): tarefa de UI aberta sem declaração;
+  - `UI-PROBE-MISSING` (erro): tarefa de UI entregue sem a sonda, com o arquivo ausente, com rota declarada que a sonda não visitou ou com gesto declarado sem teste;
+  - `UI-PROBE-DIRTY` (erro): a sonda anexada tem achado medium ou pior.
+  - Valem só para tarefa com `ui_behavior`: as entregues antes do processo não passam a falhar.
+- Testes em `core/test_ui_behavior.py` (25).
+
+### Sonda de UI num navegador real (V-05)
+Os componentes entregues pelo `frontend` quebravam em outras larguras, escondiam conteúdo e prometiam gestos que não existiam, e nada pegava isso: a evidência era captura em três larguras e um scan de cores e fontes. Novo `core/ui_probe.py`: abre a tela num Chrome headless, muda a largura, rola, arrasta, toca, usa o teclado e prova com capturas.
+- 13 regras: `UI-REFLOW` (página mais larga que a tela), `UI-CLIPPED` (texto cortado sem jeito de ler inteiro), `UI-UNREACHABLE` (conteúdo fora de alcance: a sonda tenta roda, arrastar, toque e teclado e diz o que funcionou), `UI-COVERED` (foco coberto por barra fixa), `UI-TARGET` (alvo menor que 24 px), `UI-KEYBOARD` (Tab que não chega, foco invisível, clique que o teclado não aciona, armadilha), `UI-DEAD` (parece clicável e não faz nada), `UI-HOVER-ONLY`, `UI-FOCUS-RETURN` (Esc que não fecha, foco que não volta), `UI-ZOOM` (zoom de 200%), `UI-MOTION` (anima com `prefers-reduced-motion`), `UI-OVERLAP` e `UI-INTERACTION` (gesto declarado que não funciona).
+- Larguras 320, 375, 768, 1024 e 1440, com toque emulado até 480 px, e uma passada de zoom de 200%.
+- Cada achado vem com captura recortada e contornada; cada interação, com antes e depois. O SHA-256 de cada captura fica no relatório (`ui-probe-report.schema.v0.1.json`), e `ui_probe.py verify` acusa prova trocada.
+- Sem dependência nova: cliente do DevTools Protocol só com biblioteca padrão (`core/cdp_client.py`). Só abre endereço local sem `--allow-remote`, e não clica em envio de formulário, link externo nem ação destrutiva. Sem Chrome, sai com erro, nunca com "ok".
+- Testes em `core/test_ui_probe.py`, com uma página de exemplo por regra em `core/fixtures/ui/`: o defeito gera o achado e a versão corrigida passa limpa.
+- Prova de fogo no painel do AISEF com os dados do HireMe: a primeira passada deu 63 achados, a maioria erro da própria sonda, que foi calibrada:
+  - o Tab começava do último foco;
+  - texto só para leitor de tela contava como cortado;
+  - link para a tela atual e botão que só muda o tema ou o foco pareciam não fazer nada;
+  - a área de toque ampliada por `::after` não contava;
+  - conteúdo de `details` fechado e de barra fixa entrava na sobreposição.
+- Depois da calibração, a sonda achou três defeitos reais do painel, já corrigidos:
+  - a busca (Ctrl K) não devolvia o foco a quem a abriu;
+  - o nome da feature no custo por feature e o título das linhas da lista do celular apareciam cortados, sem dica.
+  - Ficam as barras curtas da linha do tempo (7×9 px): é a exceção da WCAG 2.5.8 para o tamanho que representa dado, com a lista "Quem disparou quem" como alternativa na mesma tela.
+
 ## 0.17.3 (2026-11-27)
 
 ### Autorização encerrada não vira erro nas tarefas que já a usaram (A-01)

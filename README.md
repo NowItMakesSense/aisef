@@ -6,7 +6,7 @@
 
 AISEF is a Claude Code plugin for teams that must show what the AI did, not just ship faster. A plain-language request becomes a specified feature: triaged in code, split into vertical slices, built test-first by agents in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log that CI can verify on each pull request.
 
-| **172** | **2,800+** | **207** | **66** | **~0.2 s** |
+| **175** | **2,800+** | **207** | **66** | **~0.2 s** |
 |---|---|---|---|---|
 | consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 80 of them bypass attempts, all blocked ([limits](#what-the-gateway-does-not-guarantee)) | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
@@ -19,7 +19,7 @@ AISEF is a Claude Code plugin for teams that must show what the AI did, not just
 |---|---|
 | **Rules that hold** | An Execution Gateway decides allow, ask or deny on every tool call, in code. It reads commands token by token (`bash -c`, `eval`, `$(...)`, inline code), keeps the signing key out of reach, and caps each agent with its own permission ceiling. |
 | **A log nobody can quietly edit** | Each event is hash-chained and signed with Ed25519; the head lives outside the repository. In a team, each person writes to their own stream with their own key, so merges never conflict and every approval carries the signature of whoever gave it. |
-| **Every requirement traced to its proof** | Requirement → slice → acceptance criterion → test → evidence, checked by 172 rules. `aisef_sysgraph.py` answers "what does this requirement touch?" without a model. |
+| **Every requirement traced to its proof** | Requirement → slice → acceptance criterion → test → evidence, checked by 175 rules. `aisef_sysgraph.py` answers "what does this requirement touch?" without a model. |
 | **Proof on every pull request** | The `aisef-verify` GitHub Action fails the PR if the log was tampered with, if the log shrank since the base branch, if `aisef-check` finds an error, or if the PR touches a task nobody validated. |
 | **Evidence your auditor can verify** | `aisef_evidence.py` packs a feature (contracts, reports, approvals, signed events, public keys) with a controls table for SOC 2 CC8.1, ISO/IEC 27001:2022 A.8.32 and A.5.3, ISO/IEC 42001, EU AI Act art. 12 and NIST AI RMF. With `--in-toto`, each task gets a signed in-toto attestation (DSSE). The package verifies itself, without the project. |
 | **Observability you already use** | `aisef_otel.py` exports each feature as OpenTelemetry traces (OTLP/JSON) with the GenAI conventions: one span per agent attempt, one per tool call. |

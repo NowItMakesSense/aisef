@@ -26,6 +26,41 @@
       "items": { "enum": ["ui", "api", "domain", "data", "integration", "infra", "docs"] },
       "description": "Opcional. Camadas que a fatia atravessa. Decide quais especialistas revisam (data -> database, ui -> frontend, seguranca pelo risco)."
     },
+    "ui_behavior": {
+      "type": "object", "additionalProperties": false,
+      "description": "Opcional (V-06, 0.18): como a UI da tarefa se comporta, declarado antes de codar. A sonda (ui_probe.py run --task) le daqui as rotas e os gestos, e o ui-verifier confere cada item.",
+      "required": ["routes", "widths", "overflow", "interactions", "states"],
+      "properties": {
+        "base_url": { "type": "string", "description": "Onde a UI roda no ambiente de desenvolvimento (ex.: http://127.0.0.1:5173). O --base da sonda tem precedencia." },
+        "routes": {
+          "type": "array", "minItems": 1,
+          "items": { "type": "object", "additionalProperties": false, "required": ["name", "path"], "properties": {
+            "name": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" }, "path": { "type": "string" }, "wait_for": { "type": "string" },
+            "setup": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["click"], "properties": { "click": { "type": "string" } } } } } }
+        },
+        "widths": {
+          "type": "object", "minProperties": 1, "additionalProperties": { "type": "string", "minLength": 3 },
+          "description": "O que muda em cada faixa de largura (chave: a faixa, ex. '<=480', '481-1024', '>=1025'; valor: o comportamento)."
+        },
+        "overflow": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": false, "required": ["target", "strategy"], "properties": {
+            "target": { "type": "string" }, "strategy": { "enum": ["wrap", "scroll_visible", "drag", "more", "truncate_accessible", "paginate"] }, "note": { "type": "string" } } },
+          "description": "O que fazer quando o conteudo nao cabe: quebrar linha, rolar com barra visivel, arrastar, 'ver mais', truncar com o texto inteiro acessivel ou paginar."
+        },
+        "interactions": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": false, "required": ["target", "gesture"], "properties": {
+            "target": { "type": "string" }, "gesture": { "enum": ["drag", "swipe", "wheel", "keyboard", "hover", "long_press", "click"] },
+            "axis": { "enum": ["x", "y"] }, "expect": { "enum": ["scroll", "change", "any"] }, "route": { "type": "string" },
+            "widths": { "type": "array", "items": { "type": "integer", "minimum": 200, "maximum": 3840 } }, "note": { "type": "string" } } }
+        },
+        "states": {
+          "type": "array", "uniqueItems": true, "items": { "enum": ["empty", "loading", "error", "overflow", "minimal"] },
+          "description": "Estados tratados: vazio, carregando, erro, conteudo demais (pior caso) e de menos."
+        }
+      }
+    },
     "reopen_cycle": { "type": "integer", "minimum": 1, "default": 1, "description": "Ciclo da feature (reabertura cria novo ciclo)." },
     "review": {
       "type": "object", "additionalProperties": false,

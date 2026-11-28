@@ -1819,7 +1819,7 @@ button.chip { display: inline-flex; align-items: center; }
       var g = el("div", { cls: "mgroup" }, [el("h3", { text: ST[st].lab[0].toUpperCase() + ST[st].lab.slice(1) + " (" + list.length + ")" })]);
       list.forEach(function (t) {
         g.appendChild(el("button", { cls: "mrow", type: "button", "data-open": t.task_id }, [glyph(t.st),
-          el("span", { style: "min-width:0" }, [el("span", { cls: "t clip1", style: "display:block", text: t.task_id + " · " + t.title }), clipped("span", "s clip1", nodeMeta(t), 70)]),
+          el("span", { style: "min-width:0" }, [el("span", { cls: "t clip1", style: "display:block", text: t.task_id + " · " + t.title, title: t.task_id + " · " + t.title }), clipped("span", "s clip1", nodeMeta(t), 70)]),
           el("span", { cls: "s num", text: t.st === "run" ? since(t.started_at) : "" })]));
       });
       ml.appendChild(g);
@@ -2607,7 +2607,7 @@ button.chip { display: inline-flex; align-items: center; }
     var tb = el("tbody", {}, feats.map(function (f) {
       var loose = f.feature_id === "sem fatia", info = fd[f.feature_id] || {}, n = info.tasks_completed || 0;
       return el("tr", { cls: loose ? "cs-loose" : "" }, [
-        el("td", {}, [el("span", { cls: "cs-fn" }, loose ? [el("span", { text: "sem fatia ligada" }), el("small", { text: "arquitetura, planejamento, revisão de feature" })] : [el("span", { cls: "mono", text: f.feature_id }), el("small", { text: clip(info.title || "", 46) })])]),
+        el("td", {}, [el("span", { cls: "cs-fn" }, loose ? [el("span", { text: "sem fatia ligada" }), el("small", { text: "arquitetura, planejamento, revisão de feature" })] : [el("span", { cls: "mono", text: f.feature_id }), el("small", { text: clip(info.title || "", 46), title: info.title || null })])]),
         el("td", { cls: "num r" }, [M(f.usd)]), el("td", { cls: "num r cs-pc" }, [pct(f.usd, tot) + "%"]),
         el("td", { cls: "num r" }, [loose ? "—" : String(n)]), el("td", { cls: "num r" }, [loose || !n ? "—" : M(f.usd / n)])]);
     }));
@@ -3568,8 +3568,17 @@ button.chip { display: inline-flex; align-items: center; }
     pin.setAttribute("aria-activedescendant", presults.length ? "pr" + psel : "");
   }
   function choose(i) { var r = presults[i]; closeSearch(); if (r) r.go(); }
-  function openSearch() { palette.classList.add("open"); pin.value = ""; psel = 0; searchRender(); pin.focus(); }
-  function closeSearch() { palette.classList.remove("open"); if (pendingData) { var x = pendingData; pendingData = null; applyData(x); } }
+  // quem abriu a busca recebe o foco de volta ao fechar (a sonda de UI achou o foco caindo no body)
+  var searchOpener = null;
+  function openSearch() {
+    var a = document.activeElement; searchOpener = a && a !== document.body && !palette.contains(a) ? a : null;
+    palette.classList.add("open"); pin.value = ""; psel = 0; searchRender(); pin.focus();
+  }
+  function closeSearch() {
+    var had = palette.contains(document.activeElement), o = searchOpener; searchOpener = null;
+    palette.classList.remove("open"); if (pendingData) { var x = pendingData; pendingData = null; applyData(x); }
+    if (had && o && document.contains(o) && o.getClientRects().length) o.focus();
+  }
   pin.addEventListener("input", function () { psel = 0; searchRender(); });
   pin.addEventListener("keydown", function (e) {
     if (e.key === "ArrowDown") { psel = Math.min(presults.length - 1, psel + 1); searchRender(); e.preventDefault(); }

@@ -13,7 +13,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CORE = os.path.join(ROOT, "plugins", "aisef", "core")
-SOURCES = ["check_project.py", "check_rules_1.py", "check_rules_2.py", "check_rules_3.py", "check_rules_4.py", "check_knowledge.py"]
+SOURCES = ["check_project.py", "check_rules_1.py", "check_rules_2.py", "check_rules_3.py", "check_rules_4.py", "check_rules_5.py", "check_knowledge.py"]
 NOT_RULES = {"FEAT-MAINT"}  # id da feature de manutencao, nao uma regra
 OUT = os.path.join(ROOT, "docs", "reference", "check-rules.md")
 
@@ -41,6 +41,7 @@ GROUPS = [
     ("SLICE", "Fatias verticais", "toda fatia tem ao menos um criterio verificado por teste automatizado"),
     ("TDD", "TDD", "evidencia de teste vermelho antes do verde, no relatorio do executor"),
     ("ARCH", "Arquitetura", "deteccao valida, estilo adotado aprovado como decisao arquitetural e regra de dependencia"),
+    ("UI", "Verificação de UI", "UI declarada (ui_behavior), provada pela sonda num navegador real e verificada por outro agente"),
     ("DESIGN", "Autoridade de design", "tokens de design validos, aprovados como decisao arquitetural, e UI coberta por eles"),
     ("VAL", "Validação", "validação independente, nunca do próprio executor"),
     ("ROUTE", "Roteamento", "validador não roda abaixo do nível do executor"),
