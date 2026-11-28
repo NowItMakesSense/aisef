@@ -21,6 +21,7 @@ SUITES = [
     ("engineering blueprint schema", [os.path.join(CORE, "test_blueprint.py")]),
     ("check_project (mutacoes)", [os.path.join(CORE, "test_check_project.py")]),
     ("TDD cruzado com o log assinado (E-01)", [os.path.join(CORE, "test_tdd_log.py")]),
+    ("Teste depois de heredoc no log (E-01b)", [os.path.join(CORE, "test_shell_test_runs.py")]),
     ("Dependencias entre features (F-10)", [os.path.join(CORE, "test_feature_deps.py")]),
     ("Fim das autorizacoes de escopo (A-01)", [os.path.join(CORE, "test_auth_life.py")]),
     ("Check sem aviso que nao pede acao (A-02)", [os.path.join(CORE, "test_check_ruido.py")]),

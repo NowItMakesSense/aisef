@@ -48,6 +48,8 @@ def shell_runs(log):
         when = _when(ev)
         if when is not None:
             out.append((when, norm_cmd(d.get("command")), d.get("exit_code"), ev))
+            # E-01b: comando longo (heredoc) leva as invocacoes de teste em test_runs, com o mesmo resultado
+            out.extend((when, norm_cmd(r), d.get("exit_code"), ev) for r in d.get("test_runs") or [])
     return out
 
 

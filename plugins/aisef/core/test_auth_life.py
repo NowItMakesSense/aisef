@@ -80,11 +80,33 @@ try:
     bad = [f for f in r.findings if f["rule"] in ("SCHEMA", "AUTH-EXPIRED", "AUTH-STATUS", "AUTH-HISTORY", "AUTH-NOT-CLOSED")]
     check("autorizacoes encerradas passam no schema e no check (sem AUTH-EXPIRED)", bad == [], bad)
 
+    rules_now = [f["rule"] for f in r.findings]
+    check("autorizacao encerrada nao gera AUTH-REDUNDANT (nada a fazer)", "AUTH-REDUNDANT" not in
+          [f["rule"] for f in r.findings if "AUTH-001" in f["where"] or "AUTH-002" in f["where"]], rules_now)
     # rede do check: autorizacao ainda 'active' de feature aceita vira aviso
     d = load("AUTH-003"); d["feature_id"] = "FEAT-001"; ap.write_json(path("AUTH-003"), d)
     r = cp.check(os.path.join(proj, ".aisef"), HERE, POL, DEF)
     check("check avisa AUTH-NOT-CLOSED para autorizacao ativa de feature aceita",
           any(f["rule"] == "AUTH-NOT-CLOSED" for f in r.findings), [f["rule"] for f in r.findings])
+
+    # tarefa ja concluida que usou a autorizacao enquanto valia: encerrar depois nao e erro
+    import aisef_new
+    ap.activate_agents(proj)
+    b = json.loads(json.dumps(aisef_new.EXAMPLES["feature"]))
+    b["id"] = "FEAT-001"
+    aisef_new.cmd_feature(proj, b)
+    tpath = os.path.join(proj, ".aisef", "contracts", "tasks", "T-010.json")
+
+    def task(status):
+        with open(tpath, encoding="utf-8") as fh:
+            t = json.load(fh)
+        t["permissions"].update(environment="dev", scope_authorization_id="AUTH-001")
+        t["state"]["status"] = status
+        ap.write_json(tpath, t)
+        return [f["rule"] for f in cp.check(os.path.join(proj, ".aisef"), HERE, POL, DEF, now=NOW).findings
+                if "T-010" in f["where"] and f["rule"] == "AUTH-STATUS"]
+    check("tarefa concluida citando autorizacao ja encerrada: sem AUTH-STATUS", task("completed") == [])
+    check("tarefa ainda aberta citando autorizacao encerrada: AUTH-STATUS", task("ready") == ["AUTH-STATUS"])
 finally:
     shutil.rmtree(work, ignore_errors=True)
 

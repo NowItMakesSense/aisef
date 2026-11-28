@@ -16,6 +16,7 @@ O detalhe de cada versão está no [CHANGELOG](../CHANGELOG.md), e as decisões 
 
 | Versão | Entrega |
 |---|---|
+| 0.17.3 | Autorização encerrada não vira erro nas tarefas que já a usaram (A-01); teste rodado depois de heredoc conta como evidência de TDD (E-01b) |
 | 0.17.2 | Autorização de escopo encerrada no aceite e no vencimento, com evento no log (A-01); check sem aviso que não pede ação (A-02); texto cortado do painel legível no teclado e no toque |
 | 0.17.1 | Features ligadas (dependências declaradas e conferidas no check, F-10) e painel usável em qualquer tela: todas as telas no celular, foco visível, gaveta que devolve o foco, pílulas arrastáveis, integridade explicada (U-01, U-02) |
 | 0.17.0 | Fechar o que o README promete: gateway com 13 contornos fechados, sandbox estrito em `team`/`regulated`, dependência nova conferida e sessão marcada por conteúdo não confiável; TDD conferido contra o log assinado; validação às cegas; carimbo RFC 3161 e chave no cofre do sistema (opt-in); atestado in-toto e controles de IA no pacote de evidência; revisores avaliados com bugs plantados e braço enxuto no benchmark (rodadas pagas pendentes) |

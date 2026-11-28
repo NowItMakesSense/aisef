@@ -2,6 +2,19 @@
 
 ## Não lançado
 
+## 0.17.3 (2026-11-27)
+
+### Autorização encerrada não vira erro nas tarefas que já a usaram (A-01)
+Ao encerrar a AUTH-001 e a AUTH-002 do HireMe, o check passou a acusar `AUTH-STATUS` na T-000, concluída em 20/11 com a autorização ainda válida. A regra de vencimento já isentava tarefa encerrada; a de status não.
+- `AUTH-STATUS` só vale para tarefa aberta; `AUTH-REDUNDANT` só para autorização ativa (na encerrada não há nada a fazer).
+- Testes em `core/test_auth_life.py` (12).
+
+### Teste rodado depois de um heredoc conta como evidência de TDD (E-01b)
+Também do HireMe: 9 avisos `TDD-EVIDENCE-UNBACKED` em fatias aceitas. O agente escrevia o teste num heredoc e o rodava no mesmo comando; o hook guarda só os primeiros 400 caracteres, então a execução ficava fora do log e o check não achava o vermelho.
+- O hook extrai do comando inteiro as invocações de executor de teste (vitest, jest, pytest, go test, cargo test e outros), sem o corpo dos heredocs, e grava em `test_runs`; o check procura ali também. Novo `core/shell_test_runs.py`.
+- Vale daqui para a frente: os eventos já gravados não mudam (o log é assinado), então os avisos dessas fatias antigas continuam como registro.
+- Testes em `core/test_shell_test_runs.py` (9).
+
 ## 0.17.2 (2026-11-27)
 
 ### Autorização de escopo termina de verdade (A-01)
