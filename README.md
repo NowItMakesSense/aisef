@@ -6,7 +6,7 @@
 
 AISEF is a Claude Code plugin for teams that must show what the AI did, not just ship faster. A plain-language request becomes a specified feature: triaged in code, split into vertical slices, built test-first by agents in parallel, reviewed by specialists, validated by a different agent and accepted by you. Every tool call goes through a policy enforced in code, and every step lands in a signed, tamper-evident log that CI can verify on each pull request.
 
-| **175** | **2,800+** | **207** | **66** | **~0.2 s** |
+| **175** | **3,000+** | **207** | **66** | **~0.2 s** |
 |---|---|---|---|---|
 | consistency rules in `aisef-check` | automated checks, CI on Linux and Windows | gateway cases, 80 of them bypass attempts, all blocked ([limits](#what-the-gateway-does-not-guarantee)) | specialist agents (15 active on a new Python project) | gateway cost per tool call on Windows ([measured](tools/bench_hooks.py)) |
 
