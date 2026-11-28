@@ -153,6 +153,11 @@ open(lp, "w", encoding="utf-8").write("\n".join(lines) + "\n")
 bb = run_build(d)
 check("evento adulterado: integridade 'broken' com erro de hash", bb["manifest"]["integrity"]["status"] == "broken" and any("hash" in e for e in bb["manifest"]["integrity"]["errors"]))
 check("painel adulterado continua valido no schema (o aviso vem no manifesto)", not list(validator.iter_errors(bb)))
+det = bb["manifest"]["integrity"].get("details") or []
+alt = [x for x in det if x["level"] == "error" and x.get("event") and x["event"]["seq"] == 4]
+check("U-02: o evento alterado vira um achado so, com o que, como e quando", len(alt) == 1 and alt[0]["kind"] == "altered"
+      and alt[0]["event"]["at"] and alt[0]["before"]["seq"] == 3 and alt[0]["how"] and alt[0]["action"])
+check("U-02: o resumo do evento afetado vai para o achado", alt and "alterada por fora" in (alt[0]["event"]["summary"] or ""))
 
 d = fresh("truncate")
 lp = os.path.join(d, "project", "audit", "log.jsonl")
@@ -160,6 +165,18 @@ lines = open(lp, encoding="utf-8").read().splitlines()
 open(lp, "w", encoding="utf-8").write("\n".join(lines[:-2]) + "\n")
 bb = run_build(d)
 check("log truncado: detectado pelo head assinado", bb["manifest"]["integrity"]["status"] == "broken" and any("truncado" in e for e in bb["manifest"]["integrity"]["errors"]))
+tr = [x for x in bb["manifest"]["integrity"].get("details") or [] if x["kind"] == "truncated"]
+check("U-02: log cortado diz quantos eventos sumiram e qual e o ultimo que restou", tr and tr[0].get("missing") == 2 and tr[0]["event"]["seq"] == len(lines) - 3)
+
+d = fresh("delete")
+lp = os.path.join(d, "project", "audit", "log.jsonl")
+lines = open(lp, encoding="utf-8").read().splitlines()
+del lines[3]
+open(lp, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+bb = run_build(d)
+det = [x for x in bb["manifest"]["integrity"].get("details") or [] if x["level"] == "error"]
+check("U-02: um evento apagado no meio vira um achado so (nao um por evento deslocado)",
+      len(det) == 1 and det[0]["kind"] == "removed" and det[0]["before"]["seq"] == 2 and det[0]["event"]["seq"] == 4)
 
 d = fresh("nohead")
 os.remove(os.path.join(d, "project", "audit", "head.json"))
@@ -280,7 +297,9 @@ if chrome:
         "agents": ["Agente Backend", "Agente Validador"],
         "risks": ["Algoritmo de assinatura mal escolhido", "Regressao nas rotas protegidas"],
         "timeline": ["concluida", "Escopo para T-003 aguardando aprovacao"],
-        "engineering": ["Comparativo de blueprints", "Desenho tecnico da autenticacao JWT", "POST /auth/token", "Token forjado", "dado pessoal", "MIG-1"],
+        "engineering": ["Comparativo de blueprints", "BP-001", "Clique numa linha do comparativo"],
+        # Engenharia abre sem blueprint escolhido; o link direto abre o desenho
+        "engineering/BP-001": ["Comparativo de blueprints", "Desenho tecnico da autenticacao JWT", "POST /auth/token", "Token forjado", "dado pessoal", "MIG-1"],
         # telas novas (hash canonico), com os mesmos conteudos
         # Agora: o que roda, o que depende de voce e a saude do processo; mapa e raias ficam no Mapa dos agentes
         "agora": ["Integridade do histórico verificada", "1 decisão sua", "Esperando você", "esperando outra fatia", "Saúde do processo",
@@ -344,13 +363,17 @@ if chrome:
           out.count('class="pm-g on"') == 1 and 'aria-pressed="true"' in out and "Cadeia de prova" in out)
     out, _ = dump(base, "engineering", offline=True)
     body = out[out.find("<body"):]
-    check("Chrome sem rede: aba Engenharia desenha arquitetura e ER (2 SVGs)", body.count("<svg") >= 2)
+    check("Chrome: Engenharia abre so com o comparativo, sem blueprint escolhido", "Comparativo de blueprints" in body
+          and "POST /auth/token" not in body and 'aria-selected="true"' not in body)
+    out, _ = dump(base, "engineering/BP-001", offline=True)
+    body = out[out.find("<body"):]
+    check("Chrome sem rede: link direto da Engenharia desenha arquitetura e ER (2 SVGs)", body.count("<svg") >= 2)
     out, _ = dump(base, "deps", offline=True)
     check("Chrome sem rede: Mermaid local desenha o diagrama (SVG)", "<svg" in out[out.find("<body"):])
 
     tamper = os.path.join(work, "tamper")
     out, _ = dump(tamper, "overview")
-    check("Chrome: log adulterado mostra o aviso de integridade comprometida", "INTEGRIDADE COMPROMETIDA" in out and 'class="broken"' in out)
+    check("Chrome: log adulterado mostra o aviso de integridade comprometida", "O histórico de auditoria foi adulterado" in out and 'class="ibox broken' in out and "Quando pode ter acontecido" in out)
 
     out, _ = dump(os.path.join(work, "evil"), "tasks")
     check("Chrome: HTML injetado num titulo e exibido como texto, nao interpretado",
@@ -359,7 +382,7 @@ if chrome:
     check("Chrome: segredo mascarado nao aparece na pagina", "hunter2" not in out and "REDACTED" in out)
 
     out, _ = dump(os.path.join(work, "nolog"), "overview")
-    check("Chrome: sem log aparece o aviso (nao 'verificado')", 'class="warning"' in out and "verificada: cadeia" not in out)
+    check("Chrome: sem log aparece o aviso (nao 'verificado')", 'class="ibox warning' in out and "verificada: cadeia" not in out)
 
     nodata = os.path.join(work, "nodata"); os.makedirs(os.path.join(nodata, "panel"))
     out, _ = dump(nodata, "overview")
