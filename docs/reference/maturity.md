@@ -42,7 +42,8 @@ próximo projeto. Até lá, eles ficam como **CI**.
 | F-05 | Log em camadas (edições e MCP na telemetria) | 0.14.0 | CI | `split` em projeto novo | `audit.telemetry: "signed"` põe tudo no log assinado |
 | F-09 | Custo de atenção (métrica e card do painel) | 0.14.0 | CI | ligado | Só leitura |
 | F-10 | Dependências entre features exigidas no brief e conferidas no check (`FEATURE-DEPS-UNDECLARED`, `FEATURE-DEP-UNKNOWN`, `FEATURE-DEP-CYCLE`) | não lançado | CI e HireMe | ligado | Contrato antigo sem o campo só gera aviso |
-| U-01 | Painel em telas pequenas e baixas: todas as telas na barra do celular, busca no celular, reflow a 320 px, alvos de 24 px, teclado nos cartões | não lançado | CI (estático) e auditoria manual no navegador | ligado | Pontos sobrepostos em Entregas no tempo continuam sobrepostos; a gaveta da feature é o caminho alternativo |
+| U-01 | Painel em telas pequenas e baixas: todas as telas na barra do celular, busca no celular, reflow a 320 px, alvos de 24 px, teclado nos cartões | não lançado | CI (estático) e auditoria manual no navegador | ligado | Ver U-02 |
+| U-02 | Usabilidade dos componentes do painel: integridade explicada (o que, como e quando), pílulas arrastáveis, foco nunca encoberto, gaveta devolve o foco, dicas no teclado e no toque, controles que respondem a clique e teclado, pontos sem sobreposição | não lançado | CI (estático) e auditoria de interação no navegador | ligado | Textos cortados com reticências mostram o texto inteiro só no `title` (mouse) ou na gaveta |
 | G-07 | Grafo do sistema (`impact`, `why`) e filtro no painel | 0.14.0 | CI | ligado | Só leitura |
 | H-01 | Módulos menores, sem mudar comportamento | 0.14.0 | CI | — | Refatoração; a API de `aisef_project` ficou igual |
 | L-02 | Worktree por fatia | 0.14.0 | CI, opcional | desligado | `parallel.mode: "paths"` (o padrão) |

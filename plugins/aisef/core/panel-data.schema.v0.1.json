@@ -38,7 +38,27 @@
             "signatures_verified": { "type": "boolean" },
             "head_verified": { "type": "boolean" },
             "errors": { "type": "array", "items": { "type": "string" } },
-            "warnings": { "type": "array", "items": { "type": "string" } }
+            "warnings": { "type": "array", "items": { "type": "string" } },
+            "details": {
+              "type": "array",
+              "description": "U-02: cada erro ou aviso explicado (panel_integrity.py): o que aconteceu, como foi detectado, o evento afetado e o ultimo integro antes dele.",
+              "items": {
+                "type": "object",
+                "required": ["level", "kind", "title", "how", "action", "raw"],
+                "properties": {
+                  "level": { "enum": ["error", "warning"] },
+                  "kind": { "type": "string" },
+                  "title": { "type": "string" },
+                  "how": { "type": "array", "items": { "type": "string" } },
+                  "action": { "type": "string" },
+                  "raw": { "type": "array", "items": { "type": "string" } },
+                  "event": { "type": ["object", "null"] },
+                  "before": { "type": ["object", "null"] },
+                  "stream": { "type": "string" },
+                  "missing": { "type": "integer" }
+                }
+              }
+            }
           }
         },
         "redactions": { "type": "integer", "minimum": 0, "description": "Quantos trechos com aparencia de segredo foram mascarados na geracao." },

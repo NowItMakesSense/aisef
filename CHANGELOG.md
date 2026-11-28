@@ -2,6 +2,20 @@
 
 ## Não lançado
 
+### Painel: usabilidade dos componentes (U-02)
+A U-01 media tamanhos; esta rodada usou cada componente no navegador, com os dados do HireMe, a 1280 e a 390 px: foco por teclado em cada controle (visível? coberto?), um clique em cada tipo de controle (responde?), rolagem (dá para chegar com o mouse?) e a gaveta (o foco entra, o Esc fecha, o foco volta).
+- **Sai o `integrity-slot`.** Era uma `div` vazia no grid do `main` que abria 20 px em branco no topo de toda tela. O aviso de contrato inválido ganhou estilo (antes saía sem caixa, com `id` repetido).
+- **Integridade explicada: o que, como e quando.** No lugar de uma faixa com frases do verificador, um cartão com um item por problema: o que aconteceu (evento alterado, evento apagado, log cortado, assinatura que não confere…), o evento afetado (número, quando foi gravado, por quem, o que dizia), como foi detectado e a janela em que pode ter acontecido (o alterado só depois de gravado; o apagado foi gravado entre os vizinhos que sobraram). Apagar um evento no meio vira um achado só, não um por evento deslocado. No fim, o que fazer e o comando de verificação com botão de copiar. Avisos sem adulteração ficam recolhidos. Novo `core/panel_integrity.py`; campo `integrity.details` no schema do painel.
+- **Pílulas de feature arrastáveis.** A linha rolava na horizontal sem barra e sem outro jeito de rolar com o mouse. Continua numa linha só, agora arrastável com o mouse (como o mapa, e soltar não seleciona), com a roda rolando para o lado; o esmaecido aparece só do lado em que há mais pílulas, a escolhida volta à vista quando a escolha muda, e o nome de cada uma traz id, título e estado.
+- **Rolagem com a barra visível** na barra inferior do celular e no trilho em janela baixa.
+- **Engenharia abre sem blueprint escolhido.** Antes já vinha com o blueprint mais recente aberto (e a última escolha ficava salva no navegador). Agora abre só o comparativo; clicar numa linha abre o desenho e clicar de novo fecha. Link direto: `#eng/BP-001`.
+- **Foco nunca escondido** (WCAG 2.4.11): com Tab, o controle ia parar sob o topo fixo, sob a barra inferior do celular ou sob a coluna fixa de rótulos das raias. `scroll-padding` resolve os três.
+- **A gaveta devolve o foco** a quem a abriu (antes caía no `body` e o teclado voltava ao topo); se a tela foi redesenhada, procura o mesmo alvo visível.
+- **Dicas no teclado e no toque.** As dicas (`data-tip`) só apareciam com o mouse; agora aparecem no foco e no toque, e o Esc fecha.
+- **Controles que não respondiam:** os ícones de atenção do Mapa só abriam com toque (agora clique, Enter e espaço, com `aria-expanded`); os tipos de decisão da Governança recebiam foco, mas Enter e espaço não faziam nada; o chip de tarefa fora do quadro (`T-MAINT`) parecia botão e não abria nada.
+- **Pontos de Entregas no tempo não se sobrepõem mais:** depois do layout, cada ponto vai para a primeira faixa em que não encosta em outro. Nas raias, a barra focada sobe acima dos marcadores, e o marcador ganha dica acessível.
+- Testes em `core/test_panel_responsive.py` (32, eram 16) e `core/test_panel.py` (evento alterado, apagado e log cortado explicados).
+
 ### Painel em telas pequenas e baixas (U-01)
 Auditoria no navegador, com os dados reais do HireMe, nas oito telas, de 320 a 1280 px e numa janela de 480 px de altura: transbordo, elemento cortado ou coberto, alvo de toque abaixo de 24 px (WCAG 2.5.8), controle sem nome e clique sem teclado.
 - **Nenhuma tela some no celular.** A barra inferior escondia Rastreabilidade, Histórico e Engenharia, e a Engenharia ficava sem caminho nenhum. Agora as oito telas cabem na barra (36 px cada); abaixo disso ela rola na horizontal. Com a janela baixa (até 500 px), o trilho lateral rola na vertical em vez de cortar os últimos ícones.

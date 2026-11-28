@@ -511,13 +511,16 @@ def build(project, out, schemas_dir, now=None):
         "integrity": integrity, "redactions": 0,
         "contains_secrets": False, "contains_model_reasoning": False,
     }
+    import panel_integrity  # U-02: o que quebrou, como e quando (antes da mascara: o resumo dos eventos tambem passa por ela)
+    integrity["details"] = panel_integrity.explain(log, integrity["errors"], integrity["warnings"])
     bundle = {"schema_version": "0.1.0", "manifest": manifest, **views, "source_errors": source_errors}
     counter = [0]
     bundle = redact_tree(bundle, counter)
     bundle["manifest"]["redactions"] = counter[0]
     if counter[0]:
-        bundle["manifest"]["integrity"]["warnings"].append(
-            "%d trecho(s) com aparencia de segredo foram mascarados nas fontes" % counter[0])
+        msg = "%d trecho(s) com aparencia de segredo foram mascarados nas fontes" % counter[0]
+        bundle["manifest"]["integrity"]["warnings"].append(msg)
+        bundle["manifest"]["integrity"]["details"] += panel_integrity.explain([], [], [msg])
         if bundle["manifest"]["integrity"]["status"] == "ok":
             bundle["manifest"]["integrity"]["status"] = "warning"
 

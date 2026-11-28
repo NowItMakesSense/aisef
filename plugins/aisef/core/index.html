@@ -136,7 +136,7 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
 .mapwrap { position: relative; overflow: auto; }
 /* arrastar com o mouse para navegar (mapa e raias): a mao aparece so quando ha o que rolar */
 .mapwrap.can-pan, .lanes.can-pan { cursor: grab; }
-.mapwrap.panning, .lanes.panning, .panning * { cursor: grabbing !important; user-select: none; }
+.mapwrap.panning, .lanes.panning, .fb-list.panning, .panning * { cursor: grabbing !important; user-select: none; }
 .map { position: relative; }
 .map svg.edges { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
 .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; }
@@ -324,10 +324,43 @@ td .glyph { width: 22px; height: 22px; } td .glyph::before { inset: -2px; border
 .skip { position: absolute; left: -9999px; top: 8px; z-index: 50; padding: 8px 12px; border-radius: 8px; background: var(--text); color: var(--ground); }
 .skip:focus { left: 64px; }
 .g-off { color: var(--wait); background: var(--wait-soft); opacity: .7; }
-#integrity.broken, #integrity.warning { display: grid; gap: 6px; padding: 14px 18px; border-radius: var(--r-card); font-size: 13.5px; }
-#integrity.broken { background: var(--fail); color: var(--surface); font-weight: 600; }
-#integrity.warning { background: var(--you-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--you) 40%, transparent); }
-#integrity ul { margin: 0; padding-left: 18px; font-weight: 400; }
+.ibox.broken, .ibox.warning { display: grid; gap: 6px; padding: 14px 18px; border-radius: var(--r-card); font-size: 13.5px; }
+.ibox.broken { background: var(--fail); color: var(--surface); font-weight: 600; }
+.ibox.warning { background: var(--you-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--you) 40%, transparent); }
+.ibox ul { margin: 0; padding-left: 18px; font-weight: 400; }
+.ibox-list { display: grid; gap: 10px; }
+.ibox.ib-card { padding: 0; gap: 0; font-weight: 400; }
+.ibox.broken.ib-card { background: var(--surface); color: var(--text); border: 1.5px solid var(--fail); }
+.ib-head { display: flex; gap: 12px; align-items: flex-start; padding: 14px 18px; background: var(--fail-soft); border-radius: var(--r-card) var(--r-card) 0 0; }
+.ib-head > svg.i { color: var(--fail); width: 22px; height: 22px; margin-top: 2px; }
+.ib-head h2 { margin: 0 0 4px; font-size: 15px; color: var(--fail); }
+.ib-head p { margin: 0; font-size: 13px; color: var(--text); }
+.ib-list { list-style: none; margin: 0; padding: 4px 18px; display: grid; }
+.ib-row { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.ib-row:first-child { border-top: 0; }
+.ib-body { display: grid; gap: 5px; min-width: 0; font-size: 13px; }
+.ib-body p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.ib-t { font-size: 13.5px; }
+.ib-k { color: var(--text); font-weight: 600; }
+.ib-ev { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--muted); }
+.ib-ev b { color: var(--text); }
+.ib-raw summary, .ib-more summary { cursor: pointer; font-size: 12px; color: var(--faint); }
+.ib-raw code { display: block; margin-top: 4px; white-space: pre-wrap; font: 11.5px/1.5 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.ib-more { padding: 6px 18px 10px; border-top: 1px solid var(--rule); }
+.ib-act { display: grid; gap: 8px; padding: 12px 18px 16px; border-top: 1px solid var(--rule); font-size: 13px; }
+.ib-act p { margin: 0; }
+.ib-cmd { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ib-cmd code { flex: 1 1 260px; min-width: 0; padding: 7px 10px; border-radius: 8px; background: var(--raised); font: 12px var(--mono); overflow-wrap: anywhere; }
+details.ibox.ib-card { padding: 12px 18px; }
+details.ib-card > summary { display: flex; gap: 8px; align-items: center; cursor: pointer; list-style: none; font-size: 13.5px; }
+details.ib-card > summary::-webkit-details-marker { display: none; }
+details.ib-card .ib-list { padding: 4px 0 0; }
+.ib-n { color: var(--muted); font-weight: 400; }
+/* foco nunca fica sob o que e fixo (WCAG 2.4.11): o topo de 56 px, a barra inferior do celular e a coluna de rotulos
+   fixa das raias. Sem isto, o Tab rolava o controle ate a borda e ele ficava escondido atras dessas faixas. */
+html { scroll-padding-top: 68px; }
+.lanes { scroll-padding-left: 260px; }
+@media (max-width: 760px) { html { scroll-padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } .lanes { scroll-padding-left: 162px; } }
 body[data-integrity="broken"] .cmd, body[data-integrity="broken"] .youbtn { display: none; }
 .seal.bad { color: var(--fail); background: var(--fail-soft); }
 .seal.warn { color: var(--you); background: var(--you-soft); }
@@ -550,11 +583,15 @@ details.grp .rq:first-of-type { border-top: 1px solid var(--rule); }
 .fbar .fb-all svg.i { width: 14px; height: 14px; }
 .fb-n { font-size: 11px; padding: 0 5px; border-radius: 999px; background: var(--raised); color: var(--muted); font-weight: 600; }
 .fb-sep { flex: none; width: 1px; height: 18px; background: var(--border); }
-.fb-list { display: flex; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 2px 0;
-  mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+/* pilulas numa linha so: arrasta com o mouse (como o mapa), a roda rola para o lado, o toque desliza e o Tab traz a
+   pilula focada para a vista. O esmaecido aparece so no lado em que ha mais pilulas. */
+.fb-list { display: flex; gap: 6px; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding: 2px 0; }
 .fb-list::-webkit-scrollbar { display: none; }
+.fb-list.can-pan { cursor: grab; }
+.fb-list.fade-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+.fb-list.fade-l { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px); mask-image: linear-gradient(90deg, transparent, #000 36px); }
+.fb-list.fade-l.fade-r { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
 .fb-list button { font-family: var(--mono); font-size: 12px; padding-right: 12px; }
-.fb-list button:last-child { margin-right: 24px; }
 i.fb-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
 i.fb-dot::before { content: none; }
 i.fb-dot.g-done { background: var(--done); } i.fb-dot.g-run, i.fb-dot.g-val { background: var(--run); } i.fb-dot.g-you { background: var(--you); }
@@ -674,7 +711,7 @@ button.tl-lbl { cursor: pointer; } button.tl-lbl:hover { background: var(--raise
 .tl-row.agg .tl-lbl { color: var(--muted); }
 .tl-track { position: relative; flex: none; }
 .tl-bar { position: absolute; height: 9px; padding: 0; border: 0; border-radius: 3px; background: var(--ph); cursor: pointer; }
-.tl-bar:hover, .tl-bar:focus-visible { outline: 2px solid color-mix(in srgb, var(--ph) 45%, transparent); outline-offset: 1px; z-index: 2; }
+.tl-bar:hover, .tl-bar:focus-visible { outline: 2px solid color-mix(in srgb, var(--ph) 45%, transparent); outline-offset: 1px; z-index: 4; }  /* acima dos marcadores (.tl-mk) */
 .tl-mk { position: absolute; top: 2px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1.5px solid currentColor; z-index: 2; }
 .tl-mk svg.i { width: 10px; height: 10px; }
 .legend .tl-mk.lmk { position: static; margin: 0; display: inline-grid; }
@@ -1124,18 +1161,17 @@ button.hbr.lnk:hover .hbr-l, button.hbr.lnk:focus-visible .hbr-l { color: var(--
 .dag-when { display: grid; justify-items: end; gap: 2px; font-size: 12px; color: var(--faint); white-space: nowrap; }
 @media (max-width: 760px) { .drawer { width: auto; } .drawer .kv { grid-template-columns: 110px 1fr; } .drawer .steps li { grid-template-columns: 1fr; gap: 2px; } }
 /* ---- U-01: telas pequenas e baixas, alvos de toque (WCAG 2.5.8, 24 px) ---- */
-.rail::-webkit-scrollbar { display: none; }
 .searchbtn { display: none; }
 @media (max-width: 760px) {
   /* as 8 telas cabem na barra inferior; abaixo de ~340 px ela rola na horizontal em vez de esconder telas */
-  .rail { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; gap: 0; scrollbar-width: none; }
+  .rail { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; gap: 0; scrollbar-width: thin; }
   .rail .hide-m { display: grid; }
   .rail a { flex: 1 0 36px; width: 36px; max-width: 64px; margin: 0 auto; }
   .searchbtn { display: grid; }
   .app { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 }
 /* janela baixa: o trilho rola na vertical (as dicas laterais somem nesse caso; o aria-label continua) */
-@media (max-height: 500px) and (min-width: 761px) { .rail { overflow-y: auto; scrollbar-width: none; } .rail .tip { display: none; } .mark { margin-bottom: 6px; flex: none; } .rail .sep { margin: 4px 0; flex: none; } .rail a { flex: none; } }
+@media (max-height: 500px) and (min-width: 761px) { .rail { overflow-y: auto; scrollbar-width: thin; } .rail .tip { display: none; } .mark { margin-bottom: 6px; flex: none; } .rail .sep { margin: 4px 0; flex: none; } .rail a { flex: none; } }
 button.chip, button.pm-l, button.rm-h, .chain button.lk { min-height: 24px; }
 button.chip { display: inline-flex; align-items: center; }
 .tl-bar::after, .dl-dot::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 24px); height: 24px; transform: translate(-50%, -50%); }
@@ -1191,7 +1227,6 @@ button.chip { display: inline-flex; align-items: center; }
     <button class="iconbtn" type="button" id="theme" aria-label="Alternar tema (t)"><svg class="i" aria-hidden="true"><use href="#i-sun"/></svg></button>
   </header>
   <main class="main" id="main" tabindex="-1">
-    <div id="integrity-slot"></div>
     <div id="view"></div>
     <div id="foot" hidden></div>
   </main>
@@ -1399,7 +1434,7 @@ button.chip { display: inline-flex; align-items: center; }
   /* ====================================== filtros (sobrevivem a recarregar) ====================================== */
   var feat = store("feat") || "", stFilter = "", gapsOnly = store("gaps") === "1", histFilter = store("hist") || "all";
   var impactQ = store("impact") || "";
-  var riskSel = store("risksel") || "", rtmFeat = store("rtmfeat") || "", mapView = store("mapview") || "tl", dlOpen = store("dlopen"), pages = {}, govType = store("govtype") || "", govFeat = store("govfeat") || "", govAll = store("govall") === "1", bpSel = store("bp") || "", showHash = store("hashes") === "1";
+  var riskSel = store("risksel") || "", rtmFeat = store("rtmfeat") || "", mapView = store("mapview") || "tl", dlOpen = store("dlopen"), pages = {}, govType = store("govtype") || "", govFeat = store("govfeat") || "", govAll = store("govall") === "1", bpSel = "", showHash = store("hashes") === "1";
   function visible(t) { return !feat || t.feature_id === feat; }
 
   /* ====================================== agentes por feature e por fatia ====================================== */
@@ -1813,7 +1848,8 @@ button.chip { display: inline-flex; align-items: center; }
     fs.forEach(function (f) {
       var on = feat ? feat === f : focus.indexOf(f) >= 0, mf = m.feats[f], st = mf ? featState(mf) : "todo";
       var title = mf && mf.title ? mf.title : ((D.features || []).filter(function (x) { return x.feature_id === f; })[0] || {}).title || "";
-      list.appendChild(pick(el("button", { cls: "fb-f", type: "button", "aria-pressed": String(on), title: f + (title ? " · " + title : "") + " · " + (ST[st] || ST.todo).lab },
+      list.appendChild(pick(el("button", { cls: "fb-f", type: "button", "aria-pressed": String(on), title: f + (title ? " · " + title : "") + " · " + (ST[st] || ST.todo).lab,
+        "aria-label": f + (title ? ", " + title : "") + ", " + (ST[st] || ST.todo).lab },
         [el("i", { cls: "fb-dot " + (ST[st] || ST.todo).cls, "aria-hidden": "true" }), f]), f));
     });
     return el("div", { cls: "fbar", role: "group", "aria-label": "Feature" }, [all, el("span", { cls: "fb-sep", "aria-hidden": "true" }), list]);
@@ -2022,7 +2058,7 @@ button.chip { display: inline-flex; align-items: center; }
       var lane = r.kind === "task" && laneBy[r.t.task_id];
       (lane ? lane.marks : []).forEach(function (mk) {
         var k = MK[mk.kind], at = ptime(mk.at); if (!k || !at) return;
-        track.appendChild(el("span", { cls: "tl-mk " + ST[k[0]].txt, style: "left:" + px(at) + "px", title: k[2] + " · " + stamp(mk.at) }, [icon(k[1])]));
+        track.appendChild(el("span", { cls: "tl-mk " + ST[k[0]].txt, style: "left:" + px(at) + "px", "data-tip": k[2] + " · " + stamp(mk.at), role: "img", "aria-label": k[2] + " · " + stamp(mk.at) }, [icon(k[1])]));
       });
       if (!items.length) track.appendChild(el("span", { cls: "tl-none", text: r.t && r.t.st === "dep" ? "aguarda " + r.t.waiting_on.join(" e ") : r.t && (r.t.st === "done" || r.t.st === "fail") ? "sem agentes registrados" : "nenhum agente ainda" }));
       var lbl;
@@ -2067,7 +2103,7 @@ button.chip { display: inline-flex; align-items: center; }
   }
 
   /* ====================================== gaveta de detalhe ====================================== */
-  var drawerId = null;
+  var drawerId = null, drawerOpener = null;
   function openDrawer(id, focus) {
     var t = byId(id), drawer = document.getElementById("drawer");
     if (!t) { closeDrawer(); return; }
@@ -2098,7 +2134,7 @@ button.chip { display: inline-flex; align-items: center; }
     if (steps.children.length) b.appendChild(el("div", {}, [el("h4", { text: "Últimas ações" }), steps]));
     drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false");
     Array.prototype.forEach.call(document.querySelectorAll(".node[data-open]"), function (n) { n.setAttribute("aria-pressed", String(n.getAttribute("data-open") === id)); });
-    if (focus) document.getElementById("d-close").focus();
+    if (focus) { rememberOpener(); document.getElementById("d-close").focus(); }
   }
   /* ====================================== gaveta do agente (executor, validador ou subagente) ====================================== */
   function agentById(id) { return B().agents.filter(function (a) { return a.agent_id === id; })[0]; }
@@ -2144,7 +2180,7 @@ button.chip { display: inline-flex; align-items: center; }
     b.appendChild(el("div", {}, [el("h4", { text: "Últimas ações deste agente" }), steps.children.length ? steps : el("p", { cls: "dec-opt", text: "Nenhuma ação registrada ainda." })]));
     drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false");
     markPressed();
-    if (focus) document.getElementById("d-close").focus();
+    if (focus) { rememberOpener(); document.getElementById("d-close").focus(); }
   }
   // agentes de uma fatia na gaveta: separados por fase, cada um com o que pediram, quando e quanto levou
   function drawerAgents(list) {
@@ -2167,10 +2203,30 @@ button.chip { display: inline-flex; align-items: center; }
     Array.prototype.forEach.call(document.querySelectorAll(".node[data-open], .dnode[data-open], .fc-main[data-open]"), function (n) { n.setAttribute("aria-pressed", String(drawerId === n.getAttribute("data-open"))); });
     Array.prototype.forEach.call(document.querySelectorAll(".sub-node[data-agent]"), function (n) { n.setAttribute("aria-pressed", String(drawerId === "agent:" + n.getAttribute("data-agent"))); });
   }
+  // quem abriu a gaveta recebe o foco de volta ao fechar (antes o foco caia no body e o teclado voltava ao topo)
+  function rememberOpener() {
+    var a = document.activeElement, d = document.getElementById("drawer");
+    if (!a || a === document.body || d.contains(a)) return;
+    drawerOpener = { el: a, open: a.getAttribute("data-open"), agent: a.getAttribute("data-agent") };
+  }
+  function restoreFocus() {
+    var o = drawerOpener; drawerOpener = null;
+    if (!o) return;
+    var t = o.el && document.contains(o.el) ? o.el : null;
+    // a tela pode ter sido redesenhada: procura o mesmo alvo, mas so um visivel (no celular o mapa fica escondido e
+    // tem os mesmos data-open da lista)
+    function vis(sel) { return Array.prototype.filter.call(document.querySelectorAll(sel), function (n) { return n.getClientRects().length > 0; })[0] || null; }
+    if (t && !t.getClientRects().length) t = null;
+    if (!t && o.open) t = vis('#view [data-open="' + o.open + '"]');
+    if (!t && o.agent) t = vis('#view [data-agent="' + o.agent + '"]');
+    (t || document.getElementById("main")).focus();
+  }
   function closeDrawer() {
+    var d = document.getElementById("drawer"), had = d.contains(document.activeElement);
     drawerId = null;
-    var d = document.getElementById("drawer"); d.classList.remove("open"); d.setAttribute("aria-hidden", "true");
+    d.classList.remove("open"); d.setAttribute("aria-hidden", "true");
     markPressed();
+    if (had) restoreFocus(); else drawerOpener = null;
   }
   document.addEventListener("click", function (e) {
     var ag = e.target.closest && e.target.closest("[data-agent]");
@@ -2181,9 +2237,50 @@ button.chip { display: inline-flex; align-items: center; }
   /* arrastar para navegar: segurar o botao esquerdo e arrastar rola o mapa de execucao e as raias. So mouse (o toque
      ja rola nativo); um arrasto de mais de 5 px nao vira clique, entao o clique simples num no continua abrindo a gaveta.
      Enquanto arrasta, a atualizacao ao vivo espera (busy), para o elemento nao ser trocado no meio do gesto. */
-  var PAN = ".mapwrap,.lanes", pan = null, panClick = false;
+  var PAN = ".mapwrap,.lanes,.fb-list", pan = null, panClick = false;
   function scrollable(w) { return w.scrollWidth > w.clientWidth + 1 || w.scrollHeight > w.clientHeight + 1; }
-  function markPan() { Array.prototype.forEach.call(view.querySelectorAll(PAN), function (w) { w.classList.toggle("can-pan", scrollable(w)); }); }
+  function markPan() { Array.prototype.forEach.call(view.querySelectorAll(PAN), function (w) { w.classList.toggle("can-pan", scrollable(w)); }); fbFit(); dodgeDots(); }
+  // pilulas de feature: a escolhida sempre a vista, e o esmaecido so do lado em que ha mais
+  function fbFade(w) { w.classList.toggle("fade-l", w.scrollLeft > 2); w.classList.toggle("fade-r", w.scrollLeft + w.clientWidth < w.scrollWidth - 2); }
+  var fbSel = null;  // so ajusta quando a escolha muda: a atualizacao ao vivo nao desfaz o arrasto de quem esta olhando
+  function fbFit() {
+    Array.prototype.forEach.call(view.querySelectorAll(".fb-list"), function (w) {
+      var on = w.querySelector('[aria-pressed="true"]'), key = on ? on.textContent : "";
+      if (on && key !== fbSel) {
+        var r = on.getBoundingClientRect(), q = w.getBoundingClientRect();
+        if (r.left < q.left || r.right > q.right) w.scrollLeft += r.left - q.left - 36;
+      }
+      fbSel = key;
+      fbFade(w);
+    });
+  }
+  document.addEventListener("scroll", function (e) { if (e.target.classList && e.target.classList.contains("fb-list")) fbFade(e.target); }, true);
+  // roda do mouse (vertical) rola as pilulas para o lado quando o ponteiro esta sobre elas
+  document.addEventListener("wheel", function (e) {
+    var w = e.target.closest && e.target.closest(".fb-list");
+    if (!w || w.scrollWidth <= w.clientWidth + 1 || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    var before = w.scrollLeft; w.scrollLeft += e.deltaY;
+    if (w.scrollLeft !== before) e.preventDefault();
+  }, { passive: false });
+  /* Entregas no tempo: fatias que terminam perto umas das outras ficavam com os pontos um sobre o outro (so o de cima
+     recebia clique). Depois do layout, cada ponto vai para a primeira faixa vertical em que nao encosta em outro. */
+  function dodgeDots() {
+    Array.prototype.forEach.call(view.querySelectorAll(".dl-feat .dl-track"), function (tr) {
+      var items = Array.prototype.slice.call(tr.querySelectorAll(".dl-dot, .dl-flag"));
+      if (items.length < 2) return;
+      var lanes = [0, -13, 13, -26, 26], last = {};
+      items.forEach(function (n) { n.style.top = ""; });
+      items.map(function (n) { var r = n.getBoundingClientRect(); return { n: n, l: r.left, r: r.right }; })
+        .sort(function (a, b) { return a.l - b.l; })
+        .forEach(function (it) {
+          var k = 0;
+          while (k < lanes.length - 1 && last[k] !== undefined && it.l < last[k] + 2) k++;
+          last[k] = it.r;
+          if (lanes[k]) it.n.style.top = "calc(50% + " + lanes[k] + "px)";
+        });
+      tr.style.minHeight = Object.keys(last).length > 3 ? "72px" : Object.keys(last).length > 1 ? "48px" : "";
+    });
+  }
   document.addEventListener("pointerdown", function (e) {
     if (e.pointerType !== "mouse" || e.button !== 0) return;
     var w = e.target.closest && e.target.closest(PAN);
@@ -2260,20 +2357,20 @@ button.chip { display: inline-flex; align-items: center; }
     if (c.available) rows.push(["i-coin", "Custo estimado", money(c.total_usd, c), costNote(c)]);
     return el("div", { cls: "attn-rail", role: "group", "aria-label": "Pontos de atenção" }, rows.map(function (r, i) {
       var pid = "attn-pop-" + i;
-      var bt = el("button", { cls: "mx-b", type: "button", "aria-label": r[1] + ": " + r[2], "aria-describedby": pid }, [icon(r[0])]);
+      var bt = el("button", { cls: "mx-b", type: "button", "aria-label": r[1] + ": " + r[2], "aria-describedby": pid, "aria-expanded": "false" }, [icon(r[0])]);
       var mx = el("div", { cls: "mx" }, [bt,
         el("div", { cls: "mx-pop", id: pid, role: "tooltip" }, [el("span", { cls: "mx-k", text: r[1] }), el("b", { cls: "mx-v num", text: r[2] }),
           el("span", { cls: "mx-s", text: r[3] }), r[4] || null])]);
-      bt.addEventListener("pointerup", function (e) {
-        if (e.pointerType === "mouse") return;
+      // clique, toque, Enter e espaco abrem e fecham o numero (antes so o toque abria; mouse e teclado dependiam do hover/foco)
+      bt.addEventListener("click", function () {
         var on = !mx.classList.contains("open");
-        closeAttnPops(); mx.classList.toggle("open", on);
+        closeAttnPops(); mx.classList.toggle("open", on); bt.setAttribute("aria-expanded", String(on));
       });
       mx.addEventListener("mouseleave", function () { mx.classList.remove("open"); });
       return mx;
     }));
   }
-  function closeAttnPops() { Array.prototype.forEach.call(document.querySelectorAll(".mx.open"), function (x) { x.classList.remove("open"); }); }
+  function closeAttnPops() { Array.prototype.forEach.call(document.querySelectorAll(".mx.open"), function (x) { x.classList.remove("open"); var b = x.querySelector(".mx-b"); if (b) b.setAttribute("aria-expanded", "false"); }); }
   document.addEventListener("pointerdown", function (e) { if (!(e.target.closest && e.target.closest(".mx"))) closeAttnPops(); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") { closeAttnPops(); var a = document.activeElement; if (a && a.classList.contains("mx-b")) a.blur(); } });
   // dinheiro na moeda local (cotacao do build_panel); sem cotacao, em dolar
@@ -2361,7 +2458,8 @@ button.chip { display: inline-flex; align-items: center; }
         el("span", {}, [el("b", { cls: "num", text: fmtInt(tests) }), "execuções de teste"]),
         el("span", {}, [el("b", { cls: "num", text: fmtInt(ev) }), "evidências anexadas"])]),
       gaps.length ? el("div", { cls: "hc-sub" }, [el("span", { cls: "hc-k", text: "Sem validação independente" }),
-        el("div", { cls: "hc-chips" }, gaps.slice(0, 12).map(function (t) { return el("button", { cls: "chip", type: "button", "data-open": t.task_id, title: t.title, text: t.task_id }); }))]) : null,
+        el("div", { cls: "hc-chips" }, gaps.slice(0, 12).map(function (t) { return byId(t.task_id) ? el("button", { cls: "chip", type: "button", "data-open": t.task_id, title: t.title, text: t.task_id })
+          : el("span", { cls: "chip", title: t.title, text: t.task_id }); }))]) : null,
       insight(gaps.length ? plural(gaps.length, "fatia passou", "fatias passaram") + " sem validador (" + Object.keys(feats).join(", ") + "). Para um auditor, elas não têm prova independente; " +
         (nNone.length ? plural(nNone.length, "delas não teve", "delas não tiveram") + " nem revisão." : "só a revisão.") : done.length ? "Toda fatia concluída tem validação independente." : "")]));
   }
@@ -2537,6 +2635,11 @@ button.chip { display: inline-flex; align-items: center; }
   }
   function hideTip() { if (ctip) ctip.classList.remove("on"); }
   document.addEventListener("mouseover", function (e) { var n = e.target.closest && e.target.closest("[data-tip]"); if (n) showTip(n); else hideTip(); });
+  // teclado e toque: a dica tambem aparece no foco e no toque (antes so o mouse a via)
+  document.addEventListener("focusin", function (e) { var n = e.target.closest && e.target.closest("[data-tip]"); if (n) showTip(n); else hideTip(); });
+  document.addEventListener("focusout", hideTip);
+  document.addEventListener("pointerdown", function (e) { if (e.pointerType === "mouse") return; var n = e.target.closest && e.target.closest("[data-tip]"); if (n) showTip(n); else hideTip(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") hideTip(); });
   document.addEventListener("scroll", hideTip, true);
 
 
@@ -2680,10 +2783,13 @@ button.chip { display: inline-flex; align-items: center; }
       var y = TOP + i * ROW + ROW / 2;
       var lt = mk("text", { x: 0, y: y + 4, "class": "dln-y lnk", tabindex: "0", role: "button" }, lab(ty));
       lt.setAttribute("aria-label", "Ver os pedidos de " + lab(ty));
-      lt.addEventListener("click", function () {
+      var goType = function () {
         if (ty !== "architecture_decision") { govType = ty; store("govtype", ty); pages.decided = 0; render(false); }
         setTimeout(function () { var p = document.getElementById(ty === "architecture_decision" ? "p-decisions" : "p-decided"); if (p) p.scrollIntoView({ behavior: "smooth", block: "start" }); }, 30);
-      });
+      };
+      lt.addEventListener("click", goType);
+      // texto SVG com role=button: Enter e espaco tambem (recebia foco pelo Tab, mas o teclado nao fazia nada)
+      lt.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goType(); } });
       mk("line", { x1: LBL, x2: W - 12, y1: y, y2: y, "class": "dln-row" });
       dec.filter(function (a) { return a.request_type === ty; }).forEach(function (a) {
         var c = ptime(a.created_at), dd = ptime(a.decided.decided_at), inc = c && dd < c, wait = c && !inc ? dd - c : null;
@@ -2785,8 +2891,10 @@ button.chip { display: inline-flex; align-items: center; }
         el("td", {}, [dots(thr.map(function (t) { return ["t-" + (SEV[t.severity] || "todo"), lab(t.severity) + " · " + t.description]; }))]),
         el("td", {}, [dots((b.migrations || []).map(function (mg) { return [mg.destructive ? "destr" : mg.reversible ? "rev" : "norev", mg.id + (mg.destructive ? " · destrutiva" : mg.reversible ? " · reversível" : " · sem rollback")]; }))]),
       ]);
-      tr.addEventListener("click", function () { bpSel = b.blueprint_id; store("bp", bpSel); render(false); });
-      tr.addEventListener("keydown", function (e) { if (e.key === "Enter") { bpSel = b.blueprint_id; store("bp", bpSel); render(false); } });
+      // clicar escolhe; clicar de novo na mesma linha fecha o desenho
+      var pickBp = function () { bpSel = bpSel === b.blueprint_id ? "" : b.blueprint_id; render(false); };
+      tr.addEventListener("click", pickBp);
+      tr.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickBp(); } });
       tb.appendChild(tr);
     });
     if (missing.length) tb.appendChild(el("tr", { cls: "bm-miss" }, [el("td", { colspan: "5" }, [el("span", { cls: "bm-n" }, [
@@ -2922,23 +3030,13 @@ button.chip { display: inline-flex; align-items: center; }
     eng: function () {
       var bps = D.engineering || [];
       if (!bps.length) return [titleRow("Engenharia", "O desenho técnico aprovado para as features."), panel(null, "Blueprints", "", empty("Nenhum Engineering Blueprint ainda."))];
-      var ids = bps.map(function (x) { return x.blueprint_id; }), pick = ids.indexOf(bpSel) >= 0 ? bpSel : ids.slice().sort().pop();
-      var bp = bps.filter(function (x) { return x.blueprint_id === pick; })[0];
-      var choose = null && el("div", { cls: "filters" }, [el("span", { cls: "dec-opt", text: "Blueprint" }), bps.length > 6 ? (function () {
-        var sel = el("select", { "aria-label": "Escolher blueprint" }, bps.map(function (x) { return el("option", { value: x.blueprint_id, selected: x.blueprint_id === pick ? "selected" : null, text: x.blueprint_id + " · " + x.feature_id + " · " + x.title }); }));
-        sel.addEventListener("change", function () { bpSel = sel.value; store("bp", bpSel); render(false); });
-        return sel;
-      })() : (function () {
-        var seg = el("div", { cls: "seg", role: "group", "aria-label": "Blueprint" });
-        bps.forEach(function (x) {
-          var bt = el("button", { type: "button", "aria-pressed": String(x.blueprint_id === pick), title: x.title, text: x.blueprint_id + " · " + x.feature_id });
-          bt.addEventListener("click", function () { bpSel = x.blueprint_id; store("bp", bpSel); render(false); });
-          seg.appendChild(bt);
-        });
-        return seg;
-      })()]);
+      // a aba abre so com o comparativo: antes ja vinha com o blueprint mais recente aberto (e a ultima escolha salva)
+      var ids = bps.map(function (x) { return x.blueprint_id; }), deep = (location.hash.split("/")[1] || "");  // #eng/BP-001 abre esse
+      if (deep && ids.indexOf(deep) >= 0 && !bpSel) bpSel = deep;
+      var pick = ids.indexOf(bpSel) >= 0 ? bpSel : "";
+      var bp = pick ? bps.filter(function (x) { return x.blueprint_id === pick; })[0] : null;
       return [titleRow("Engenharia", plural(bps.length, "blueprint", "blueprints") + ": o desenho técnico aprovado de cada feature. Clique numa linha do comparativo para ver o desenho."),
-        panel("p-bm", "Comparativo de blueprints", "o desenho técnico de cada feature lado a lado", blueprintMatrix(pick))].concat(blueprint(bp));
+        panel("p-bm", "Comparativo de blueprints", "o desenho técnico de cada feature lado a lado", blueprintMatrix(pick))].concat(bp ? blueprint(bp) : []);
     },
     agentes: function () {
       return [titleRow("Equipe de agentes", "Quem constrói, revisa e valida, quanto custa cada papel e o que o projeto já aprendeu."),
@@ -3294,6 +3392,54 @@ button.chip { display: inline-flex; align-items: center; }
       rail.appendChild(a);
     });
   }
+  /* U-02: integridade explicada. Cada achado (panel_integrity.py) diz o que aconteceu, como foi detectado, o evento
+     afetado (numero, quando foi registrado, por quem, o que dizia) e a janela em que a mudanca pode ter ocorrido:
+     depois do ultimo evento integro e antes desta verificacao. Avisos sem adulteracao ficam recolhidos. */
+  function integrityCard(ig, m) {
+    var det = ig.details || (ig.errors || []).map(function (t) { return { level: "error", title: t, how: [], raw: [t] }; })
+      .concat((ig.warnings || []).map(function (t) { return { level: "warning", title: t, how: [], raw: [t] }; }));
+    var errs = det.filter(function (d) { return d.level === "error"; }), warns = det.filter(function (d) { return d.level !== "error"; });
+    var evs = errs.filter(function (d) { return d.event; }), first = evs[0] && evs[0].event;
+    function evLine(e) {
+      return el("div", { cls: "ib-ev" }, [el("b", { cls: "mono", text: "#" + e.seq }), el("span", { text: when(e.at) }),
+        e.event_type ? el("span", { cls: "mono", text: e.event_type }) : null, e.actor ? el("span", { text: "por " + e.actor }) : null,
+        e.task_id ? el("span", { cls: "mono", text: e.task_id }) : null]);
+    }
+    function row(d) {
+      var e = d.event, b = d.before, gap = d.kind === "removed" || d.kind === "inserted" || d.kind === "chain", verif = when(m.generated_at);
+      // quando: o evento alterado so pode ter mudado depois de gravado; o apagado foi gravado entre os vizinhos que sobraram
+      var window_ = !e ? null
+        : d.kind === "removed" && b ? "O evento apagado foi gravado entre " + when(b.at) + " (#" + b.seq + ") e " + when(e.at) + " (#" + e.seq + "). Foi tirado do arquivo depois disso e antes desta verificação (" + verif + ")."
+        : d.kind === "truncated" ? "Depois de " + when(e.at) + " (#" + e.seq + ", o último que restou) e antes desta verificação (" + verif + ")."
+        : "Depois de " + when(e.at) + ", quando o #" + e.seq + " foi gravado, e antes desta verificação (" + verif + ").";
+      return el("li", { cls: "ib-row " + d.level }, [
+        glyph(d.level === "error" ? "fail" : "you"),
+        el("div", { cls: "ib-body" }, [
+          el("b", { cls: "ib-t", text: d.title + (d.missing ? " (" + plural(d.missing, "evento apagado", "eventos apagados") + ")" : "") + (d.stream ? " · log de " + d.stream : "") }),
+          e && gap && b ? el("div", { cls: "ib-ev" }, [el("span", { text: "Entre " }), el("b", { cls: "mono", text: "#" + b.seq }), el("span", { text: when(b.at) }),
+            el("span", { text: "e" }), el("b", { cls: "mono", text: "#" + e.seq }), el("span", { text: when(e.at) })]) : e ? evLine(e) : null,
+          e && e.summary && !gap ? el("p", { cls: "ib-sum" }, [el("span", { cls: "ib-k", text: d.kind === "truncated" ? "Último evento que restou: " : "O que o evento dizia: " }), e.summary]) : null,
+          (d.how || []).length ? el("p", {}, [el("span", { cls: "ib-k", text: "Como foi detectado: " }), d.how.join(" ")]) : null,
+          window_ && d.level === "error" ? el("p", {}, [el("span", { cls: "ib-k", text: "Quando pode ter acontecido: " }), window_]) : null,
+          el("details", { cls: "ib-raw" }, [el("summary", { text: "Mensagem do verificador" }), el("code", { text: (d.raw || []).join(" · ") })])])]);
+    }
+    var vcmd = "python -I <CORE>/aisef_project.py verify --project .", cb = el("button", { cls: "btn sm", type: "button", text: "Copiar" });
+    cb.addEventListener("click", function () { copyText(vcmd, cb); });
+    if (!errs.length) {  // so avisos: nada foi adulterado, fica recolhido
+      return el("details", { cls: "ibox warning ib-card", role: "status" }, [
+        el("summary", {}, [icon("i-shield"), el("b", { text: "Integridade verificada com ressalvas" }), el("span", { cls: "ib-n", text: " · " + plural(warns.length, "ponto", "pontos") + " a conferir, nenhuma adulteração" })]),
+        el("ul", { cls: "ib-list" }, warns.map(row))]);
+    }
+    return el("section", { cls: "ibox broken ib-card", role: "alert", "aria-labelledby": "ib-h" }, [
+      el("div", { cls: "ib-head" }, [icon("i-shield"), el("div", {}, [
+        el("h2", { id: "ib-h", text: "O histórico de auditoria foi adulterado" }),
+        el("p", { text: (evs.length ? plural(evs.length, "evento afetado", "eventos afetados") + (first ? ", o primeiro é o #" + first.seq + " (registrado em " + when(first.at) + ")" : "") + ". " : "")
+          + "Verificado em " + when(m.generated_at) + ". Não confie nos dados abaixo até investigar; os comandos de aprovar foram ocultados." })])]),
+      el("ol", { cls: "ib-list" }, errs.map(row)),
+      warns.length ? el("details", { cls: "ib-more" }, [el("summary", { text: plural(warns.length, "outro ponto a conferir", "outros pontos a conferir") }), el("ul", { cls: "ib-list" }, warns.map(row))]) : null,
+      el("div", { cls: "ib-act" }, [el("p", { text: "O que fazer: rode a verificação para ver os detalhes e compare o log com o Git (git log -p .aisef/audit/) para achar quando o arquivo mudou." }),
+        el("div", { cls: "ib-cmd" }, [el("code", { text: vcmd }), cb])])]);
+  }
   function renderTop() {
     var m = D.manifest, ig = m.integrity, pend = (D.approvals.pending || []).length;
     document.getElementById("crumb").textContent = "";
@@ -3309,18 +3455,15 @@ button.chip { display: inline-flex; align-items: center; }
     else { seal.appendChild(icon("i-shield")); seal.appendChild(el("span", { text: ig.status === "broken" ? "Log comprometido" : "Log com ressalvas" })); }
     var yb = document.getElementById("youbtn");
     yb.hidden = !pend; yb.textContent = ""; yb.appendChild(icon("i-hand")); yb.appendChild(document.createTextNode(plural(pend, "decisão sua", "decisões suas")));
-    var slot = document.getElementById("integrity-slot"); slot.textContent = "";
+    // aviso de integridade e de contrato invalido: so existe quando ha o que avisar (um no vazio no grid do main abria
+    // 20 px em branco no topo de todas as telas)
+    var prev = document.getElementById("integrity"); if (prev) prev.remove();
     document.body.removeAttribute("data-integrity");
-    if (ig.status !== "ok") {
-      var box = el("div", { id: "integrity", cls: ig.status === "broken" ? "broken" : "warning", role: ig.status === "broken" ? "alert" : "status" }, [
-        el("div", { text: ig.status === "broken" ? "INTEGRIDADE COMPROMETIDA: o histórico de auditoria não confere. Não confie nos dados abaixo até investigar; os comandos de aprovar foram ocultados."
-          : "Atenção: integridade verificada com ressalvas." })]);
-      var items = (ig.errors || []).concat(ig.warnings || []);
-      if (items.length) box.appendChild(el("ul", {}, items.map(function (t) { return el("li", { text: t }); })));
-      slot.appendChild(box);
-      if (ig.status === "broken") document.body.setAttribute("data-integrity", "broken");
-    }
-    (D.source_errors || []).forEach(function (s) { slot.appendChild(el("div", { id: "integrity-src", cls: "warning", role: "status" }, [el("div", { text: "Contrato ignorado por ser inválido: " + s.file + " — " + (s.errors || []).join("; ") + ". Rode o aisef-check." })])); });
+    var boxes = [];
+    if (ig.status !== "ok") boxes.push(integrityCard(ig, m));
+    if (ig.status === "broken") document.body.setAttribute("data-integrity", "broken");
+    (D.source_errors || []).forEach(function (s) { boxes.push(el("div", { cls: "ibox warning", role: "status" }, [el("div", { text: "Contrato ignorado por ser inválido: " + s.file + " — " + (s.errors || []).join("; ") + ". Rode o aisef-check." })])); });
+    if (boxes.length) { var view = document.getElementById("view"); view.parentNode.insertBefore(el("div", { id: "integrity", cls: "ibox-list" }, boxes), view); }
     document.getElementById("foot").textContent = "Gerado em " + when(m.generated_at) + " · construtor " + m.builder_version + " · log " + (m.source.log_id || "—") +
       " até a sequência " + (m.source.head_sequence === null ? "—" : m.source.head_sequence) + (IS_LIVE ? "" : " · página estática: use build_panel.py --serve para acompanhar ao vivo");
     tickLive();
