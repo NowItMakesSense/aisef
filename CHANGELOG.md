@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+## 0.17.1 (2026-11-27)
+
 ### Painel: usabilidade dos componentes (U-02)
 A U-01 media tamanhos; esta rodada usou cada componente no navegador, com os dados do HireMe, a 1280 e a 390 px: foco por teclado em cada controle (visível? coberto?), um clique em cada tipo de controle (responde?), rolagem (dá para chegar com o mouse?) e a gaveta (o foco entra, o Esc fecha, o foco volta).
 - **Sai o `integrity-slot`.** Era uma `div` vazia no grid do `main` que abria 20 px em branco no topo de toda tela. O aviso de contrato inválido ganhou estilo (antes saía sem caixa, com `id` repetido).
