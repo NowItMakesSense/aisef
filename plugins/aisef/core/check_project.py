@@ -258,6 +258,7 @@ RULE_GROUPS = [
     ("check_rules_4", "rules_tdd_no_log"),  # E-01: evidencia de TDD cruzada com o log assinado
     ("check_rules_4", "rules_sandbox_do_perfil"),  # S-04: sandbox estrito nos perfis team e regulated
     ("check_rules_4", "rules_dependencias_de_feature"),  # F-10: dependencias entre features declaradas e sem ciclo
+    ("check_rules_4", "rules_fim_das_autorizacoes"),  # A-01: autorizacao de feature aceita nao segue ativa
     ("check_rules_2", "rules_autoridade_de_design_arquitetura_detecta"),  # autoridade de design (0.6.1) / arquitetura detectada (aisef_detect)
     ("check_rules_2", "rules_roteamento_de_modelo"),  # roteamento de modelo (execution_profile)
     ("check_rules_2", "rules_aprovacoes_e_autorizacoes"),  # aprovacoes e autorizacoes

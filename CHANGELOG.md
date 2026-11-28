@@ -2,6 +2,22 @@
 
 ## Não lançado
 
+### Autorização de escopo termina de verdade (A-01)
+Veio do HireMe: a AUTH-001 e a AUTH-002 eram da FEAT-001, aceita em 21/11, mas seguiram `active` até vencer em 27/11, quando o check passou a acusar `AUTH-EXPIRED`. O `termination_condition` (`expiry`, `feature_accepted`) era só declarado: nada encerrava a autorização.
+- Novo `core/aisef_auth_life.py`: autorização de feature aceita vira `closed`; a vencida vira `expired`. Cada encerramento entra no histórico da autorização e no log assinado (`authorization_closed`, tipo novo, ou `authorization_expired`). Idempotente.
+- Roda sozinho no aceite da feature (`decide` de `feature_acceptance` e `append --type feature_accepted`), no `next` e no doctor do início de sessão.
+- Regra nova `AUTH-NOT-CLOSED` (aviso): autorização ainda ativa de feature já aceita, para o projeto que não rodou nenhum dos três.
+- Testes em `core/test_auth_life.py` (9).
+
+### Check sem aviso que não pede ação (A-02)
+Também do HireMe: avisos que não apontavam nada a fazer.
+- `PAR-PATH-OVERLAP` só vale enquanto uma das duas tarefas está aberta; duas tarefas já encerradas não rodam mais juntas.
+- Entidade de blueprint ganha `storage` (`table`, padrão, `document`, `file` ou `memory`); `BP-NO-PK` só cobra chave primária de tabela (um arquivo com um token não tem uma).
+- Testes em `core/test_check_ruido.py` (5).
+
+### Painel: texto cortado legível no teclado e no toque
+Texto cortado com reticências guardava o inteiro só no `title`, que só o mouse vê. No foco e no toque, ele agora aparece como dica.
+
 ## 0.17.1 (2026-11-27)
 
 ### Painel: usabilidade dos componentes (U-02)

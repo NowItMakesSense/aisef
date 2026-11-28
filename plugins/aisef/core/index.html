@@ -2629,16 +2629,19 @@ button.chip { display: inline-flex; align-items: center; }
   var ctip = null;
   function showTip(n) {
     if (!ctip) { ctip = el("div", { cls: "ctip", role: "tooltip" }); document.body.appendChild(ctip); }
-    var r = n.getBoundingClientRect(); ctip.textContent = n.getAttribute("data-tip"); ctip.classList.add("on");
+    var r = n.getBoundingClientRect(); ctip.textContent = n.getAttribute("data-tip") || tipTitle(n); ctip.classList.add("on");
     var w = ctip.offsetWidth, x = Math.min(innerWidth - w - 8, Math.max(8, r.left + r.width / 2 - w / 2)), y = r.top - ctip.offsetHeight - 8;
     ctip.style.left = x + "px"; ctip.style.top = (y < 8 ? r.bottom + 8 : y) + "px";
   }
   function hideTip() { if (ctip) ctip.classList.remove("on"); }
   document.addEventListener("mouseover", function (e) { var n = e.target.closest && e.target.closest("[data-tip]"); if (n) showTip(n); else hideTip(); });
-  // teclado e toque: a dica tambem aparece no foco e no toque (antes so o mouse a via)
-  document.addEventListener("focusin", function (e) { var n = e.target.closest && e.target.closest("[data-tip]"); if (n) showTip(n); else hideTip(); });
+  // teclado e toque: a dica tambem aparece no foco e no toque (antes so o mouse a via). Texto cortado com reticencias
+  // guarda o inteiro no title, que so o mouse ve: no foco e no toque ele vira dica tambem.
+  function tipTitle(n) { var t = n.getAttribute("title") ? n : n.querySelector && n.querySelector("[title]"); return t ? t.getAttribute("title") : ""; }
+  function tipFor(n) { return n.closest && (n.closest("[data-tip]") || (tipTitle(n) ? n : null) || n.closest("[title]")); }
+  document.addEventListener("focusin", function (e) { var n = tipFor(e.target); if (n && (n.getAttribute("data-tip") || tipTitle(n))) showTip(n); else hideTip(); });
   document.addEventListener("focusout", hideTip);
-  document.addEventListener("pointerdown", function (e) { if (e.pointerType === "mouse") return; var n = e.target.closest && e.target.closest("[data-tip]"); if (n) showTip(n); else hideTip(); });
+  document.addEventListener("pointerdown", function (e) { if (e.pointerType === "mouse") return; var n = tipFor(e.target); if (n && (n.getAttribute("data-tip") || tipTitle(n))) showTip(n); else hideTip(); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") hideTip(); });
   document.addEventListener("scroll", hideTip, true);
 

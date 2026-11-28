@@ -25,7 +25,7 @@
         "tool_used", "operation_requested", "operation_decided", "operation_executed", "file_modified",
         "test_run", "evidence_recorded", "validation_result",
         "failure", "recovery_attempt", "scope_discovery",
-        "authorization_granted", "authorization_revoked", "authorization_expired",
+        "authorization_granted", "authorization_revoked", "authorization_expired", "authorization_closed",
         "approval_requested", "approval_granted", "approval_rejected",
         "decision_recorded", "feature_accepted", "feature_reopened",
         "correction"

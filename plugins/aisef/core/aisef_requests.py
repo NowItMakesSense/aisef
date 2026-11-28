@@ -168,6 +168,9 @@ def decide(project, request_id, choice, option=None, note=None, ack=(), authoriz
     write_json(req_path, req)
     if req.get("request_type") == "plan_approval" and req["status"] == "approved" and req.get("feature_id"):
         reflect_plan_approval(project, req["feature_id"], when)
+    if req.get("request_type") == "feature_acceptance" and req["status"] == "approved":
+        import aisef_auth_life  # A-01: aceite encerra as autorizacoes de escopo da feature
+        aisef_auth_life.close_finished(project)
     return req
 
 

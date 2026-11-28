@@ -144,6 +144,7 @@
             "properties": {
               "id": { "$ref": "#/$defs/id" },
               "name": { "type": "string" },
+              "storage": { "enum": ["table", "document", "file", "memory"], "description": "Onde a entidade fica (padrao table). So tabela precisa de chave primaria (BP-NO-PK)." },
               "fields": {
                 "type": "array", "minItems": 1,
                 "items": {

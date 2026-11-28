@@ -128,6 +128,9 @@ def main(argv):
             res = aisef_anchor.milestone(project, "aceite %s" % (a.feature or ""))
             if res:
                 print(("carimbo de tempo: %s" % res["gen_time"]) if res["ok"] else "AVISO: " + res["warning"])
+            import aisef_auth_life  # A-01: o aceite encerra as autorizacoes de escopo da feature
+            for aid, st, why in aisef_auth_life.close_finished(project):
+                print("%s -> %s (%s)" % (aid, st, why))
         return 0
     if a.command == "settings":
         path, added = native_settings(project, a.apply)
@@ -156,6 +159,9 @@ def main(argv):
         return 0
     if a.command == "next":
         import aisef_next
+        import aisef_auth_life  # A-01: autorizacoes vencidas ou de feature aceita deixam de ficar 'active'
+        for aid, st, why in aisef_auth_life.close_finished(project):
+            print("%s -> %s (%s)" % (aid, st, why), file=sys.stderr)
         res = aisef_next.compute_next(project, a.feature)
         print(json.dumps(res, ensure_ascii=False, indent=2) if a.json else aisef_next.format_next(res))
         return 0

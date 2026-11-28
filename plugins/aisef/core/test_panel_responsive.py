@@ -92,7 +92,8 @@ check("pilula de feature com nome completo (id, titulo e estado)", re.search(r'c
 hidden = [m.group(1).strip().splitlines()[-1] for m in re.finditer(r"([^{}]+)\{[^}]*scrollbar-width: none", css)]
 check("so as pilulas (que tem arraste, roda e Tab) rolam com a barra escondida", hidden == [".fb-list"])
 check("dica (data-tip) aparece tambem no foco do teclado e no toque",
-      'addEventListener("focusin"' in js and re.search(r'addEventListener\("pointerdown", function \(e\) \{ if \(e\.pointerType === "mouse"\) return; var n = e\.target\.closest && e\.target\.closest\("\[data-tip\]"\)', js) is not None)
+      'addEventListener("focusin"' in js and re.search(r'addEventListener\("pointerdown", function \(e\) \{ if \(e\.pointerType === "mouse"\) return; var n = tipFor\(e\.target\)', js) is not None)
+check("texto cortado (inteiro so no title) vira dica no foco e no toque", "function tipTitle(n)" in js and 'getAttribute("data-tip") || tipTitle(n)' in js)
 check("gaveta devolve o foco a quem a abriu", "function restoreFocus()" in js and re.search(r"if \(had\) restoreFocus\(\)", js) is not None
       and js.count("rememberOpener();") == 2)
 check("ponto de atencao do mapa abre com clique e teclado (aria-expanded)",
