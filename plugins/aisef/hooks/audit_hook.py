@@ -63,9 +63,15 @@ def main():
     inp = data.get("tool_input") or {}
     detail = {"tool": tool}
     if tool in ("Bash", "PowerShell"):
-        cmd = (inp.get("command") or "")[:MAX_COMMAND]
+        full = inp.get("command") or ""
+        cmd = full[:MAX_COMMAND]
         probe = {"data": {"command": cmd}}
         detail["command"] = "[omitido: possivel segredo]" if audit_chain.find_secrets(probe) else cmd
+        if len(full) > MAX_COMMAND:  # E-01b: o teste rodado depois do corte (heredoc grande) tambem fica no log
+            import shell_test_runs
+            runs = [r for r in shell_test_runs.extract(full) if not audit_chain.find_secrets({"data": {"command": r}})]
+            if runs:
+                detail["test_runs"] = runs
         detail.update(shell_result(data))  # E-01: o check cruza a evidencia de TDD com este resultado
         summary = tool + ": " + detail["command"].splitlines()[0][:120] if detail["command"] else tool
     elif tool.startswith("mcp__"):

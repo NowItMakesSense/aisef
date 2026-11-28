@@ -46,6 +46,7 @@ próximo projeto. Até lá, eles ficam como **CI**.
 | U-02 | Usabilidade dos componentes do painel: integridade explicada (o que, como e quando), pílulas arrastáveis, foco nunca encoberto, gaveta devolve o foco, dicas no teclado e no toque, controles que respondem a clique e teclado, pontos sem sobreposição | 0.17.1 | CI (estático) e auditoria de interação no navegador | ligado | Sem ressalvas conhecidas |
 | A-01 | Autorização de escopo encerrada no aceite da feature (`closed`) e no vencimento (`expired`), com evento no log; aviso `AUTH-NOT-CLOSED` | 0.17.2 | CI e HireMe | ligado | Só autorizações de escopo; confiança MCP já vencia pelo gateway |
 | A-02 | Check sem aviso que não pede ação: sobreposição só entre tarefas abertas, `storage` na entidade do blueprint | 0.17.2 | CI e HireMe | ligado | Sem ressalvas conhecidas |
+| E-01b | Teste rodado depois de heredoc grande fica no log (`test_runs`) e conta como evidência de TDD | 0.17.3 | CI | ligado | Só para eventos gravados a partir da 0.17.3 |
 | G-07 | Grafo do sistema (`impact`, `why`) e filtro no painel | 0.14.0 | CI | ligado | Só leitura |
 | H-01 | Módulos menores, sem mudar comportamento | 0.14.0 | CI | — | Refatoração; a API de `aisef_project` ficou igual |
 | L-02 | Worktree por fatia | 0.14.0 | CI, opcional | desligado | `parallel.mode: "paths"` (o padrão) |
