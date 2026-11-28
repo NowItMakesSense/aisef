@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+## 0.17.3 (2026-11-27)
+
+### Autorização encerrada não vira erro nas tarefas que já a usaram (A-01)
+Ao encerrar a AUTH-001 e a AUTH-002 do HireMe, o check passou a acusar `AUTH-STATUS` na T-000, concluída em 20/11 com a autorização ainda válida. A regra de vencimento já isentava tarefa encerrada; a de status não.
+- `AUTH-STATUS` só vale para tarefa aberta; `AUTH-REDUNDANT` só para autorização ativa (na encerrada não há nada a fazer).
+- Testes em `core/test_auth_life.py` (12).
+
 ## 0.17.2 (2026-11-27)
 
 ### Autorização de escopo termina de verdade (A-01)

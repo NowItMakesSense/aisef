@@ -109,7 +109,8 @@ def rules_tarefas(_cx):
                     missing = [r for r in needs_scope if r not in au["resources"]]
                     if missing:
                         rep.err("AUTH-RESOURCE", where, "%s nao cobre %s" % (sid, missing))
-                    if au["status"] != "active":
+                    # A-01: tarefa ja encerrada usou a autorizacao enquanto valia; encerra-la depois e o fluxo normal
+                    if au["status"] != "active" and t["state"]["status"] not in ("completed", "cancelled"):
                         rep.err("AUTH-STATUS", where, "%s esta '%s'" % (sid, au["status"]))
                     elif parse_time(au["validity"]["valid_until"]) < now and t["state"]["status"] not in ("completed", "cancelled"):
                         rep.err("AUTH-EXPIRED", where, "%s expirou em %s mas segue 'active'" % (sid, au["validity"]["valid_until"]))
@@ -436,7 +437,7 @@ def rules_aprovacoes_e_autorizacoes(_cx):
                         continue
                     if any(x in lv for x in ("approve_operation", "approve_reinforced", "deny")):
                         rep.err("AUTH-NOT-SCOPABLE", where, "a politica nao admite escopo para %s em %s (exige %s)" % (r, au["environment"], [x for x in lv if x != "allow"]))
-                    else:
+                    elif au["status"] == "active":  # encerrada: nada a fazer
                         rep.warn("AUTH-REDUNDANT", where, "%s em %s ja e 'allow' na politica; o escopo nao acrescenta nada" % (r, au["environment"]))
                 if au["policy_version"] != policy["policy_version"]:
                     rep.warn("AUTH-POLICY-VERSION", where, "emitida na politica %s; a atual e %s" % (au["policy_version"], policy["policy_version"]))
